@@ -1,0 +1,23 @@
+{
+  "name": "JST-PH",
+  "style": "latch",
+  "geometry": {
+    "pin_pitch": 8.0,
+    "padding_left": 8.0,
+    "padding_right": 8.0,
+    "height": 19.0,
+    "wall": 2.2,
+    "pin_cy": 11.0,
+    "pin_radius": 2.5,
+    "pinout_side": "top",
+    "line_length": 10.0,
+    "rows": 1,
+    "row2_pin_cy": 0.0,
+    "row2_pinout_side": "top",
+    "row2_line_length": 20.0,
+    "row2_padding_left": -1.0,
+    "row2_pin_pitch_y": 0.0,
+    "row2_pin_radius": -1.0,
+    "cavity_size": 0.0
+  }
+}

@@ -1,0 +1,14 @@
+[connector]
+name = "Micro-Fit"
+style = "grid"
+
+[geometry]
+pin_pitch = 12.0
+height = 21.6
+wall = 2.5
+pin_cy = 11.9
+pin_radius = 1.8
+pinout_side = "bottom"
+line_length = 15.0
+rows = 1
+cavity_size = 10.5

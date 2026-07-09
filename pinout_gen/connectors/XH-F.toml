@@ -1,0 +1,14 @@
+[connector]
+name = "JST-XH"
+style = "latch"
+
+[geometry]
+pin_pitch = 10.0
+padding_left = 10.0
+padding_right = 10.0
+height = 23.0
+wall = 2.6
+pin_cy = 13.5
+pin_radius = 3.0
+pinout_side = "top"
+line_length = 15.0

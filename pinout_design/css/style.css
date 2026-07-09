@@ -1,0 +1,693 @@
+:root {
+  --bg: #131313;
+  --bg-panel: #1a1a1a;
+  --bg-panel-alt: #1e1e1e;
+  --border: #2a2a2a;
+  --border-focus: #3b82f6;
+  --text: #e0e0e0;
+  --text-dim: #888;
+  --text-muted: #555;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-bg: rgba(59, 130, 246, 0.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+
+  --conn-body: #3a3a35;
+  --conn-cavity: #2e2e28;
+  --conn-stroke: #aaa;
+  --label-color: #ddd;
+  --line-color: #888;
+
+  --hs-fill: rgba(59, 130, 246, 0.15);
+  --hs-stroke: rgba(96, 165, 250, 0.6);
+  --hs-fill-selected: rgba(59, 130, 246, 0.3);
+  --hs-stroke-selected: rgba(96, 165, 250, 0.9);
+
+  --toolbar-h: 40px;
+  --panel-header-h: 32px;
+  --resizer: 4px;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* --- Top toolbar --- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--toolbar-h);
+  padding: 0 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.toolbar-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: auto;
+}
+
+.toolbar button, .toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.toolbar button:hover, .toolbar label:hover {
+  border-color: var(--border-focus);
+  background: var(--accent-bg);
+}
+
+.toolbar input[type="file"] {
+  display: none;
+}
+
+/* --- Main layout --- */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.panels {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left panel (TOML editor) */
+
+.panel-editor {
+  display: flex;
+  flex-direction: column;
+  width: 40%;
+  min-width: 200px;
+  border-right: 1px solid var(--border);
+}
+
+.panel-editor-header,
+.panel-board-header,
+.panel-connector-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--panel-header-h);
+  padding: 0 10px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.panel-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Right panels (stacked) */
+
+.panel-right {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Board image panel */
+
+.panel-board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-board-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.board-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.board-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  line-height: 0;
+}
+
+.board-canvas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.board-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.board-rect {
+  fill: var(--hs-fill);
+  stroke: var(--hs-stroke);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.board-rect:hover {
+  fill: var(--hs-fill-selected);
+  stroke: var(--hs-stroke-selected);
+}
+
+.board-rect.selected {
+  fill: var(--hs-fill-selected);
+  stroke: var(--hs-stroke-selected);
+  stroke-width: 2.5;
+}
+
+.board-rect-label {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: central;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Connector editor panel */
+
+.panel-connector {
+  height: 40%;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-connector-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 12px;
+}
+
+.connector-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+}
+
+/* Connector editor form */
+
+.conn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conn-form-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.conn-form-row label {
+  font-size: 11px;
+  color: var(--text-dim);
+  width: 70px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.conn-form-row input,
+.conn-form-row select {
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+.conn-form-row input:focus,
+.conn-form-row select:focus {
+  border-color: var(--border-focus);
+}
+
+.conn-svg-preview {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow: auto;
+}
+
+.conn-svg-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Pin list */
+
+.pin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pin-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 0;
+}
+
+.pin-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.pin-row:hover {
+  border-color: var(--border-focus);
+}
+
+.pin-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 11px;
+  user-select: none;
+}
+
+.pin-color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pin-name-input {
+  flex: 1;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: "Consolas", "Fira Code", monospace;
+  outline: none;
+}
+
+.pin-name-input:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-panel-alt);
+}
+
+.pin-row-select {
+  width: 36px;
+  padding: 1px 2px;
+  font-size: 11px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+}
+
+.pin-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.pin-delete-btn:hover {
+  color: var(--danger);
+}
+
+.pin-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.pin-add-btn:hover {
+  border-color: var(--border-focus);
+  color: var(--text);
+}
+
+/* New connector dialog */
+
+.new-conn-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-focus);
+  border-radius: 8px;
+  padding: 16px;
+  z-index: 100;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.new-conn-dialog-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.toolbar-btn {
+  padding: 4px 12px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover {
+  border-color: var(--border-focus);
+}
+
+.toolbar-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.toolbar-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
+.toolbar button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Resize handles */
+
+.resize-handle {
+  pointer-events: all;
+}
+
+/* Horizontal resizer */
+
+.resizer-h {
+  width: var(--resizer);
+  cursor: col-resize;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.resizer-h:hover, .resizer-h.active {
+  background: var(--accent);
+}
+
+/* Vertical resizer */
+
+.resizer-v {
+  height: var(--resizer);
+  cursor: row-resize;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.resizer-v:hover, .resizer-v.active {
+  background: var(--accent);
+}
+
+/* Code editor (textarea + highlight overlay) */
+
+.code-editor {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Consolas", "Fira Code", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.code-gutter {
+  width: 40px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  text-align: right;
+  padding: 8px 6px 8px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  user-select: none;
+}
+
+.code-gutter div {
+  height: 1.5em;
+}
+
+.code-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.code-highlight,
+.code-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  margin: 0;
+  border: none;
+  font: inherit;
+  line-height: inherit;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+
+.code-highlight {
+  pointer-events: none;
+  color: var(--text);
+  z-index: 1;
+}
+
+.code-input {
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+  resize: none;
+  outline: none;
+  z-index: 2;
+  -webkit-text-fill-color: transparent;
+}
+
+.code-input::selection {
+  background: rgba(59, 130, 246, 0.3);
+  -webkit-text-fill-color: transparent;
+}
+
+/* TOML syntax highlighting */
+
+.hl-comment { color: #6a737d; font-style: italic; }
+.hl-table { color: #79c0ff; font-weight: 600; }
+.hl-table-array { color: #d2a8ff; font-weight: 600; }
+.hl-key { color: #7ee787; }
+.hl-string { color: #a5d6ff; }
+.hl-number { color: #f0883e; }
+.hl-bool { color: #ff7b72; }
+
+.code-error {
+  display: none;
+  padding: 4px 10px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 11px;
+  border-top: 1px solid var(--danger);
+}
+
+/* Scrollbar styling */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Color picker popup */
+
+.color-picker-popup {
+  z-index: 200;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-focus);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  min-width: 180px;
+}
+
+.color-picker-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.color-preset {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.1s, transform 0.1s;
+}
+
+.color-preset:hover {
+  border-color: var(--text-dim);
+  transform: scale(1.1);
+}
+
+.color-preset.active {
+  border-color: #fff;
+}
+
+.color-picker-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-family: "Consolas", "Fira Code", monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.color-picker-hex-row span {
+  padding-left: 4px;
+}
+
+.color-picker-hex {
+  flex: 1;
+  padding: 3px 6px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.color-picker-hex:focus {
+  border-color: var(--border-focus);
+}
+
+/* Toolbar disabled buttons */
+
+.toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.toolbar .separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 2px;
+}
