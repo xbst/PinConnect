@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PinConnect Designer</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Top toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-title">PinConnect Designer</span>
+    <button id="undo-btn" title="Undo (Ctrl+Z)" disabled>&#x21A9; Undo</button>
+    <button id="redo-btn" title="Redo (Ctrl+Y)" disabled>&#x21AA; Redo</button>
+    <span class="separator"></span>
+    <label>
+      Open Image
+      <input type="file" id="open-image" accept="image/*">
+    </label>
+    <label>
+      Open TOML
+      <input type="file" id="open-toml" accept=".toml">
+    </label>
+    <button id="save-toml">Save TOML</button>
+  </div>
+
+  <!-- Panels -->
+  <div class="panels">
+
+    <!-- Left: TOML editor -->
+    <div class="panel-editor" id="panel-editor">
+      <div class="panel-editor-header">TOML Source</div>
+      <div class="panel-editor-body" id="editor-container"></div>
+    </div>
+
+    <div class="resizer-h" id="resizer-h"></div>
+
+    <!-- Right panels -->
+    <div class="panel-right" id="panel-right">
+
+      <!-- Top-right: Board image -->
+      <div class="panel-board" id="panel-board">
+        <div class="panel-board-header">
+          Board Image
+          <button id="draw-mode-btn" style="margin-left:auto;padding:2px 8px;font-size:11px">+ Add Connector</button>
+        </div>
+        <div class="panel-board-body" id="board-body">
+          <div class="board-placeholder" id="board-placeholder">
+            Load a board image to get started
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer-v" id="resizer-v"></div>
+
+      <!-- Bottom-right: Connector editor -->
+      <div class="panel-connector" id="panel-connector">
+        <div class="panel-connector-header">Connector Editor</div>
+        <div class="panel-connector-body" id="connector-body">
+          <div class="connector-empty" id="connector-empty">
+            Select a connector to edit
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
