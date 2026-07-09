@@ -1,0 +1,13 @@
+[project]
+name = "pinout-embed"
+version = "0.1.0"
+description = "Markdown extension for embedding interactive pinouts on markdown docs sites."
+readme = "README.md"
+license = "GPL-3.0"
+
+[tool.setuptools]
+py-modules = ["pinout_embed"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
