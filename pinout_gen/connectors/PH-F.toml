@@ -1,0 +1,14 @@
+[connector]
+name = "JST-PH"
+style = "latch"
+
+[geometry]
+pin_pitch = 8.0
+padding_left = 8.0
+padding_right = 8.0
+height = 19.0
+wall = 2.2
+pin_cy = 11.0
+pin_radius = 2.5
+pinout_side = "top"
+line_length = 10.0

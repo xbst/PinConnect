@@ -1,0 +1,14 @@
+[connector]
+name = "USB-C"
+style = "box"
+
+[geometry]
+padding_left = 12.0
+padding_right = 12.0
+height = 10.0
+wall = 4.2
+pin_pitch = 1.0
+pin_cy = 5.0
+pin_radius = 0.0
+pinout_side = "bottom"
+line_length = 0.0

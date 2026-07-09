@@ -1,0 +1,21 @@
+[connector]
+name = "XT30(2+2)"
+style = "xt30"
+
+[geometry]
+pin_pitch = 16.0
+padding_left = 22.0
+padding_right = 10.0
+height = 16.0
+wall = 2.0
+pin_cy = 8.0
+pin_radius = 3.0
+pinout_side = "top"
+line_length = 12.0
+rows = 2
+row2_pin_cy = 8.0
+row2_pinout_side = "left"
+row2_line_length = 8.0
+row2_padding_left = 10.0
+row2_pin_pitch_y = 6.0
+row2_pin_radius = 1.2
