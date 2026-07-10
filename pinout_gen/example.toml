@@ -1,0 +1,310 @@
+[board]
+title = "Test"
+image = "board.png"
+width = 1600
+height = 1200
+connector_dir = "./connectors"
+
+[[connector]]
+id = "FAN"
+name = "Fan"
+type = "XH-F"
+x1 = 1279
+y1 = 246
+x2 = 1427
+y2 = 361
+orientation = 180
+description = "Always-on fan connector, VIN"
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+
+[[connector]]
+id = "SW5"
+name = "Switch 5"
+type = "XH-F"
+x1 = 1279
+y1 = 366
+x2 = 1427
+y2 = 480
+orientation = 180
+description = "Switch connector: Hub"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PB12"
+  color = "#FFBF00" # Yellow
+
+[[connector]]
+id = "SW4"
+name = "Switch 4"
+type = "XH-F"
+x1 = 1279
+y1 = 483
+x2 = 1427
+y2 = 597
+orientation = 180
+description = "Switch connector: Lane 2-Load"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PB11"
+  color = "#FFBF00" # Yellow
+  
+[[connector]]
+id = "SW3"
+name = "Switch 3"
+type = "XH-F"
+x1 = 1279
+y1 = 601
+x2 = 1427
+y2 = 714
+orientation = 180
+description = "Switch connector: Lane 2-Prep"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PB2"
+  color = "#FFBF00" # Yellow
+  
+[[connector]]
+id = "SW2"
+name = "Switch 2"
+type = "XH-F"
+x1 = 1279
+y1 = 717
+x2 = 1427
+y2 = 832
+orientation = 180
+description = "Switch connector: Lane 1-Load"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PB1"
+  color = "#FFBF00" # Yellow
+  
+[[connector]]
+id = "SW1"
+name = "Switch 1"
+type = "XH-F"
+x1 = 1279
+y1 = 835
+x2 = 1427
+y2 = 950
+orientation = 180
+description = "Switch connector: Lane 1-Prep"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PB10"
+  color = "#FFBF00" # Yellow
+
+[[connector]]
+id = "STP2"
+name = "Stepper 2"
+type = "XH-F"
+x1 = 1130
+y1 = 274
+x2 = 1245
+y2 = 515
+orientation = 90
+description = "Lane 2 extruder stepper connector"
+
+  [[connector.pin]]
+  name  = "B"
+  color = "#3498DB" # Blue
+
+  [[connector.pin]]
+  name  = "B"
+  color = "#E74C3C" # Red
+
+  [[connector.pin]]
+  name  = "A"
+  color = "#2ECC71" # Green
+
+  [[connector.pin]]
+  name  = "A"
+  color = "#2C3E50" # Black
+
+[[connector]]
+id = "STP1"
+name = "Stepper 1"
+type = "XH-F"
+x1 = 1130
+y1 = 680
+x2 = 1245
+y2 = 920
+orientation = 90
+description = "Lane 1 extruder stepper connector"
+
+  [[connector.pin]]
+  name  = "B"
+  color = "#3498DB" # Blue
+
+  [[connector.pin]]
+  name  = "B"
+  color = "#E74C3C" # Red
+
+  [[connector.pin]]
+  name  = "A"
+  color = "#2ECC71" # Green
+
+  [[connector.pin]]
+  name  = "A"
+  color = "#2C3E50" # Black
+  
+[[connector]]
+id = "SW6"
+name = "TurtleNeck"
+type = "PH-F"
+x1 = 176
+y1 = 682
+x2 = 322
+y2 = 947
+orientation = 270
+description = "Switch connector: TurtleNeck filament buffer"
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "PA3"
+  color = "#FFBF00" # Yellow
+  
+  [[connector.pin]]
+  name = "PA2"
+  color = "#FFBF00" # Yellow
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  
+  [[connector.pin]]
+  name = "3.3V"
+  color = "#E74C3C" # Red
+
+[[connector]]
+id = "USB"
+name = "USB-C"
+type = "USB-C"
+x1 = 450
+y1 = 858
+x2 = 618
+y2 = 996
+orientation = 0
+description = "USB Type-C port"
+
+[[connector]]
+id = "CAN+VIN"
+name = "Power & Data"
+type = "XT30-2+2"
+x1 = 167
+y1 = 249
+x2 = 331
+y2 = 510
+orientation = 270
+description = "12-24VIN, CAN or USB data (H: CAN_H or D+, L: CAN_L or D-)"
+
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  row   = 1
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  row   = 1
+
+  [[connector.pin]]
+  name = "H"
+  color = "#FFBF00" # Yellow
+  row   = 2
+
+  [[connector.pin]]
+  name = "L"
+  color = "#2ECC71" # Green
+  row   = 2
+  
+## Placeholder connectors below, not on the board image
+
+[[connector]]
+id = "Test1"
+name = "MF 2x2 Test"
+type = "MX-F-2R"
+x1 = 100
+y1 = 100
+x2 = 150
+y2 = 150
+orientation = 270
+description = "Dummy 2x2 MF"
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  row   = 1
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  row   = 1
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  row   = 2
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  row   = 2
+
+[[connector]]
+id = "Test2"
+name = "MF 4P Test"
+type = "MX-F-1R"
+x1 = 200
+y1 = 100
+x2 = 250
+y2 = 150
+orientation = 0
+description = "Dummy 4P MF"
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  row   = 1
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  row   = 1
+
+  [[connector.pin]]
+  name = "VIN"
+  color = "#E74C3C" # Red
+  row   = 1
+  
+  [[connector.pin]]
+  name = "GND"
+  color = "#2C3E50" # Black
+  row   = 1
