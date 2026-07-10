@@ -62,7 +62,7 @@ Install the generator from the repository root. Using a virtual environment is r
 
 ```powershell
 python -m venv venv
-venv\Scripts\Activate.ps1
+./venv/Scripts/activate
 pip install .\pinout_gen
 ```
 
