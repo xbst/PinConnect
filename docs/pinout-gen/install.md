@@ -10,7 +10,7 @@ Using a virtual environment is recommended so the tool and its dependencies stay
 
 ```powershell
 python -m venv venv
-venv\Scripts\Activate.ps1
+./venv/Scripts/activate
 pip install .\pinout_gen
 ```
 
