@@ -439,7 +439,8 @@ body{{display:flex;height:100%;overflow:hidden}}
 .pw img{{display:block;width:auto;height:auto;max-width:100%;max-height:100vh;user-select:none;-webkit-user-drag:none}}
 .po{{position:absolute;inset:0;width:100%;height:100%}}
 .hs{{fill:transparent;stroke:transparent;stroke-width:2;cursor:pointer;transition:fill .18s,stroke .18s}}
-.hs:hover,.hs.pulse{{fill:var(--hs-hover);stroke:var(--hs-stroke)}}
+.hs.pulse{{fill:var(--hs-hover);stroke:var(--hs-stroke)}}
+@media(hover:hover){{.hs:hover{{fill:var(--hs-hover);stroke:var(--hs-stroke)}}}}
 .hs.active{{fill:var(--hs-active);stroke:var(--hs-stroke)}}
 .tt{{position:absolute;background:var(--tip-bg);border:1px solid var(--tip-border);
   border-radius:10px;padding:14px 16px;box-shadow:0 6px 20px var(--tip-shadow);
@@ -507,7 +508,8 @@ body{{display:flex;height:100%;overflow:hidden}}
 const C={data};
 const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
-let aId=null,pinned=false;
+let aId=null,pinned=false,isTouch=false;
+document.addEventListener('touchstart',function(){{isTouch=true}},{{once:true,passive:true}});
 sbBtn.addEventListener('click',e=>{{e.stopPropagation();sb.classList.toggle('hid');
   if(aId){{const el=hs(aId);if(el)setTimeout(()=>pos(el),0)}}}});
 function hs(id){{return document.querySelector(`.hs[data-id="${{id}}"]`)}}
@@ -540,15 +542,15 @@ function pos(el){{
 }}
 document.querySelectorAll('.hs').forEach(el=>{{
   const id=el.dataset.id;
-  el.addEventListener('mouseenter',()=>{{if(!pinned){{mark(id);show(id,el)}}}});
-  el.addEventListener('mouseleave',()=>{{if(!pinned){{unmark();hide()}}}});
+  el.addEventListener('mouseenter',()=>{{if(!isTouch&&!pinned){{mark(id);show(id,el)}}}});
+  el.addEventListener('mouseleave',()=>{{if(!isTouch&&!pinned){{unmark();hide()}}}});
   el.addEventListener('click',e=>{{e.stopPropagation();if(pinned&&aId===id){{hide();return}}
     hide();pinned=true;mark(id);show(id,el)}});
 }});
 document.querySelectorAll('.cl-i').forEach(el=>{{
   const id=el.dataset.id;
-  el.addEventListener('mouseenter',()=>{{if(!pinned){{const h=hs(id);if(h){{mark(id);show(id,h)}}}}}});
-  el.addEventListener('mouseleave',()=>{{if(!pinned){{unmark();hide()}}}});
+  el.addEventListener('mouseenter',()=>{{if(!isTouch&&!pinned){{const h=hs(id);if(h){{mark(id);show(id,h)}}}}}});
+  el.addEventListener('mouseleave',()=>{{if(!isTouch&&!pinned){{unmark();hide()}}}});
   el.addEventListener('click',e=>{{e.stopPropagation();const h=hs(id);if(!h)return;
     if(pinned&&aId===id){{hide();return}}hide();pinned=true;mark(id);show(id,h)}});
 }});
