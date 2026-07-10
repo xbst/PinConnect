@@ -350,7 +350,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
 
 # ── Full HTML page ───────────────────────────────────────────────────
 
-def generate_html(board: Board, connector_types: dict[str, ConnectorType]) -> str:
+def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
+                   image_data_uri: str | None = None) -> str:
     connector_data: dict[str, dict] = {}
     for conn in board.connectors:
         ct = connector_types[conn.type]
@@ -376,8 +377,9 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType]) -> st
             f'<span class="cl-t">{html.escape(ct.name)} &middot; '
             f'{len(conn.pins)}p</span></div>'
         )
+    image_src = image_data_uri if image_data_uri is not None else board.image
     return _HTML_TEMPLATE.format(
-        title=html.escape(board.title), image_path=board.image,
+        title=html.escape(board.title), image_path=image_src,
         img_w=board.width, img_h=board.height,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),

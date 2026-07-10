@@ -32,14 +32,44 @@ The output directory must already exist.
 
 When it runs, `pinout-gen` resolves two things relative to the board config:
 
-- **The board image**, from the `image` field in `[board]`. It is referenced by the generated HTML (not embedded), so keep it next to the output — see the caveat below.
+- **The board image**, from the `image` field in `[board]`. By default it is referenced by the generated HTML (not embedded), so keep it next to the output — see the caveat below. You can embed it instead with `-i`.
 - **The connector type definitions**, from `connector_dir` (defaults to `./connectors` next to the config). Every `type` used by a connector must have a matching `<type>.toml` in that folder. See [connector types](connector-types.md).
 
 ## Keep the image next to the output
 
-The generated HTML links the board image by the same relative path used in the TOML. It is not inlined. If you move the HTML, move the image with it (or serve both from the same directory), or the diagram will show a broken image.
+By default, the generated HTML links the board image by the same relative path used in the TOML. It is not inlined. If you move the HTML, move the image with it (or serve both from the same directory), or the diagram will show a broken image.
 
 For example, if `board.toml` has `image = "board.png"`, then `board.png` must sit next to `board.pinout.html`.
+
+To avoid this requirement, use `-i` to embed the image directly — see below.
+
+## Embedding the board image
+
+Use `-i` / `--image-embed` to base64-encode the board image into the HTML so the output is fully self-contained with no external image file needed.
+
+### Use the image from the board config
+
+```bash
+pinout-gen board.toml -i
+```
+
+This reads the `image` path from `[board]` (resolved relative to the config), encodes it, and inlines it as a data URI.
+
+### Use a different image
+
+```bash
+pinout-gen board.toml -i photo.png
+```
+
+This embeds `photo.png` instead of whatever `image` is set to in the config.
+
+### Error handling
+
+If `-i` is used and the image file cannot be found or read, `pinout-gen` exits with an error:
+
+```
+Error: image file not found: /path/to/image.png
+```
 
 ## Common errors
 

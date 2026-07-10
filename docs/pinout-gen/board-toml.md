@@ -43,7 +43,7 @@ y2 = 742
 
 | Field | Required | Default | Meaning |
 |-------|----------|---------|---------|
-| `image` | yes | — | Path to the board image, relative to the config. Referenced (not embedded) by the output, so keep it next to the generated HTML. |
+| `image` | yes | — | Path to the board image, relative to the config. By default referenced (not embedded) by the output, so keep it next to the generated HTML. Use `pinout-gen -i` to embed it instead. |
 | `width` | yes | — | Image width in pixels. |
 | `height` | yes | — | Image height in pixels. |
 | `title` | no | `"Pinout"` | Shown as the diagram title. |

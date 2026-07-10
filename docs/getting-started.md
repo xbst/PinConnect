@@ -86,7 +86,7 @@ By default this writes `board.pinout.html` next to the config. Use `-o` to choos
 pinout-gen board.toml -o docs/my-board.html
 ```
 
-> **Keep the image alongside the output.** The generated HTML links to your board image by the same relative path used in the TOML — it is not embedded. Make sure the image file sits next to the HTML (or serve both from the same folder) or the diagram will show a broken image.
+> **Keep the image alongside the output.** By default the generated HTML links to your board image by the same relative path used in the TOML — it is not embedded. Make sure the image file sits next to the HTML (or serve both from the same folder) or the diagram will show a broken image. To make the HTML fully self-contained, add `-i` to embed the image: `pinout-gen board.toml -i`.
 
 Open the resulting `.html` file in a browser to check your interactive pinout.
 

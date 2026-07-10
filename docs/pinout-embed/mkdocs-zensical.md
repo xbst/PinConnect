@@ -47,7 +47,7 @@ Only images tagged `type=application/pinout` are affected; ordinary images pass 
 
 MkDocs copies non-Markdown files under `docs/` into the built site. Put the generated HTML **and its board image** inside your docs tree and reference the HTML by a path relative to the page.
 
-Because the pinout HTML links its board image by relative path, keep the two together. For example:
+By default the pinout HTML links its board image by relative path, so keep the two together (or use `pinout-gen -i` to embed the image). For example:
 
 ```
 docs/
@@ -69,7 +69,7 @@ A convenient way to keep this in sync is to point `pinout-gen -o` directly at yo
 pinout-gen board.toml -o docs/pinouts/board.pinout.html
 ```
 
-Just remember to copy the board image next to it.
+Just remember to copy the board image next to it, or use `-i` to embed the image into the HTML.
 
 ## Troubleshooting
 
