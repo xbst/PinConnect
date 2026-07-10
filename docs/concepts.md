@@ -73,7 +73,7 @@ These JSON files are generated from the canonical TOML definitions by `pinout_de
 
 ## What "self-contained" means for the output
 
-`pinout-gen` produces a single HTML file with its CSS and JavaScript inlined, so it works when opened directly or served statically. The one external reference is the board image, which is linked by the same relative path used in the board TOML. Keep the image next to the generated HTML so the link resolves.
+`pinout-gen` produces a single HTML file with its CSS and JavaScript inlined, so it works when opened directly or served statically. By default, the one external reference is the board image, which is linked by the same relative path used in the board TOML. Keep the image next to the generated HTML so the link resolves, or use `pinout-gen -i` to embed the image and make the output fully self-contained.
 
 ## Where to go next
 
