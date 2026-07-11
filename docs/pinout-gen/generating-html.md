@@ -33,7 +33,7 @@ The output directory must already exist.
 When it runs, `pinout-gen` resolves two things relative to the board config:
 
 - **The board image**, from the `image` field in `[board]`. By default it is referenced by the generated HTML (not embedded), so keep it next to the output — see the caveat below. You can embed it instead with `-i`.
-- **The connector type definitions**, from `connector_dir` (defaults to `./connectors` next to the config). Every `type` used by a connector must have a matching `<type>.toml` in that folder. See [connector types](connector-types.md).
+- **The connector type definitions**, first from `connector_dir` (defaults to `./connectors` next to the config), then from the built-in types bundled with the package. You can override a built-in type by placing a `<type>.toml` in your `connector_dir`. See [connector types](connector-types.md).
 
 ## Keep the image next to the output
 

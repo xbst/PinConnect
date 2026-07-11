@@ -57,9 +57,9 @@ Full field-by-field details live in the [board TOML reference](pinout-gen/board-
 
 ### 2. Connector types (a reusable library)
 
-A connector type describes the *shape* of a physical connector — pin pitch, body size, how many rows, where the pin lines exit — independent of any board. These live in `pinout_gen/connectors/` (for example `XH-F.toml`, `MX-F-2R.toml`, `USB-C.toml`) and are shared across every board.
+A connector type describes the *shape* of a physical connector — pin pitch, body size, how many rows, where the pin lines exit — independent of any board. These live in `pinout_gen/pinout_gen/connectors/` (for example `XH-F.toml`, `MX-F-2R.toml`, `USB-C.toml`) and are shared across every board.
 
-A board connector refers to a type by name through its `type` field. When `pinout-gen` runs, it resolves each `type` against the files in `connector_dir` (defaults to `./connectors` next to the board config).
+A board connector refers to a type by name through its `type` field. When `pinout-gen` runs, it first checks the board's `connector_dir` (defaults to `./connectors` next to the board config), then falls back to the built-in types bundled with the package.
 
 You only touch these files when adding support for a connector the library does not already have. See [connector types](pinout-gen/connector-types.md).
 
@@ -67,9 +67,9 @@ You only touch these files when adding support for a connector the library does 
 
 The designer runs in the browser and cannot read the Python side's TOML directly, so it uses **JSON mirrors** of the connector types, stored in `pinout_design/connectors/` alongside an `index.json` listing them.
 
-These JSON files are generated from the canonical TOML definitions by `pinout_design/tools/convert-connectors.py`. The TOML files in `pinout_gen/connectors/` are the source of truth; the JSON is a build artifact.
+These JSON files are generated from the canonical TOML definitions by `pinout_design/tools/convert-connectors.py`. The TOML files in `pinout_gen/pinout_gen/connectors/` are the source of truth; the JSON is a build artifact.
 
-> **If you add or change a connector type,** edit the TOML in `pinout_gen/connectors/`, then re-run `convert-connectors.py` to regenerate the designer's JSON. Editing one without the other will leave the designer and generator out of sync.
+> **If you add or change a connector type,** edit the TOML in `pinout_gen/pinout_gen/connectors/`, then re-run `convert-connectors.py` to regenerate the designer's JSON. Editing one without the other will leave the designer and generator out of sync.
 
 ## What "self-contained" means for the output
 

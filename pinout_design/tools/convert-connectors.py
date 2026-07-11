@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "pinout_gen"))
 from pinout_gen.config import load_connector_type
 
-CONNECTORS_DIR = Path(__file__).resolve().parent.parent.parent / "pinout_gen" / "connectors"
+CONNECTORS_DIR = Path(__file__).resolve().parent.parent.parent / "pinout_gen" / "pinout_gen" / "connectors"
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "connectors"
 
 
