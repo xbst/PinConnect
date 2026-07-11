@@ -1,10 +1,10 @@
 # pinout-design
 
-The designer is a browser-based tool for building a [board TOML config](pinout-gen/board-toml.md) visually. You load a board image, draw a box over each connector, label the pins, and the tool writes the TOML for you. It is a static web app — there is nothing to install.
+The designer is a browser-based tool for building a [board TOML config](pinout-gen/board-toml.md) visually. You load a board image, draw a box over each connector, label the pins, and the tool writes the TOML for you. It is a static web app so there is nothing to install.
 
 ## Running the designer
 
-The designer reads its connector library over `fetch()`, so it must be served over HTTP. Opening `index.html` directly with `file://` will not work — the connector list will fail to load.
+The designer reads its connector library over `fetch()`, so it must be served over HTTP. Opening `index.html` directly with `file://` will not work.
 
 Start a local server from the `pinout_design` folder:
 
@@ -22,16 +22,16 @@ cd pinout_design
 python3 -m http.server 8000
 ```
 
-Then open <http://localhost:8000> in your browser. Stop the server with `Ctrl+C` when you are done.
+Then open <http://localhost:8000> in your browser. Stop the server with `Ctrl+C` (on the terminal) when you are done.
 
 ## The interface
 
 The window has a toolbar across the top and three panels:
 
-- **Toolbar** — Undo, Redo, Open Image, Open TOML, and Save TOML.
-- **TOML Source** (left) — a live, editable view of the config. Edits here update the diagram, and vice versa.
-- **Board Image** (top right) — your board photo with connector boxes overlaid. Has an **+ Add Connector** button.
-- **Connector Editor** (bottom right) — fields and pin list for the currently selected connector.
+- **Toolbar**: Undo, Redo, Open Image, Open TOML, and Save TOML.
+- **TOML Source** (left): a live, editable view of the config. Edits here update the diagram, and vice versa.
+- **Board Image** (top right): your board photo with connector boxes overlaid. Has an **+ Add Connector** button.
+- **Connector Editor** (bottom right): fields and pin list for the currently selected connector.
 
 The panel dividers can be dragged to resize.
 
@@ -56,11 +56,11 @@ In the board panel you can:
 
 With a connector selected, the **Connector Editor** shows:
 
-- **ID** — unique identifier.
-- **Name** — label shown on the diagram.
-- **Type** — connector type, chosen from the built-in library (drives the rendered shape).
-- **Orient.** — rotation: 0°, 90°, 180°, or 270°.
-- **Desc.** — optional longer description.
+- **ID**: unique identifier.
+- **Name**: label shown on the diagram.
+- **Type**: connector type, chosen from the built-in library (drives the rendered shape).
+- **Orient.**: rotation: 0°, 90°, 180°, or 270°.
+- **Desc.**: optional longer description.
 
 A small preview shows the selected connector type as it will render.
 
@@ -83,7 +83,7 @@ The **TOML Source** pane is fully editable. Anything you type there updates the 
 
 ### 6. Save
 
-Click **Save TOML** to download the config (for example `board.toml`). Save it next to your board image so `pinout-gen` can find the image later.
+Click **Save TOML** to download the config. Save it next to your board image so `pinout-gen` can find the image later.
 
 To resume work, use **Open TOML** to load a config back in, and **Open Image** to reload its board image.
 
@@ -93,7 +93,7 @@ Use the **Undo** and **Redo** toolbar buttons (or `Ctrl+Z` / `Ctrl+Y`) to step t
 
 ## After the designer
 
-The designer only produces the TOML — it does not generate the interactive pinout. Once you have saved the config, continue with [pinout-gen](pinout-gen/generating-html.md) to render the HTML.
+The designer produces the TOML needed for `pinout-gen`, it doesn't generate the interactive pinout itself. Once you have saved the config, continue with [pinout-gen](pinout-gen/generating-html.md) to render the HTML.
 
 ## Adding new connector types
 

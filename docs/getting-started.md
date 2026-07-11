@@ -4,9 +4,9 @@ This guide takes you end to end: from a photo of your board to an interactive pi
 
 PinConnect has three tools, used in sequence:
 
-1. **pinout-design** — a browser-based designer that turns a board image into a TOML config.
-2. **pinout-gen** — a CLI that reads that TOML and generates a self-contained interactive HTML pinout.
-3. **pinout-embed** — an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
+1. **pinout-design**: a browser-based designer that turns a board image into a TOML config.
+2. **pinout-gen**: a CLI that reads that TOML and generates a self-contained interactive HTML pinout.
+3. **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
 
 You only need the first two to get a working pinout. The third is for people publishing to a Markdown docs site.
 
@@ -18,7 +18,7 @@ You only need the first two to get a working pinout. The third is for people pub
 
 ---
 
-## Step 1 — Design your pinout
+## Step 1: Design your pinout
 
 The designer is a static web app. It reads its connector library over `fetch()`, so it must be served over HTTP — opening `index.html` directly with `file://` will not work.
 
@@ -54,7 +54,7 @@ See [pinout-design](pinout-design.md) for a full tour of the designer.
 
 ---
 
-## Step 2 — Generate the HTML
+## Step 2: Generate the HTML
 
 Install the generator from the repository root. Using a virtual environment is recommended but optional.
 
@@ -94,7 +94,7 @@ See [pinout-gen: generating HTML](pinout-gen/generating-html.md) and [board TOML
 
 ---
 
-## Step 3 — Embed it in a docs site (optional)
+## Step 3: Embed it in a docs site (optional)
 
 If you publish with **MkDocs** or **Zensical**, `pinout-embed` lets you drop the generated pinout into a page with an image-style tag:
 
@@ -110,7 +110,7 @@ See [pinout-embed](pinout-embed/mkdocs-zensical.md) for installation and configu
 
 ## Where to go next
 
-- [Concepts](concepts.md) — how the pieces fit together and the two kinds of TOML files.
-- [pinout-design](pinout-design.md) — designing configs visually.
-- [pinout-gen](pinout-gen/generating-html.md) — CLI usage, board TOML, and connector types.
-- [pinout-embed](pinout-embed/mkdocs-zensical.md) — embedding in a Markdown site.
+- [Concepts](concepts.md): how the pieces fit together and the two kinds of TOML files.
+- [pinout-design](pinout-design.md): designing configs visually.
+- [pinout-gen](pinout-gen/generating-html.md): CLI usage, board TOML, and connector types.
+- [pinout-embed](pinout-embed/mkdocs-zensical.md): embedding in a Markdown site.
