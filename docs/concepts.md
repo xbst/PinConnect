@@ -5,22 +5,13 @@ This page explains how PinConnect's pieces fit together and the two different ki
 ## The pipeline
 
 PinConnect is a three-stage pipeline. Each stage produces the input for the next:
-
-```
- board image + you          board.toml            board.pinout.html         docs site
-      │                         │                        │                     │
- ┌────▼────────┐          ┌─────▼──────┐          ┌───────▼──────┐      ┌───────▼──────┐
- │ pinout-     │  writes  │            │  reads   │  pinout-gen  │ embed│ pinout-embed │
- │ design      ├─────────▶│  TOML      ├─────────▶│  renders     ├─────▶│  (MkDocs /   │
- │ (browser)   │          │  config    │          │  HTML        │      │  Zensical)   │
- └─────────────┘          └────────────┘          └──────────────┘      └──────────────┘
-```
-
 - **pinout-design** is where you do the design. It overlays connector boxes on a board image and *writes* a board TOML file.
-- **pinout-gen** is a pure transform. It *reads* that TOML and *renders* a self-contained interactive HTML file — an SVG overlay of connectors and pin lines on top of your board image.
+- **pinout-gen** *reads* that TOML and *renders* a self-contained interactive HTML file with an SVG overlay of connectors and pin lines on top of your board image.
 - **pinout-embed** is glue for documentation sites. It *embeds* the generated HTML into a Markdown page as a responsive iframe.
 
 The middle artifact (the board TOML) is what is ultimately used to generate the pinout. The designer is just a convenient way to produce it, and you can always write it without the designer, or edit it afterwards.
+
+This also means, it is a good idea to keep a copy of this TOML file. If you need to make edits to your interactive pinout, you can just edit the file in pinout-design (or edit the file manually), and use it to generate an updated pinout, without having to create another TOML from scratch.
 
 ## The two kinds of TOML
 
@@ -77,6 +68,6 @@ These JSON files are generated from the canonical TOML definitions by `pinout_de
 
 ## Where to go next
 
-- [Getting Started](getting-started.md) — run the whole pipeline once.
-- [board TOML reference](pinout-gen/board-toml.md) — every field in a board config.
-- [connector types](pinout-gen/connector-types.md) — the type library and adding your own.
+- [Getting Started](getting-started.md): run the whole pipeline once.
+- [board TOML reference](pinout-gen/board-toml.md): every field in a board config.
+- [connector types](pinout-gen/connector-types.md): the type library and adding your own.

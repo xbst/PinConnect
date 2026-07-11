@@ -12,7 +12,7 @@ From the repository root:
 pip install ./pinout_embed
 ```
 
-If you build your site in a virtual environment, install it into that same environment so MkDocs can find it.
+If you build your site in a virtual environment, install it into that same environment.
 
 ## Enable the extension
 
@@ -45,7 +45,7 @@ Only images tagged `type=application/pinout` are affected; ordinary images pass 
 
 ## Place the files so the site serves them
 
-MkDocs copies non-Markdown files under `docs/` into the built site. Put the generated HTML **and its board image** inside your docs tree and reference the HTML by a path relative to the page.
+MkDocs and Zensical copy non-Markdown files under `docs/` into the built site. Put the generated HTML **and its board image** inside your docs tree and reference the HTML by a path relative to the page.
 
 By default the pinout HTML links its board image by relative path, so keep the two together (or use `pinout-gen -i` to embed the image). For example:
 

@@ -45,7 +45,7 @@ To avoid this requirement, use `-i` to embed the image directly — see below.
 
 ## Embedding the board image
 
-Use `-i` / `--image-embed` to base64-encode the board image into the HTML so the output is fully self-contained with no external image file needed.
+Use `-i` / `--image-embed` to base64-encode the board image into the HTML so the output is fully self-contained with no external image file needed. This is ideal if you're sharing the pinout file instead of embedding into a website since the person opening the pinout doesn't have to worry about having the image file in the same location the HTML file is opened from as well.
 
 ### Use the image from the board config
 
@@ -58,10 +58,10 @@ This reads the `image` path from `[board]` (resolved relative to the config), en
 ### Use a different image
 
 ```bash
-pinout-gen board.toml -i photo.png
+pinout-gen board.toml -i image.png
 ```
 
-This embeds `photo.png` instead of whatever `image` is set to in the config.
+This embeds `image.png` instead of whatever `image` is set to in the config.
 
 ### Error handling
 

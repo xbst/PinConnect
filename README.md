@@ -4,9 +4,9 @@ An interactive pinout generator for PCBs. PinConnect turns a photo of a board in
 
 It is made of three tools, used in sequence:
 
-- **pinout-design** — a browser-based designer that turns a board image into a TOML config.
-- **pinout-gen** — a CLI that reads that config and generates a self-contained interactive HTML pinout.
-- **pinout-embed** — an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
+- **pinout-design**: a browser-based designer that turns a board image into a TOML config.
+- **pinout-gen**: a CLI that reads that config and generates a self-contained interactive HTML pinout.
+- **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
 
@@ -44,10 +44,10 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 
 ## Repository layout
 
-- `pinout_design/` — the visual designer (static web app).
-- `pinout_gen/` — the `pinout-gen` CLI and connector type library.
-- `pinout_embed/` — the Markdown embedding extension.
-- `docs/` — documentation.
+- `pinout_design/`: the visual designer (static web app).
+- `pinout_gen/`: the `pinout-gen` CLI and connector type library.
+- `pinout_embed/`: the Markdown embedding extension.
+- `docs/`: documentation.
 
 ## License
 
