@@ -10,6 +10,8 @@ It is made of three tools, used in sequence:
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
 
+If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/Nevermore/SM3-PCB/#wiring
+
 ## Quick start
 
 1. Serve the designer and open it in your browser:
@@ -51,4 +53,6 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 
 ## License
 
-GPL-3.0. See [LICENSE](LICENSE).
+This project is licensed under GPL-3.0. See [LICENSE](LICENSE).
+
+If you'd like to support the development of this and other open-source projects, you can donate on [GitHub](https://github.com/sponsors/xbst/).
