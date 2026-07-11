@@ -47,7 +47,7 @@ y2 = 742
 | `width` | yes | — | Image width in pixels. |
 | `height` | yes | — | Image height in pixels. |
 | `title` | no | `"Pinout"` | Shown as the diagram title. |
-| `connector_dir` | no | `"./connectors"` | Folder holding the connector type `.toml` files, relative to the config. |
+| `connector_dir` | no | `"./connectors"` | Folder holding connector type `.toml` files, relative to the config. Types not found here fall back to the built-in types bundled with the package. |
 
 `width` and `height` set the coordinate space that all connector positions are measured in, so they should match the actual image dimensions.
 

@@ -7,7 +7,7 @@ pip install ./pinout_gen      # from the repository root
 pinout-gen board.toml         # writes board.pinout.html
 ```
 
-Requires Python 3.9+. Connector shapes are defined by the type library in [`connectors/`](connectors).
+Requires Python 3.9+. Connector shapes are defined by the type library in [`pinout_gen/connectors/`](pinout_gen/connectors).
 
 **Usage:** see the docs —
 [installation](../docs/pinout-gen/install.md),

@@ -2,7 +2,7 @@
 
 A connector type describes the *shape* of a physical connector — its pin pitch, body size, number of rows, and where the pin lines exit — independent of any board. Board connectors reference a type by name through their `type` field.
 
-Type definitions live in `pinout_gen/connectors/`, one `.toml` file per type. The filename is the type name: `XH-F.toml` defines the `XH-F` type. When `pinout-gen` runs, it looks for each `type` in the board's `connector_dir` (defaults to `./connectors`).
+Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file per type. The filename is the type name: `XH-F.toml` defines the `XH-F` type. When `pinout-gen` runs, it first checks the board's `connector_dir` (defaults to `./connectors` next to the board config), then falls back to the built-in types bundled with the package.
 
 ## Built-in types
 
@@ -66,7 +66,7 @@ Any field you omit falls back to a built-in default, so a minimal type only need
 
 ## Adding a new type
 
-1. Create `pinout_gen/connectors/<TYPE>.toml` with a `[connector]` and `[geometry]` table. Copy an existing type with a similar body as a starting point.
+1. Create `pinout_gen/pinout_gen/connectors/<TYPE>.toml` with a `[connector]` and `[geometry]` table. Copy an existing type with a similar body as a starting point.
 2. Reference it from a board config by setting a connector's `type = "<TYPE>"`.
 3. Regenerate the designer's JSON mirror so the type shows up in the visual designer (see below).
 

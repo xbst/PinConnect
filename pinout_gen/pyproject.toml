@@ -21,3 +21,6 @@ extension = ["markdown>=3.4"]
 
 [tool.setuptools]
 packages = ["pinout_gen"]
+
+[tool.setuptools.package-data]
+pinout_gen = ["connectors/*.toml"]

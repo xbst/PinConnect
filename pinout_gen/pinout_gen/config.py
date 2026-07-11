@@ -131,12 +131,17 @@ def load_connector_type(path: Path) -> ConnectorType:
     )
 
 
+_BUNDLED_CONNECTORS = Path(__file__).parent / "connectors"
+
+
 def load_all_connector_types(board: Board, board_path: Path) -> dict[str, ConnectorType]:
     connector_dir = (board_path.parent / board.connector_dir).resolve()
     types: dict[str, ConnectorType] = {}
     for type_name in {c.type for c in board.connectors}:
         toml_path = connector_dir / f"{type_name}.toml"
         if not toml_path.exists():
-            raise FileNotFoundError(f"Connector type '{type_name}' not found at {toml_path}")
+            toml_path = _BUNDLED_CONNECTORS / f"{type_name}.toml"
+        if not toml_path.exists():
+            raise FileNotFoundError(f"Connector type '{type_name}' not found at {connector_dir} or {_BUNDLED_CONNECTORS}")
         types[type_name] = load_connector_type(toml_path)
     return types
