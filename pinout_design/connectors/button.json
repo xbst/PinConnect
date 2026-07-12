@@ -1,0 +1,23 @@
+{
+  "name": "Button",
+  "style": "button",
+  "geometry": {
+    "pin_pitch": 5.0,
+    "padding_left": 6.2,
+    "padding_right": 6.2,
+    "height": 10.0,
+    "wall": 1.0,
+    "pin_cy": 5.0,
+    "pin_radius": 0.0,
+    "pinout_side": "bottom",
+    "line_length": 0.0,
+    "rows": 1,
+    "row2_pin_cy": 0.0,
+    "row2_pinout_side": "top",
+    "row2_line_length": 20.0,
+    "row2_padding_left": -1.0,
+    "row2_pin_pitch_y": 0.0,
+    "row2_pin_radius": -1.0,
+    "cavity_size": 0.0
+  }
+}

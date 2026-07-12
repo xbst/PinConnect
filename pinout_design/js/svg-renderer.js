@@ -80,6 +80,47 @@ function bodyPathGrid(geo, nPerRow) {
   );
 }
 
+function bodyPathButton(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow);
+  const H = geo.height;
+  const r = Math.min(1.0, Math.min(W, H) * 0.08);
+  return (
+    `M ${f1(r)},0 L ${f1(W - r)},0 A ${f1(r)},${f1(r)} 0 0 1 ${f1(W)},${f1(r)} ` +
+    `L ${f1(W)},${f1(H - r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(W - r)},${f1(H)} ` +
+    `L ${f1(r)},${f1(H)} A ${f1(r)},${f1(r)} 0 0 1 0,${f1(H - r)} ` +
+    `L 0,${f1(r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(r)},0 Z`
+  );
+}
+
+function buttonCavities(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow);
+  const H = geo.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const parts = [];
+  const fill = 'fill="var(--conn-cavity,#d0d0c8)"';
+  const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
+
+  const cr = Math.min(W, H) * 0.34;
+  parts.push(
+    `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(cr)}" ${fill} ${stk}/>`
+  );
+
+  const padW = Math.max(0.4, W * 0.016);
+  const padH = H * 0.48;
+  const padY = cy - padH / 2;
+  const padOffset = W * 0.177;
+  parts.push(
+    `<rect x="${f1(padOffset - padW / 2)}" y="${f1(padY)}" ` +
+    `width="${f1(padW)}" height="${f1(padH)}" ${fill} ${stk}/>`
+  );
+  parts.push(
+    `<rect x="${f1(W - padOffset - padW / 2)}" y="${f1(padY)}" ` +
+    `width="${f1(padW)}" height="${f1(padH)}" ${fill} ${stk}/>`
+  );
+  return parts.join("\n");
+}
+
 function bodyPathXt30(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow);
   const H = geo.height;
@@ -269,10 +310,11 @@ export function renderConnectorSVG(connector, connType) {
 
   const style = connType.style;
   let pathD;
-  if (style === "latch")     pathD = bodyPathLatch(geo, nPerRow);
-  else if (style === "grid") pathD = bodyPathGrid(geo, nPerRow);
-  else if (style === "xt30") pathD = bodyPathXt30(geo, nPerRow);
-  else                       pathD = bodyPathBox(geo, nPerRow);
+  if (style === "latch")      pathD = bodyPathLatch(geo, nPerRow);
+  else if (style === "grid")  pathD = bodyPathGrid(geo, nPerRow);
+  else if (style === "xt30")  pathD = bodyPathXt30(geo, nPerRow);
+  else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
+  else                        pathD = bodyPathBox(geo, nPerRow);
 
   parts.push(
     `<path d="${pathD}" ` +
@@ -284,6 +326,8 @@ export function renderConnectorSVG(connector, connType) {
   const w = geo.wall;
   if (style === "xt30") {
     parts.push(xt30Cavities(geo, nPerRow));
+  } else if (style === "button") {
+    parts.push(buttonCavities(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {
     const half = geo.cavity_size / 2;
     const rowCys = [geo.pin_cy];

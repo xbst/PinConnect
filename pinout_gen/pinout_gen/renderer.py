@@ -82,6 +82,46 @@ def _body_path_grid(geo: ConnectorGeometry, n_per_row: int) -> str:
     )
 
 
+def _body_path_button(geo: ConnectorGeometry, n_per_row: int) -> str:
+    W = geo.connector_width(n_per_row)
+    H = geo.height
+    r = min(1.0, min(W, H) * 0.08)
+    return (
+        f"M {r:.1f},0 L {W-r:.1f},0 A {r:.1f},{r:.1f} 0 0 1 {W:.1f},{r:.1f} "
+        f"L {W:.1f},{H-r:.1f} A {r:.1f},{r:.1f} 0 0 1 {W-r:.1f},{H:.1f} "
+        f"L {r:.1f},{H:.1f} A {r:.1f},{r:.1f} 0 0 1 0,{H-r:.1f} "
+        f"L 0,{r:.1f} A {r:.1f},{r:.1f} 0 0 1 {r:.1f},0 Z"
+    )
+
+
+def _button_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
+    W = geo.connector_width(n_per_row)
+    H = geo.height
+    cx, cy = W / 2, H / 2
+    parts: list[str] = []
+    fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+
+    cr = min(W, H) * 0.34
+    parts.append(
+        f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{cr:.1f}" {fill} {stk}/>'
+    )
+
+    pad_w = max(0.4, W * 0.016)
+    pad_h = H * 0.48
+    pad_y = cy - pad_h / 2
+    pad_offset = W * 0.177
+    parts.append(
+        f'<rect x="{pad_offset - pad_w / 2:.1f}" y="{pad_y:.1f}" '
+        f'width="{pad_w:.1f}" height="{pad_h:.1f}" {fill} {stk}/>'
+    )
+    parts.append(
+        f'<rect x="{W - pad_offset - pad_w / 2:.1f}" y="{pad_y:.1f}" '
+        f'width="{pad_w:.1f}" height="{pad_h:.1f}" {fill} {stk}/>'
+    )
+    return '\n'.join(parts)
+
+
 def _body_path_xt30(geo: ConnectorGeometry, n_per_row: int) -> str:
     """XT30(2+2): rectangular body with centred guide tabs on left & right."""
     W = geo.connector_width(n_per_row)
@@ -275,6 +315,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_grid(geo, n_per_row)
     elif style == "xt30":
         path_d = _body_path_xt30(geo, n_per_row)
+    elif style == "button":
+        path_d = _body_path_button(geo, n_per_row)
     else:
         path_d = _body_path_box(geo, n_per_row)
 
@@ -288,6 +330,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     w = geo.wall
     if style == "xt30":
         parts.append(_xt30_cavities(geo, n_per_row))
+    elif style == "button":
+        parts.append(_button_cavities(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
         half = geo.cavity_size / 2
         row_cys = [geo.pin_cy]

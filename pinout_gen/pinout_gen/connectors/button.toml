@@ -1,0 +1,14 @@
+[connector]
+name = "Button"
+style = "button"
+
+[geometry]
+pin_pitch = 5.0
+padding_left = 6.2
+padding_right = 6.2
+height = 10.0
+wall = 1.0
+pin_cy = 5.0
+pin_radius = 0.0
+pinout_side = "bottom"
+line_length = 0.0
