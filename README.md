@@ -49,6 +49,21 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 - `pinout_embed/`: the Markdown embedding extension.
 - `docs/`: documentation.
 
+## Todo
+
+The project works and generates great looking pinouts already. Below are changes/features not implemented yet, planned to be implemented soon:
+
+- Add female Sherlock connectors
+- Add 2.54, 2.00 and 1.27 pitch pin headers
+- Add slide switch as a "connector" for highlighting its positions
+- Add BOOT/RESET button highlighting
+- Add option to staircase pin names when pinout lines go to top/bottom to avoid overlaps to `pinout-gen` (there already is a auto-scale feature implemented for this, but this will work better for long pin names)
+- Add theming to `pinout-gen` 
+- Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
+- Improve how `pinout-design` handles undo/redo for position adjustments (add them as a state)
+- Write a more detailed doc with screenshots for `pinout-design`
+- Add a screenshot of the output to this document
+
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE).
