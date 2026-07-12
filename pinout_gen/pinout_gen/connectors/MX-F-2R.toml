@@ -4,14 +4,14 @@ style = "grid"
 
 [geometry]
 pin_pitch = 12.0
-height = 33.6
+height = 37.6
 wall = 2.5
-pin_cy = 23.9
+pin_cy = 25.9
 pin_radius = 1.8
 pinout_side = "bottom"
 line_length = 15.0
 rows = 2
-row2_pin_cy = 11.7
+row2_pin_cy = 13.7
 row2_pinout_side = "top"
 row2_line_length = 15.0
 cavity_size = 10.5
