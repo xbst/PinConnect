@@ -1,0 +1,14 @@
+[connector]
+name = "2.54mm Header"
+style = "box"
+
+[geometry]
+pin_pitch = 10.0
+padding_left = 6.0
+padding_right = 6.0
+height = 10.0
+wall = 1.5
+pin_cy = 5.0
+pin_radius = 2.0
+pinout_side = "bottom"
+line_length = 12.0

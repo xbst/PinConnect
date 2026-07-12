@@ -54,7 +54,6 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 The project works and generates great looking pinouts already. Below are changes/features not implemented yet, planned to be implemented soon:
 
 - Add female Sherlock connectors
-- Add 2.54, 2.00 and 1.27 pitch pin headers
 - Add slide switch as a "connector" for highlighting its positions
 - Add BOOT/RESET button highlighting
 - Add option to staircase pin names when pinout lines go to top/bottom to avoid overlaps to `pinout-gen` (there already is a auto-scale feature implemented for this, but this will work better for long pin names)

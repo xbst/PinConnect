@@ -1,0 +1,14 @@
+[connector]
+name = "1.27mm Header"
+style = "box"
+
+[geometry]
+pin_pitch = 5.0
+padding_left = 3.5
+padding_right = 3.5
+height = 6.0
+wall = 1.0
+pin_cy = 3.0
+pin_radius = 1.0
+pinout_side = "bottom"
+line_length = 8.0
