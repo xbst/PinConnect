@@ -395,22 +395,35 @@ export function renderConnectorSVG(connector, connType) {
   let maxName = 3;
   for (const p of pins) { if (p.name.length > maxName) maxName = p.name.length; }
   const charW = 0.6;
-  let fontSize = 6.0;
-  if (nPerRow > 1 && maxName > 0) {
-    fontSize = Math.min(fontSize, geo.pin_pitch * 0.9 / (maxName * charW));
-  }
-  fontSize = Math.round(Math.max(3.5, fontSize) * 10) / 10;
+  const fontSize = 6.0;
   const textH = fontSize + 3;
   const maxTextW = maxName * fontSize * charW + 4;
 
-  const effSides = new Set([r1Eff]);
-  if (r2Global.length) effSides.add(r2Eff);
-  const maxLine = Math.max(r1Line, r2Line);
+  const sideCounts = Object.fromEntries(sides.map((side) => [side, 0]));
+  const labelSteps = new Map();
+  const labelStyle = connector.label_style || "staggered";
+  for (let i = 0; i < n; i++) {
+    const [, rowNum] = pinMap.get(i);
+    const eff = rowNum === 2 ? r2Eff : r1Eff;
+    const isHoriz = eff === "bottom" || eff === "top";
+    if (!isHoriz || labelStyle === "flat") {
+      labelSteps.set(i, 0);
+    } else if (labelStyle === "staggered") {
+      labelSteps.set(i, sideCounts[eff] % 2);
+    } else {
+      labelSteps.set(i, sideCounts[eff]);
+    }
+    sideCounts[eff] += 1;
+  }
 
   const pad = {};
   for (const s of sides) pad[s] = margin;
-  for (const s of effSides) {
-    pad[s] = maxLine + ((s === "bottom" || s === "top") ? textH : maxTextW);
+  for (let i = 0; i < n; i++) {
+    const [, rowNum] = pinMap.get(i);
+    const eff = rowNum === 2 ? r2Eff : r1Eff;
+    const ll = rowNum === 2 ? r2Line : r1Line;
+    const labelExtent = (eff === "bottom" || eff === "top") ? textH : maxTextW;
+    pad[eff] = Math.max(pad[eff], ll + labelSteps.get(i) * textH + labelExtent);
   }
 
   const svgW = pad["left"] + rotW + pad["right"];
@@ -519,13 +532,14 @@ export function renderConnectorSVG(connector, connType) {
     const [, rowNum] = pinMap.get(i);
     const eff = rowNum === 2 ? r2Eff : r1Eff;
     const ll = rowNum === 2 ? r2Line : r1Line;
+    const stairOffset = labelSteps.get(i) * textH;
     const [rpx, rpy] = pinPos(i);
     const col = pins[i].color;
     let lx2, ly2;
-    if (eff === "bottom")     { lx2 = rpx; ly2 = bodyBot + ll; }
-    else if (eff === "top")   { lx2 = rpx; ly2 = bodyTop - ll; }
-    else if (eff === "right") { lx2 = bodyRgt + ll; ly2 = rpy; }
-    else                      { lx2 = bodyLft - ll; ly2 = rpy; }
+    if (eff === "bottom")     { lx2 = rpx; ly2 = bodyBot + ll + stairOffset; }
+    else if (eff === "top")   { lx2 = rpx; ly2 = bodyTop - ll - stairOffset; }
+    else if (eff === "right") { lx2 = bodyRgt + ll + stairOffset; ly2 = rpy; }
+    else                      { lx2 = bodyLft - ll - stairOffset; ly2 = rpy; }
     parts.push(
       `<line x1="${f1(rpx)}" y1="${f1(rpy)}" ` +
       `x2="${f1(lx2)}" y2="${f1(ly2)}" ` +
@@ -538,6 +552,7 @@ export function renderConnectorSVG(connector, connType) {
     const [, rowNum] = pinMap.get(i);
     const eff = rowNum === 2 ? r2Eff : r1Eff;
     const ll = rowNum === 2 ? r2Line : r1Line;
+    const stairOffset = labelSteps.get(i) * textH;
     const [rpx, rpy] = pinPos(i);
     const col = pins[i].color;
     const name = escapeHtml(pins[i].name);
@@ -551,13 +566,13 @@ export function renderConnectorSVG(connector, connType) {
 
     let tx, ty, ta, tb;
     if (eff === "bottom") {
-      tx = rpx; ty = bodyBot + ll + textH - 2; ta = "middle"; tb = "auto";
+      tx = rpx; ty = bodyBot + ll + stairOffset + textH - 2; ta = "middle"; tb = "auto";
     } else if (eff === "top") {
-      tx = rpx; ty = bodyTop - ll - 3; ta = "middle"; tb = "auto";
+      tx = rpx; ty = bodyTop - ll - stairOffset - 3; ta = "middle"; tb = "auto";
     } else if (eff === "right") {
-      tx = bodyRgt + ll + 3; ty = rpy; ta = "start"; tb = "central";
+      tx = bodyRgt + ll + stairOffset + 3; ty = rpy; ta = "start"; tb = "central";
     } else {
-      tx = bodyLft - ll - 3; ty = rpy; ta = "end"; tb = "central";
+      tx = bodyLft - ll - stairOffset - 3; ty = rpy; ta = "end"; tb = "central";
     }
 
     parts.push(

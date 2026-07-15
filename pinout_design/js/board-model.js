@@ -66,6 +66,7 @@ export class Connector {
     this.y2 = data.y2 ?? 0;
     this.orientation = data.orientation ?? 0;
     this.description = data.description ?? "";
+    this.label_style = data.label_style ?? "staggered";
   }
 }
 
