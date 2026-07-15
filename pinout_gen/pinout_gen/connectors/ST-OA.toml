@@ -1,5 +1,5 @@
 [connector]
-name = "OA (Open Air)"
+name = "ST-OA (Open Air)"
 style = "open-air"
 
 [geometry]

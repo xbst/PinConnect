@@ -15,7 +15,7 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `HDR-254` | header-female | 2.54 mm female pin header |
 | `ST-254` | screw-terminal | 2.54 mm pitch screw terminal |
 | `ST-508` | screw-terminal | 5.08 mm pitch screw terminal |
-| `OA` | open-air | 5.08 mm open-air screw terminal strip |
+| `ST-OA` | open-air | 5.08 mm open-air screw terminal strip |
 | `MX-F-1R` | grid | Micro-Fit female, single row |
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
