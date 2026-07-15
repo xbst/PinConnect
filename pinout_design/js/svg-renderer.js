@@ -200,6 +200,66 @@ function screwTerminalCavities(geo, nPerRow) {
   return parts.join("\n");
 }
 
+function bodyPathOpenAir(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  return `M 0,0 L ${f1(W)},0 L ${f1(W)},${f1(H)} L 0,${f1(H)} Z`;
+}
+
+function openAirDetails(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height, p = geo.pin_pitch;
+  const screwR = Math.min(geo.cavity_size > 0 ? geo.cavity_size / 2 : p * 0.40, p * 0.42);
+  const frameFill = 'fill="var(--conn-body,#e8e8e0)"';
+  const metalFill = 'fill="var(--conn-cavity,#d0d0c8)"';
+  const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
+  const parts = [];
+
+  const railH = p * 0.11, sideW = p * 0.08;
+  parts.push(`<rect x="0" y="0" width="${f1(W)}" height="${f1(railH)}" ${frameFill} ${stk}/>`);
+  parts.push(`<rect x="0" y="${f1(H - railH)}" width="${f1(W)}" height="${f1(railH)}" ${frameFill} ${stk}/>`);
+  parts.push(`<rect x="0" y="0" width="${f1(sideW)}" height="${f1(H)}" ${frameFill} ${stk}/>`);
+  parts.push(`<rect x="${f1(W - sideW)}" y="0" width="${f1(sideW)}" height="${f1(H)}" ${frameFill} ${stk}/>`);
+
+  for (let slot = 1; slot < nPerRow; slot++) {
+    const x = geo.padding_left + (slot - 0.5) * p;
+    parts.push(
+      `<rect x="${f1(x - sideW / 2)}" y="0" width="${f1(sideW)}" height="${f1(H)}" ${frameFill} ${stk}/>`
+    );
+  }
+
+  const cageW = p * 0.82, cageY = p * 0.23;
+  const cageH = H - 2 * cageY;
+  const clampW = p * 0.64, clampH = p * 0.10;
+  for (const px of geo.pinCentersX(nPerRow)) {
+    parts.push(
+      `<rect x="${f1(px - cageW / 2)}" y="${f1(cageY)}" width="${f1(cageW)}" ` +
+      `height="${f1(cageH)}" rx="${f1(p * 0.03)}" ${metalFill} ${stk}/>`
+    );
+    parts.push(
+      `<rect x="${f1(px - clampW / 2)}" y="${f1(p * 0.20)}" width="${f1(clampW)}" ` +
+      `height="${f1(clampH)}" ${frameFill} ${stk}/>`
+    );
+    parts.push(
+      `<rect x="${f1(px - clampW / 2)}" y="${f1(H - p * 0.30)}" width="${f1(clampW)}" ` +
+      `height="${f1(clampH)}" ${frameFill} ${stk}/>`
+    );
+
+    parts.push(`<circle cx="${f1(px)}" cy="${f1(geo.pin_cy)}" r="${f1(screwR)}" ${frameFill} ${stk}/>`);
+    parts.push(
+      `<circle cx="${f1(px)}" cy="${f1(geo.pin_cy)}" r="${f1(screwR * 0.73)}" ${metalFill} ${stk}/>`
+    );
+    const arm = screwR * 0.60;
+    parts.push(
+      `<path d="M ${f1(px - arm)},${f1(geo.pin_cy)} L ${f1(px + arm)},${f1(geo.pin_cy)} ` +
+      `M ${f1(px)},${f1(geo.pin_cy - arm)} L ${f1(px)},${f1(geo.pin_cy + arm)}" ` +
+      `stroke="var(--conn-stroke,#555)" stroke-width="${f1(p * 0.11)}" stroke-linecap="round"/>`
+    );
+    parts.push(
+      `<circle cx="${f1(px)}" cy="${f1(geo.pin_cy)}" r="${f1(p * 0.09)}" ${frameFill} ${stk}/>`
+    );
+  }
+  return parts.join("\n");
+}
+
 function buttonCavities(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow);
   const H = geo.height;
@@ -423,6 +483,7 @@ export function renderConnectorSVG(connector, connType) {
   else if (style === "xt30")  pathD = bodyPathXt30(geo, nPerRow);
   else if (style === "header-female") pathD = bodyPathHeaderFemale(geo, nPerRow);
   else if (style === "screw-terminal") pathD = bodyPathScrewTerminal(geo, nPerRow);
+  else if (style === "open-air") pathD = bodyPathOpenAir(geo, nPerRow);
   else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
   else                        pathD = bodyPathBox(geo, nPerRow);
 
@@ -440,6 +501,8 @@ export function renderConnectorSVG(connector, connType) {
     parts.push(headerFemaleCavities(geo, nPerRow));
   } else if (style === "screw-terminal") {
     parts.push(screwTerminalCavities(geo, nPerRow));
+  } else if (style === "open-air") {
+    parts.push(openAirDetails(geo, nPerRow));
   } else if (style === "button") {
     parts.push(buttonCavities(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {

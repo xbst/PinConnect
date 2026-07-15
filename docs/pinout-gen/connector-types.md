@@ -15,6 +15,7 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `HDR-254` | header-female | 2.54 mm female pin header |
 | `ST-254` | screw-terminal | 2.54 mm pitch screw terminal |
 | `ST-508` | screw-terminal | 5.08 mm pitch screw terminal |
+| `OA` | open-air | 5.08 mm open-air screw terminal strip |
 | `MX-F-1R` | grid | Micro-Fit female, single row |
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
@@ -56,6 +57,7 @@ cavity_size = 10.5
   - `xt30` — the XT30 power-connector body.
   - `header-female` — a pitch-scaled female pin-header housing with square cavities and keyed joints.
   - `screw-terminal` — a screw-terminal housing with circular screw heads and side wire-entry slots.
+  - `open-air` — an exposed screw-terminal strip with individual metal cages and cross-drive screws.
 
 ### `[geometry]`
 

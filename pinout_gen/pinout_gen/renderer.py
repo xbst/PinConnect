@@ -207,6 +207,69 @@ def _screw_terminal_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     return '\n'.join(parts)
 
 
+def _body_path_open_air(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Rectangular outer frame for an open-air screw terminal strip."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    return f"M 0,0 L {W:.1f},0 L {W:.1f},{H:.1f} L 0,{H:.1f} Z"
+
+
+def _open_air_details(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Open metal cages, frame rails, and cross-drive screw heads."""
+    W, H, p = geo.connector_width(n_per_row), geo.height, geo.pin_pitch
+    screw_r = min(geo.cavity_size / 2 if geo.cavity_size > 0 else p * 0.40, p * 0.42)
+    frame_fill = 'fill="var(--conn-body,#e8e8e0)"'
+    metal_fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+    parts: list[str] = []
+
+    rail_h, side_w = p * 0.11, p * 0.08
+    parts.append(f'<rect x="0" y="0" width="{W:.1f}" height="{rail_h:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="0" y="{H - rail_h:.1f}" width="{W:.1f}" height="{rail_h:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="0" y="0" width="{side_w:.1f}" height="{H:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="{W - side_w:.1f}" y="0" width="{side_w:.1f}" height="{H:.1f}" {frame_fill} {stk}/>')
+
+    for slot in range(1, n_per_row):
+        x = geo.padding_left + (slot - 0.5) * p
+        parts.append(
+            f'<rect x="{x - side_w / 2:.1f}" y="0" width="{side_w:.1f}" height="{H:.1f}" '
+            f'{frame_fill} {stk}/>'
+        )
+
+    cage_w, cage_y = p * 0.82, p * 0.23
+    cage_h = H - 2 * cage_y
+    clamp_w, clamp_h = p * 0.64, p * 0.10
+    for px in geo.pin_centers_x(n_per_row):
+        parts.append(
+            f'<rect x="{px - cage_w / 2:.1f}" y="{cage_y:.1f}" width="{cage_w:.1f}" '
+            f'height="{cage_h:.1f}" rx="{p * 0.03:.1f}" {metal_fill} {stk}/>'
+        )
+        parts.append(
+            f'<rect x="{px - clamp_w / 2:.1f}" y="{p * 0.20:.1f}" width="{clamp_w:.1f}" '
+            f'height="{clamp_h:.1f}" {frame_fill} {stk}/>'
+        )
+        parts.append(
+            f'<rect x="{px - clamp_w / 2:.1f}" y="{H - p * 0.30:.1f}" width="{clamp_w:.1f}" '
+            f'height="{clamp_h:.1f}" {frame_fill} {stk}/>'
+        )
+
+        parts.append(f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r:.1f}" {frame_fill} {stk}/>')
+        parts.append(
+            f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r * 0.73:.1f}" '
+            f'{metal_fill} {stk}/>'
+        )
+        arm = screw_r * 0.60
+        parts.append(
+            f'<path d="M {px - arm:.1f},{geo.pin_cy:.1f} L {px + arm:.1f},{geo.pin_cy:.1f} '
+            f'M {px:.1f},{geo.pin_cy - arm:.1f} L {px:.1f},{geo.pin_cy + arm:.1f}" '
+            f'stroke="var(--conn-stroke,#555)" stroke-width="{p * 0.11:.1f}" stroke-linecap="round"/>'
+        )
+        parts.append(
+            f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{p * 0.09:.1f}" '
+            f'{frame_fill} {stk}/>'
+        )
+    return '\n'.join(parts)
+
+
 def _button_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     W = geo.connector_width(n_per_row)
     H = geo.height
@@ -432,6 +495,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_header_female(geo, n_per_row)
     elif style == "screw-terminal":
         path_d = _body_path_screw_terminal(geo, n_per_row)
+    elif style == "open-air":
+        path_d = _body_path_open_air(geo, n_per_row)
     elif style == "button":
         path_d = _body_path_button(geo, n_per_row)
     else:
@@ -451,6 +516,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         parts.append(_header_female_cavities(geo, n_per_row))
     elif style == "screw-terminal":
         parts.append(_screw_terminal_cavities(geo, n_per_row))
+    elif style == "open-air":
+        parts.append(_open_air_details(geo, n_per_row))
     elif style == "button":
         parts.append(_button_cavities(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
