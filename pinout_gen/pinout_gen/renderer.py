@@ -94,6 +94,182 @@ def _body_path_button(geo: ConnectorGeometry, n_per_row: int) -> str:
     )
 
 
+def _body_path_header_female(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Female header housing with pitch-scaled chamfers and keyed joints."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    chamfer = min(geo.pin_pitch * 0.10, W / 4, H / 4)
+    notch = min(geo.pin_pitch * 0.20, H / 3)
+    notch_half_width = geo.pin_pitch * 0.10
+    points: list[tuple[float, float]] = [(0, chamfer), (chamfer, 0)]
+    for slot in range(1, n_per_row):
+        x = geo.padding_left + (slot - 0.5) * geo.pin_pitch
+        points.extend([(x - notch_half_width, 0), (x, notch), (x + notch_half_width, 0)])
+    points.extend([(W - chamfer, 0), (W, chamfer), (W, H - chamfer), (W - chamfer, H)])
+    for slot in range(n_per_row - 1, 0, -1):
+        x = geo.padding_left + (slot - 0.5) * geo.pin_pitch
+        points.extend([(x + notch_half_width, H), (x, H - notch), (x - notch_half_width, H)])
+    points.extend([(chamfer, H), (0, H - chamfer)])
+    d = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
+    for x, y in points[1:]:
+        d += f" L {x:.1f},{y:.1f}"
+    return d + " Z"
+
+
+def _header_female_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
+    cavity = geo.cavity_size if geo.cavity_size > 0 else min(geo.pin_pitch * 0.25, geo.height * 0.25)
+    half = cavity / 2
+    fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+    return '\n'.join(
+        f'<rect x="{px - half:.1f}" y="{geo.pin_cy - half:.1f}" '
+        f'width="{cavity:.1f}" height="{cavity:.1f}" {fill} {stk}/>'
+        for px in geo.pin_centers_x(n_per_row)
+    )
+
+
+def _body_path_screw_terminal(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Compact screw-terminal housing with subtly radiused corners."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    r = min(geo.pin_pitch * 0.06, geo.wall, W / 4, H / 4)
+    return (
+        f"M {r:.1f},0 L {W-r:.1f},0 A {r:.1f},{r:.1f} 0 0 1 {W:.1f},{r:.1f} "
+        f"L {W:.1f},{H-r:.1f} A {r:.1f},{r:.1f} 0 0 1 {W-r:.1f},{H:.1f} "
+        f"L {r:.1f},{H:.1f} A {r:.1f},{r:.1f} 0 0 1 0,{H-r:.1f} "
+        f"L 0,{r:.1f} A {r:.1f},{r:.1f} 0 0 1 {r:.1f},0 Z"
+    )
+
+
+def _screw_terminal_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Moulded sections, recessed slotted screws, and front wire entries."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    screw_r = min((geo.cavity_size / 2 if geo.cavity_size > 0 else geo.pin_pitch * 0.40), geo.pin_pitch * 0.44)
+    fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+    parts: list[str] = []
+    edge = geo.pin_pitch * 0.06
+    rail_inset = geo.pin_pitch * 0.08
+    rear_depth = geo.pin_pitch * 0.64
+    front_depth = geo.pin_pitch * 0.61
+
+    # Broad rear/front moulded bands and cell dividers reproduce the modular
+    # plastic housing seen from above.
+    parts.append(
+        f'<rect x="{edge:.1f}" y="{edge:.1f}" width="{W - 2 * edge:.1f}" '
+        f'height="{rear_depth - edge:.1f}" '
+        f'fill="var(--conn-stroke,#555)" fill-opacity="0.10" stroke="none"/>'
+    )
+    parts.append(
+        f'<rect x="{edge:.1f}" y="{H - front_depth:.1f}" width="{W - 2 * edge:.1f}" '
+        f'height="{front_depth - edge:.1f}" '
+        f'fill="var(--conn-stroke,#555)" fill-opacity="0.08" stroke="none"/>'
+    )
+    parts.append(
+        f'<path d="M {rail_inset:.1f},{rear_depth:.1f} L {rail_inset:.1f},{rail_inset:.1f} '
+        f'L {W - rail_inset:.1f},{rail_inset:.1f} L {W - rail_inset:.1f},{rear_depth:.1f}" '
+        f'fill="none" stroke="var(--conn-stroke,#555)" stroke-width="0.7" stroke-opacity="0.65"/>'
+    )
+    for slot in range(1, n_per_row):
+        x = geo.padding_left + (slot - 0.5) * geo.pin_pitch
+        parts.append(
+            f'<line x1="{x:.1f}" y1="{geo.pin_pitch * 0.10:.1f}" '
+            f'x2="{x:.1f}" y2="{H - geo.pin_pitch * 0.10:.1f}" '
+            f'stroke="var(--conn-stroke,#555)" stroke-width="0.6" stroke-opacity="0.55"/>'
+        )
+
+    for px in geo.pin_centers_x(n_per_row):
+        # Recess, metal screw head, and screwdriver slot.
+        parts.append(
+            f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r + geo.pin_pitch * 0.07:.1f}" '
+            f'fill="var(--conn-body,#e8e8e0)" {stk}/>'
+        )
+        parts.append(f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r:.1f}" {fill} {stk}/>')
+        parts.append(
+            f'<line x1="{px - screw_r * 0.62:.1f}" y1="{geo.pin_cy:.1f}" '
+            f'x2="{px + screw_r * 0.62:.1f}" y2="{geo.pin_cy:.1f}" '
+            f'stroke="var(--conn-stroke,#555)" stroke-width="1.4" stroke-linecap="round"/>'
+        )
+
+        # Dark wire mouth with the metal clamp visible inside it.
+        mouth_w = geo.pin_pitch * 0.55
+        mouth_h = geo.pin_pitch * 0.21
+        mouth_x = px - mouth_w / 2
+        mouth_y = H - mouth_h
+        parts.append(
+            f'<rect x="{mouth_x:.1f}" y="{mouth_y:.1f}" width="{mouth_w:.1f}" height="{mouth_h:.1f}" '
+            f'fill="var(--conn-stroke,#555)" stroke="var(--conn-stroke,#555)" stroke-width="0.7"/>'
+        )
+        clamp_w = min(geo.pin_pitch * 0.39 * geo.mating_pin_scale, mouth_w * 0.88)
+        clamp_h = min(geo.pin_pitch * 0.10 * geo.mating_pin_scale, mouth_h * 0.78)
+        parts.append(
+            f'<rect x="{px - clamp_w / 2:.1f}" y="{mouth_y + geo.pin_pitch * 0.01:.1f}" '
+            f'width="{clamp_w:.1f}" height="{clamp_h:.1f}" {fill}/>'
+        )
+    return '\n'.join(parts)
+
+
+def _body_path_open_air(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Rectangular outer frame for an open-air screw terminal strip."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    return f"M 0,0 L {W:.1f},0 L {W:.1f},{H:.1f} L 0,{H:.1f} Z"
+
+
+def _open_air_details(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Open metal cages, frame rails, and cross-drive screw heads."""
+    W, H, p = geo.connector_width(n_per_row), geo.height, geo.pin_pitch
+    screw_r = min(geo.cavity_size / 2 if geo.cavity_size > 0 else p * 0.40, p * 0.42)
+    frame_fill = 'fill="var(--conn-body,#e8e8e0)"'
+    metal_fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+    parts: list[str] = []
+
+    rail_h, side_w = p * 0.11, p * 0.08
+    parts.append(f'<rect x="0" y="0" width="{W:.1f}" height="{rail_h:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="0" y="{H - rail_h:.1f}" width="{W:.1f}" height="{rail_h:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="0" y="0" width="{side_w:.1f}" height="{H:.1f}" {frame_fill} {stk}/>')
+    parts.append(f'<rect x="{W - side_w:.1f}" y="0" width="{side_w:.1f}" height="{H:.1f}" {frame_fill} {stk}/>')
+
+    for slot in range(1, n_per_row):
+        x = geo.padding_left + (slot - 0.5) * p
+        parts.append(
+            f'<rect x="{x - side_w / 2:.1f}" y="0" width="{side_w:.1f}" height="{H:.1f}" '
+            f'{frame_fill} {stk}/>'
+        )
+
+    cage_w, cage_y = p * 0.82, p * 0.23
+    cage_h = H - 2 * cage_y
+    clamp_w, clamp_h = p * 0.64, p * 0.10
+    for px in geo.pin_centers_x(n_per_row):
+        parts.append(
+            f'<rect x="{px - cage_w / 2:.1f}" y="{cage_y:.1f}" width="{cage_w:.1f}" '
+            f'height="{cage_h:.1f}" rx="{p * 0.03:.1f}" {metal_fill} {stk}/>'
+        )
+        parts.append(
+            f'<rect x="{px - clamp_w / 2:.1f}" y="{p * 0.20:.1f}" width="{clamp_w:.1f}" '
+            f'height="{clamp_h:.1f}" {frame_fill} {stk}/>'
+        )
+        parts.append(
+            f'<rect x="{px - clamp_w / 2:.1f}" y="{H - p * 0.30:.1f}" width="{clamp_w:.1f}" '
+            f'height="{clamp_h:.1f}" {frame_fill} {stk}/>'
+        )
+
+        parts.append(f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r:.1f}" {frame_fill} {stk}/>')
+        parts.append(
+            f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{screw_r * 0.73:.1f}" '
+            f'{metal_fill} {stk}/>'
+        )
+        arm = screw_r * 0.60
+        parts.append(
+            f'<path d="M {px - arm:.1f},{geo.pin_cy:.1f} L {px + arm:.1f},{geo.pin_cy:.1f} '
+            f'M {px:.1f},{geo.pin_cy - arm:.1f} L {px:.1f},{geo.pin_cy + arm:.1f}" '
+            f'stroke="var(--conn-stroke,#555)" stroke-width="{p * 0.11:.1f}" stroke-linecap="round"/>'
+        )
+        parts.append(
+            f'<circle cx="{px:.1f}" cy="{geo.pin_cy:.1f}" r="{p * 0.09:.1f}" '
+            f'{frame_fill} {stk}/>'
+        )
+    return '\n'.join(parts)
+
+
 def _button_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     W = geo.connector_width(n_per_row)
     H = geo.height
@@ -295,25 +471,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         f'style="font-family:Roboto,sans-serif">'
     )
 
-    # ── 1. Lines (lowest z) ──
-    for i in range(n):
-        row_num = pin_map[i][1]
-        eff = r2_eff if row_num == 2 else r1_eff
-        ll = r2_line if row_num == 2 else r1_line
-        stair_offset = label_steps[i] * text_h
-        rpx, rpy = _pin_pos(i)
-        col = pins[i].color
-        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll + stair_offset
-        elif eff == "top":    lx2, ly2 = rpx, body_top - ll - stair_offset
-        elif eff == "right":  lx2, ly2 = body_rgt + ll + stair_offset, rpy
-        else:                 lx2, ly2 = body_lft - ll - stair_offset, rpy
-        parts.append(
-            f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
-            f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
-            f'stroke="{col}" stroke-width="1" stroke-opacity="0.65"/>'
-        )
-
-    # ── 2. Body group (rotated) ──
+    # ── 1. Body group (rotated) ──
     parts.append(
         f'<g transform="translate({conn_cx:.1f},{conn_cy:.1f}) '
         f'rotate({ori}) translate({-cx0:.1f},{-cy0:.1f})">'
@@ -326,6 +484,12 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_grid(geo, n_per_row)
     elif style == "xt30":
         path_d = _body_path_xt30(geo, n_per_row)
+    elif style == "header-female":
+        path_d = _body_path_header_female(geo, n_per_row)
+    elif style == "screw-terminal":
+        path_d = _body_path_screw_terminal(geo, n_per_row)
+    elif style == "open-air":
+        path_d = _body_path_open_air(geo, n_per_row)
     elif style == "button":
         path_d = _body_path_button(geo, n_per_row)
     else:
@@ -341,6 +505,12 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     w = geo.wall
     if style == "xt30":
         parts.append(_xt30_cavities(geo, n_per_row))
+    elif style == "header-female":
+        parts.append(_header_female_cavities(geo, n_per_row))
+    elif style == "screw-terminal":
+        parts.append(_screw_terminal_cavities(geo, n_per_row))
+    elif style == "open-air":
+        parts.append(_open_air_details(geo, n_per_row))
     elif style == "button":
         parts.append(_button_cavities(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
@@ -368,6 +538,24 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
 
     parts.append('</g>')
 
+    # ── 2. Colored wires (over the connector body) ──
+    for i in range(n):
+        row_num = pin_map[i][1]
+        eff = r2_eff if row_num == 2 else r1_eff
+        ll = r2_line if row_num == 2 else r1_line
+        stair_offset = label_steps[i] * text_h
+        rpx, rpy = _pin_pos(i)
+        col = pins[i].color
+        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll + stair_offset
+        elif eff == "top":    lx2, ly2 = rpx, body_top - ll - stair_offset
+        elif eff == "right":  lx2, ly2 = body_rgt + ll + stair_offset, rpy
+        else:                 lx2, ly2 = body_lft - ll - stair_offset, rpy
+        parts.append(
+            f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
+            f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
+            f'stroke="{col}" stroke-width="1" stroke-opacity="0.65"/>'
+        )
+
     # ── 3. Pin circles + labels (top z) ──
     for i in range(n):
         row_num = pin_map[i][1]
@@ -379,9 +567,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         name = html.escape(pins[i].name)
 
         pr = geo.row2_pin_radius if (row_num == 2 and geo.row2_pin_radius >= 0) else geo.pin_radius
+        marker_stroke_w = min(0.9, max(0.3, pr * 0.5))
         parts.append(
             f'<circle cx="{rpx:.1f}" cy="{rpy:.1f}" r="{pr:.1f}" '
-            f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="0.9"/>'
+            f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="{marker_stroke_w:.1f}"/>'
         )
 
         if eff == "bottom":

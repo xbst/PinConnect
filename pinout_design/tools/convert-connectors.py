@@ -12,28 +12,31 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent / "connectors"
 
 def connector_type_to_dict(ct):
     geo = ct.geometry
+    geometry = {
+        "pin_pitch": geo.pin_pitch,
+        "padding_left": geo.padding_left,
+        "padding_right": geo.padding_right,
+        "height": geo.height,
+        "wall": geo.wall,
+        "pin_cy": geo.pin_cy,
+        "pin_radius": geo.pin_radius,
+        "pinout_side": geo.pinout_side,
+        "line_length": geo.line_length,
+        "rows": geo.rows,
+        "row2_pin_cy": geo.row2_pin_cy,
+        "row2_pinout_side": geo.row2_pinout_side,
+        "row2_line_length": geo.row2_line_length,
+        "row2_padding_left": geo.row2_padding_left,
+        "row2_pin_pitch_y": geo.row2_pin_pitch_y,
+        "row2_pin_radius": geo.row2_pin_radius,
+        "cavity_size": geo.cavity_size,
+    }
+    if geo.mating_pin_scale != 1.0:
+        geometry["mating_pin_scale"] = geo.mating_pin_scale
     return {
         "name": ct.name,
         "style": ct.style,
-        "geometry": {
-            "pin_pitch": geo.pin_pitch,
-            "padding_left": geo.padding_left,
-            "padding_right": geo.padding_right,
-            "height": geo.height,
-            "wall": geo.wall,
-            "pin_cy": geo.pin_cy,
-            "pin_radius": geo.pin_radius,
-            "pinout_side": geo.pinout_side,
-            "line_length": geo.line_length,
-            "rows": geo.rows,
-            "row2_pin_cy": geo.row2_pin_cy,
-            "row2_pinout_side": geo.row2_pinout_side,
-            "row2_line_length": geo.row2_line_length,
-            "row2_padding_left": geo.row2_padding_left,
-            "row2_pin_pitch_y": geo.row2_pin_pitch_y,
-            "row2_pin_radius": geo.row2_pin_radius,
-            "cavity_size": geo.cavity_size,
-        },
+        "geometry": geometry,
     }
 
 

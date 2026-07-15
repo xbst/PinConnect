@@ -35,6 +35,7 @@ class ConnectorGeometry:
     row2_pin_pitch_y: float = 0.0
     row2_pin_radius: float = -1.0
     cavity_size: float = 0.0
+    mating_pin_scale: float = 1.0
 
     def connector_width(self, n_pins: int) -> float:
         if n_pins < 1:
