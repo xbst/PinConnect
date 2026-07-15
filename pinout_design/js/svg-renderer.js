@@ -451,26 +451,7 @@ export function renderConnectorSVG(connector, connType) {
     `style="font-family:Roboto,sans-serif">`
   );
 
-  // 1. Lines (lowest z)
-  for (let i = 0; i < n; i++) {
-    const [, rowNum] = pinMap.get(i);
-    const eff = rowNum === 2 ? r2Eff : r1Eff;
-    const ll = rowNum === 2 ? r2Line : r1Line;
-    const [rpx, rpy] = pinPos(i);
-    const col = pins[i].color;
-    let lx2, ly2;
-    if (eff === "bottom")     { lx2 = rpx; ly2 = bodyBot + ll; }
-    else if (eff === "top")   { lx2 = rpx; ly2 = bodyTop - ll; }
-    else if (eff === "right") { lx2 = bodyRgt + ll; ly2 = rpy; }
-    else                      { lx2 = bodyLft - ll; ly2 = rpy; }
-    parts.push(
-      `<line x1="${f1(rpx)}" y1="${f1(rpy)}" ` +
-      `x2="${f1(lx2)}" y2="${f1(ly2)}" ` +
-      `stroke="${col}" stroke-width="1" stroke-opacity="0.65"/>`
-    );
-  }
-
-  // 2. Body group (rotated)
+  // 1. Body group (rotated)
   parts.push(
     `<g transform="translate(${f1(connCx)},${f1(connCy)}) ` +
     `rotate(${ori}) translate(${f1(-cx0)},${f1(-cy0)})">`
@@ -532,6 +513,25 @@ export function renderConnectorSVG(connector, connType) {
   }
 
   parts.push("</g>");
+
+  // 2. Colored wires (over the connector body)
+  for (let i = 0; i < n; i++) {
+    const [, rowNum] = pinMap.get(i);
+    const eff = rowNum === 2 ? r2Eff : r1Eff;
+    const ll = rowNum === 2 ? r2Line : r1Line;
+    const [rpx, rpy] = pinPos(i);
+    const col = pins[i].color;
+    let lx2, ly2;
+    if (eff === "bottom")     { lx2 = rpx; ly2 = bodyBot + ll; }
+    else if (eff === "top")   { lx2 = rpx; ly2 = bodyTop - ll; }
+    else if (eff === "right") { lx2 = bodyRgt + ll; ly2 = rpy; }
+    else                      { lx2 = bodyLft - ll; ly2 = rpy; }
+    parts.push(
+      `<line x1="${f1(rpx)}" y1="${f1(rpy)}" ` +
+      `x2="${f1(lx2)}" y2="${f1(ly2)}" ` +
+      `stroke="${col}" stroke-width="1" stroke-opacity="0.65"/>`
+    );
+  }
 
   // 3. Pin circles + labels (top z)
   for (let i = 0; i < n; i++) {

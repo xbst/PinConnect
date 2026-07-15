@@ -461,24 +461,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         f'style="font-family:Roboto,sans-serif">'
     )
 
-    # ── 1. Lines (lowest z) ──
-    for i in range(n):
-        row_num = pin_map[i][1]
-        eff = r2_eff if row_num == 2 else r1_eff
-        ll = r2_line if row_num == 2 else r1_line
-        rpx, rpy = _pin_pos(i)
-        col = pins[i].color
-        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll
-        elif eff == "top":    lx2, ly2 = rpx, body_top - ll
-        elif eff == "right":  lx2, ly2 = body_rgt + ll, rpy
-        else:                 lx2, ly2 = body_lft - ll, rpy
-        parts.append(
-            f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
-            f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
-            f'stroke="{col}" stroke-width="1" stroke-opacity="0.65"/>'
-        )
-
-    # ── 2. Body group (rotated) ──
+    # ── 1. Body group (rotated) ──
     parts.append(
         f'<g transform="translate({conn_cx:.1f},{conn_cy:.1f}) '
         f'rotate({ori}) translate({-cx0:.1f},{-cy0:.1f})">'
@@ -544,6 +527,23 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
             )
 
     parts.append('</g>')
+
+    # ── 2. Colored wires (over the connector body) ──
+    for i in range(n):
+        row_num = pin_map[i][1]
+        eff = r2_eff if row_num == 2 else r1_eff
+        ll = r2_line if row_num == 2 else r1_line
+        rpx, rpy = _pin_pos(i)
+        col = pins[i].color
+        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll
+        elif eff == "top":    lx2, ly2 = rpx, body_top - ll
+        elif eff == "right":  lx2, ly2 = body_rgt + ll, rpy
+        else:                 lx2, ly2 = body_lft - ll, rpy
+        parts.append(
+            f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
+            f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
+            f'stroke="{col}" stroke-width="1" stroke-opacity="0.65"/>'
+        )
 
     # ── 3. Pin circles + labels (top z) ──
     for i in range(n):
