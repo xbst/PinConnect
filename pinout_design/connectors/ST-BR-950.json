@@ -1,0 +1,23 @@
+{
+  "name": "9.5mm Barrier Screw Terminal",
+  "style": "barrier",
+  "geometry": {
+    "pin_pitch": 37.4,
+    "padding_left": 22.4,
+    "padding_right": 22.4,
+    "height": 58.0,
+    "wall": 2.8,
+    "pin_cy": 29.0,
+    "pin_radius": 3.4,
+    "pinout_side": "bottom",
+    "line_length": 25.0,
+    "rows": 1,
+    "row2_pin_cy": 0.0,
+    "row2_pinout_side": "top",
+    "row2_line_length": 20.0,
+    "row2_padding_left": -1.0,
+    "row2_pin_pitch_y": 0.0,
+    "row2_pin_radius": -1.0,
+    "cavity_size": 29.9
+  }
+}
