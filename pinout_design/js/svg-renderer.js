@@ -231,15 +231,15 @@ export function renderConnectorSVG(connector, connType) {
   const textH = fontSize + 3;
   const maxTextW = maxName * fontSize * charW + 4;
 
-  // Give every label on a side its own level. Dense connectors previously put
-  // all labels on one baseline and shrank the type until it fitted between the
-  // pins, which made it easy to associate a label with the wrong pin.
+  // Give top/bottom labels their own levels because they would otherwise share
+  // one horizontal baseline. Left/right labels already form a vertical list,
+  // so their leader lengths stay aligned.
   const sideCounts = Object.fromEntries(sides.map((side) => [side, 0]));
   const labelSteps = new Map();
   for (let i = 0; i < n; i++) {
     const [, rowNum] = pinMap.get(i);
     const eff = rowNum === 2 ? r2Eff : r1Eff;
-    labelSteps.set(i, sideCounts[eff]);
+    labelSteps.set(i, (eff === "bottom" || eff === "top") ? sideCounts[eff] : 0);
     sideCounts[eff] += 1;
   }
 

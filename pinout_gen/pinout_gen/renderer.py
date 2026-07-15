@@ -253,15 +253,15 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     text_h = font_sz + 3
     max_text_w = max_name * font_sz * char_w + 4
 
-    # Give every label on a side its own level.  Dense connectors previously put
-    # all labels on one baseline and shrank the type until it fitted between the
-    # pins, which made it easy to associate a label with the wrong pin.
+    # Give top/bottom labels their own levels because they would otherwise share
+    # one horizontal baseline. Left/right labels already form a vertical list,
+    # so their leader lengths stay aligned.
     side_counts = {s: 0 for s in sides}
     label_steps: dict[int, int] = {}
     for i in range(n):
         row_num = pin_map[i][1]
         eff = r2_eff if row_num == 2 else r1_eff
-        label_steps[i] = side_counts[eff]
+        label_steps[i] = side_counts[eff] if eff in ("bottom", "top") else 0
         side_counts[eff] += 1
 
     pad = {s: margin for s in sides}
