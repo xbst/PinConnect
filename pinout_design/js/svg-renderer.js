@@ -92,7 +92,7 @@ function bodyPathButton(geo, nPerRow) {
   );
 }
 
-function bodyPathHeaderFemale(geo, nPerRow) {
+function bodyPathHeaderMale(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow), H = geo.height;
   const chamfer = Math.min(geo.pin_pitch * 0.10, W / 4, H / 4);
   const notch = Math.min(geo.pin_pitch * 0.20, H / 3);
@@ -113,7 +113,7 @@ function bodyPathHeaderFemale(geo, nPerRow) {
   return d + " Z";
 }
 
-function headerFemaleCavities(geo, nPerRow) {
+function headerMaleCavities(geo, nPerRow) {
   const cavity = geo.cavity_size > 0 ? geo.cavity_size : Math.min(geo.pin_pitch * 0.25, geo.height * 0.25);
   const half = cavity / 2;
   const fill = 'fill="var(--conn-cavity,#d0d0c8)"';
@@ -200,12 +200,12 @@ function screwTerminalCavities(geo, nPerRow) {
   return parts.join("\n");
 }
 
-function bodyPathOpenAir(geo, nPerRow) {
+function bodyPathBarrier(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow), H = geo.height;
   return `M 0,0 L ${f1(W)},0 L ${f1(W)},${f1(H)} L 0,${f1(H)} Z`;
 }
 
-function openAirDetails(geo, nPerRow) {
+function barrierDetails(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow), H = geo.height, p = geo.pin_pitch;
   const screwR = Math.min(geo.cavity_size > 0 ? geo.cavity_size / 2 : p * 0.40, p * 0.42);
   const frameFill = 'fill="var(--conn-body,#e8e8e0)"';
@@ -475,9 +475,9 @@ export function renderConnectorSVG(connector, connType) {
   if (style === "latch")      pathD = bodyPathLatch(geo, nPerRow);
   else if (style === "grid")  pathD = bodyPathGrid(geo, nPerRow);
   else if (style === "xt30")  pathD = bodyPathXt30(geo, nPerRow);
-  else if (style === "header-female") pathD = bodyPathHeaderFemale(geo, nPerRow);
+  else if (style === "header-male") pathD = bodyPathHeaderMale(geo, nPerRow);
   else if (style === "screw-terminal") pathD = bodyPathScrewTerminal(geo, nPerRow);
-  else if (style === "open-air") pathD = bodyPathOpenAir(geo, nPerRow);
+  else if (style === "barrier") pathD = bodyPathBarrier(geo, nPerRow);
   else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
   else                        pathD = bodyPathBox(geo, nPerRow);
 
@@ -491,12 +491,12 @@ export function renderConnectorSVG(connector, connType) {
   const w = geo.wall;
   if (style === "xt30") {
     parts.push(xt30Cavities(geo, nPerRow));
-  } else if (style === "header-female") {
-    parts.push(headerFemaleCavities(geo, nPerRow));
+  } else if (style === "header-male") {
+    parts.push(headerMaleCavities(geo, nPerRow));
   } else if (style === "screw-terminal") {
     parts.push(screwTerminalCavities(geo, nPerRow));
-  } else if (style === "open-air") {
-    parts.push(openAirDetails(geo, nPerRow));
+  } else if (style === "barrier") {
+    parts.push(barrierDetails(geo, nPerRow));
   } else if (style === "button") {
     parts.push(buttonCavities(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {

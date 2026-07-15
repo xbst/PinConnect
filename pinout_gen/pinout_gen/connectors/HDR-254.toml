@@ -1,6 +1,6 @@
 [connector]
 name = "2.54mm Header"
-style = "header-female"
+style = "header-male"
 
 [geometry]
 pin_pitch = 10.0

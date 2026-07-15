@@ -49,7 +49,7 @@ class ConnectorGeometry:
 @dataclass
 class ConnectorType:
     name: str
-    style: str  # "latch" (XH/PH) or "box" (simple rectangle)
+    style: str
     geometry: ConnectorGeometry
 
 

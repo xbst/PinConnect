@@ -1,16 +1,16 @@
 {
-  "name": "2.54mm Header",
-  "style": "header-male",
+  "name": "5.08mm Barrier Screw Terminal",
+  "style": "barrier",
   "geometry": {
-    "pin_pitch": 10.0,
-    "padding_left": 5.0,
-    "padding_right": 5.0,
-    "height": 10.0,
+    "pin_pitch": 20.0,
+    "padding_left": 12.0,
+    "padding_right": 12.0,
+    "height": 31.0,
     "wall": 1.5,
-    "pin_cy": 5.0,
-    "pin_radius": 1.3,
+    "pin_cy": 15.5,
+    "pin_radius": 1.8,
     "pinout_side": "bottom",
-    "line_length": 12.0,
+    "line_length": 20.0,
     "rows": 1,
     "row2_pin_cy": 0.0,
     "row2_pinout_side": "top",
@@ -18,6 +18,6 @@
     "row2_padding_left": -1.0,
     "row2_pin_pitch_y": 0.0,
     "row2_pin_radius": -1.0,
-    "cavity_size": 2.5
+    "cavity_size": 16.0
   }
 }

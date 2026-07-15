@@ -62,9 +62,32 @@ One entry per connector on the board.
 | `type` | yes | — | Connector type name, matched to `<type>.toml` in `connector_dir` (e.g. `MX-F-2R`). See [connector types](connector-types.md). |
 | `x1`, `y1`, `x2`, `y2` | yes | — | Bounding box of the connector on the image, in pixels. `(x1, y1)` and `(x2, y2)` are opposite corners. |
 | `orientation` | no | `0` | Rotation of the connector body in degrees: `0`, `90`, `180`, or `270`. |
+| `label_style` | no | `"staggered"` | How pin labels are arranged on horizontal connectors: `"staggered"`, `"staircase"`, or `"flat"`. See below. |
 | `description` | no | `""` | Longer text shown for the connector (e.g. a tooltip / detail line). |
 
 The bounding box places and sizes the connector graphic over the image; `orientation` rotates it so the rendered connector matches what's on the board. The designer sets all of these for you when you drag a box and pick an orientation.
+
+### `label_style`
+
+Controls how pin labels are spaced on horizontal (top/bottom) pinout sides. Has no effect on vertical (left/right) sides, where labels naturally stack without overlapping.
+
+| Value | Behaviour |
+|-------|-----------|
+| `"staggered"` | Odd and even pin labels alternate between two levels. Compact while still avoiding overlap. **(default)** |
+| `"staircase"` | Each pin label gets its own level, stepping further from the connector body. Clearest separation, but tall with many pins. |
+| `"flat"` | All labels sit at the same level. Most compact, but labels may overlap on dense connectors. |
+
+```toml
+[[connector]]
+id = "J1"
+name = "Sensor Header"
+type = "HDR-254"
+x1 = 100
+y1 = 200
+x2 = 250
+y2 = 220
+label_style = "flat"
+```
 
 ## `[[connector.pin]]`
 

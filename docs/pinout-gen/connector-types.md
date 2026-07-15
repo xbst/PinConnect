@@ -10,12 +10,13 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 |------|-------|-------|
 | `XH-F` | latch | JST XH female, single row |
 | `PH-F` | latch | JST PH female, single row |
-| `HDR-127` | header-female | 1.27 mm female pin header |
-| `HDR-200` | header-female | 2.00 mm female pin header |
-| `HDR-254` | header-female | 2.54 mm female pin header |
+| `HDR-127` | header-male | 1.27 mm male pin header |
+| `HDR-200` | header-male | 2.00 mm male pin header |
+| `HDR-254` | header-male | 2.54 mm male pin header |
 | `ST-254` | screw-terminal | 2.54 mm pitch screw terminal |
 | `ST-508` | screw-terminal | 5.08 mm pitch screw terminal |
-| `ST-OA` | open-air | 5.08 mm open-air screw terminal strip |
+| `ST-BR-508` | barrier | 5.08 mm barrier screw terminal strip |
+| `ST-BR-950` | barrier | 9.5 mm barrier screw terminal strip |
 | `MX-F-1R` | grid | Micro-Fit female, single row |
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
@@ -55,9 +56,9 @@ cavity_size = 10.5
   - `latch` — a latching housing (JST XH / PH look).
   - `grid` — a gridded housing with cavities (Micro-Fit look); uses `cavity_size`.
   - `xt30` — the XT30 power-connector body.
-  - `header-female` — a pitch-scaled female pin-header housing with square cavities and keyed joints.
-  - `screw-terminal` — a screw-terminal housing with circular screw heads and side wire-entry slots.
-  - `open-air` — an exposed screw-terminal strip with individual metal cages and cross-drive screws.
+  - `header-male` — a pitch-scaled male pin-header housing with square cavities and keyed joints.
+  - `screw-terminal` — a screw-terminal with circular screw heads and side wire-entry slots.
+  - `barrier` — a barrier screw-terminal with individual metal cages and cross-drive screws.
 
 ### `[geometry]`
 
