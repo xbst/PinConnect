@@ -135,6 +135,7 @@ export function parseBoardToml(text) {
     y2: c.y2 || 0,
     orientation: c.orientation || 0,
     description: c.description || "",
+    label_style: c.label_style || "staggered",
     pins: (c.pin || []).map(p => ({
       name: p.name || "",
       color: p.color || "#888888",
@@ -207,6 +208,7 @@ export function serializeConnectorBlock(conn) {
   lines.push(`y2 = ${conn.y2}`);
   if (conn.orientation) lines.push(`orientation = ${conn.orientation}`);
   if (conn.description) lines.push(`description = ${quoteStr(conn.description)}`);
+  if (conn.label_style && conn.label_style !== "staggered") lines.push(`label_style = ${quoteStr(conn.label_style)}`);
 
   for (const pin of conn.pins) {
     lines.push("");

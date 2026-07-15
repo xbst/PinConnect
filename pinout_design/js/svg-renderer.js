@@ -231,15 +231,20 @@ export function renderConnectorSVG(connector, connType) {
   const textH = fontSize + 3;
   const maxTextW = maxName * fontSize * charW + 4;
 
-  // Give top/bottom labels their own levels because they would otherwise share
-  // one horizontal baseline. Left/right labels already form a vertical list,
-  // so their leader lengths stay aligned.
   const sideCounts = Object.fromEntries(sides.map((side) => [side, 0]));
   const labelSteps = new Map();
+  const labelStyle = connector.label_style || "staggered";
   for (let i = 0; i < n; i++) {
     const [, rowNum] = pinMap.get(i);
     const eff = rowNum === 2 ? r2Eff : r1Eff;
-    labelSteps.set(i, (eff === "bottom" || eff === "top") ? sideCounts[eff] : 0);
+    const isHoriz = eff === "bottom" || eff === "top";
+    if (!isHoriz || labelStyle === "flat") {
+      labelSteps.set(i, 0);
+    } else if (labelStyle === "staggered") {
+      labelSteps.set(i, sideCounts[eff] % 2);
+    } else {
+      labelSteps.set(i, sideCounts[eff]);
+    }
     sideCounts[eff] += 1;
   }
 

@@ -81,6 +81,10 @@ export class ConnectorPanel {
       .map(d => `<option value="${d}" ${d === conn.orientation ? "selected" : ""}>${d}°</option>`)
       .join("");
 
+    const labelStyleOptions = ["staggered", "staircase", "flat"]
+      .map(s => `<option value="${s}" ${s === (conn.label_style || "staggered") ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`)
+      .join("");
+
     this.container.innerHTML = `
       <div class="conn-form">
         <div class="conn-form-row">
@@ -96,6 +100,10 @@ export class ConnectorPanel {
           <select id="conn-type">${typeOptions}</select>
           <label style="width:auto">Orient.</label>
           <select id="conn-orient" style="width:70px;flex:none">${orientOptions}</select>
+        </div>
+        <div class="conn-form-row">
+          <label>Labels</label>
+          <select id="conn-label-style">${labelStyleOptions}</select>
         </div>
         <div class="conn-form-row">
           <label>Desc.</label>
@@ -248,6 +256,7 @@ export class ConnectorPanel {
     onFieldChange("#conn-name", "name");
     onFieldChange("#conn-type", "type");
     onFieldChange("#conn-orient", "orientation", v => parseInt(v));
+    onFieldChange("#conn-label-style", "label_style");
     onFieldChange("#conn-desc", "description");
 
     this.container.querySelectorAll(".pin-name-input").forEach(el => {
