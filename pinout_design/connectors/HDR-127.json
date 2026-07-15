@@ -1,16 +1,16 @@
 {
   "name": "1.27mm Header",
-  "style": "box",
+  "style": "header-male",
   "geometry": {
     "pin_pitch": 5.0,
-    "padding_left": 3.5,
-    "padding_right": 3.5,
-    "height": 6.0,
-    "wall": 1.0,
-    "pin_cy": 3.0,
-    "pin_radius": 1.0,
+    "padding_left": 2.5,
+    "padding_right": 2.5,
+    "height": 5.0,
+    "wall": 0.8,
+    "pin_cy": 2.5,
+    "pin_radius": 0.65,
     "pinout_side": "bottom",
-    "line_length": 8.0,
+    "line_length": 6.0,
     "rows": 1,
     "row2_pin_cy": 0.0,
     "row2_pinout_side": "top",
@@ -18,6 +18,6 @@
     "row2_padding_left": -1.0,
     "row2_pin_pitch_y": 0.0,
     "row2_pin_radius": -1.0,
-    "cavity_size": 0.0
+    "cavity_size": 1.25
   }
 }
