@@ -543,9 +543,10 @@ export function renderConnectorSVG(connector, connType) {
     const name = escapeHtml(pins[i].name);
 
     const pr = (rowNum === 2 && geo.row2_pin_radius >= 0) ? geo.row2_pin_radius : geo.pin_radius;
+    const markerStrokeW = Math.min(0.9, Math.max(0.3, pr * 0.5));
     parts.push(
       `<circle cx="${f1(rpx)}" cy="${f1(rpy)}" r="${f1(pr)}" ` +
-      `fill="${col}" stroke="var(--conn-stroke,#555)" stroke-width="0.9"/>`
+      `fill="${col}" stroke="var(--conn-stroke,#555)" stroke-width="${f1(markerStrokeW)}"/>`
     );
 
     let tx, ty, ta, tb;

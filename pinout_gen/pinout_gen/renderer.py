@@ -555,9 +555,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         name = html.escape(pins[i].name)
 
         pr = geo.row2_pin_radius if (row_num == 2 and geo.row2_pin_radius >= 0) else geo.pin_radius
+        marker_stroke_w = min(0.9, max(0.3, pr * 0.5))
         parts.append(
             f'<circle cx="{rpx:.1f}" cy="{rpy:.1f}" r="{pr:.1f}" '
-            f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="0.9"/>'
+            f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="{marker_stroke_w:.1f}"/>'
         )
 
         hs = body_stroke_w / 2
