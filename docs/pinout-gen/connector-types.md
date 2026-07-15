@@ -10,6 +10,11 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 |------|-------|-------|
 | `XH-F` | latch | JST XH female, single row |
 | `PH-F` | latch | JST PH female, single row |
+| `HDR-127` | header-female | 1.27 mm female pin header |
+| `HDR-200` | header-female | 2.00 mm female pin header |
+| `HDR-254` | header-female | 2.54 mm female pin header |
+| `ST-254` | screw-terminal | 2.54 mm pitch screw terminal |
+| `ST-508` | screw-terminal | 5.08 mm pitch screw terminal |
 | `MX-F-1R` | grid | Micro-Fit female, single row |
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
@@ -49,6 +54,8 @@ cavity_size = 10.5
   - `latch` — a latching housing (JST XH / PH look).
   - `grid` — a gridded housing with cavities (Micro-Fit look); uses `cavity_size`.
   - `xt30` — the XT30 power-connector body.
+  - `header-female` — a pitch-scaled female pin-header housing with square cavities and keyed joints.
+  - `screw-terminal` — a screw-terminal housing with circular screw heads and side wire-entry slots.
 
 ### `[geometry]`
 
@@ -61,6 +68,7 @@ The geometry fields position the pins and the lines that run from each pin to it
 - `line_length` — how far the pin lines extend to reach labels.
 - `rows` — `1` or `2`. For two-row types, the `row2_*` fields (`row2_pin_cy`, `row2_pinout_side`, `row2_line_length`, and so on) describe the second row.
 - `cavity_size` — size of the cavities for the `grid` style.
+- `mating_pin_scale` — optional scale for the visible metal contact inside a `screw-terminal` wire opening; defaults to `1.0`.
 
 Any field you omit falls back to a built-in default, so a minimal type only needs to specify what differs from the defaults.
 

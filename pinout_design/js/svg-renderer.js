@@ -92,6 +92,114 @@ function bodyPathButton(geo, nPerRow) {
   );
 }
 
+function bodyPathHeaderFemale(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  const chamfer = Math.min(geo.pin_pitch * 0.10, W / 4, H / 4);
+  const notch = Math.min(geo.pin_pitch * 0.20, H / 3);
+  const notchHalfWidth = geo.pin_pitch * 0.10;
+  const points = [[0, chamfer], [chamfer, 0]];
+  for (let slot = 1; slot < nPerRow; slot++) {
+    const x = geo.padding_left + (slot - 0.5) * geo.pin_pitch;
+    points.push([x - notchHalfWidth, 0], [x, notch], [x + notchHalfWidth, 0]);
+  }
+  points.push([W - chamfer, 0], [W, chamfer], [W, H - chamfer], [W - chamfer, H]);
+  for (let slot = nPerRow - 1; slot > 0; slot--) {
+    const x = geo.padding_left + (slot - 0.5) * geo.pin_pitch;
+    points.push([x + notchHalfWidth, H], [x, H - notch], [x - notchHalfWidth, H]);
+  }
+  points.push([chamfer, H], [0, H - chamfer]);
+  let d = `M ${f1(points[0][0])},${f1(points[0][1])}`;
+  for (let i = 1; i < points.length; i++) d += ` L ${f1(points[i][0])},${f1(points[i][1])}`;
+  return d + " Z";
+}
+
+function headerFemaleCavities(geo, nPerRow) {
+  const cavity = geo.cavity_size > 0 ? geo.cavity_size : Math.min(geo.pin_pitch * 0.25, geo.height * 0.25);
+  const half = cavity / 2;
+  const fill = 'fill="var(--conn-cavity,#d0d0c8)"';
+  const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
+  return geo.pinCentersX(nPerRow).map((px) =>
+    `<rect x="${f1(px - half)}" y="${f1(geo.pin_cy - half)}" ` +
+    `width="${f1(cavity)}" height="${f1(cavity)}" ${fill} ${stk}/>`
+  ).join("\n");
+}
+
+function bodyPathScrewTerminal(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  const r = Math.min(geo.pin_pitch * 0.06, geo.wall, W / 4, H / 4);
+  return (
+    `M ${f1(r)},0 L ${f1(W - r)},0 A ${f1(r)},${f1(r)} 0 0 1 ${f1(W)},${f1(r)} ` +
+    `L ${f1(W)},${f1(H - r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(W - r)},${f1(H)} ` +
+    `L ${f1(r)},${f1(H)} A ${f1(r)},${f1(r)} 0 0 1 0,${f1(H - r)} ` +
+    `L 0,${f1(r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(r)},0 Z`
+  );
+}
+
+function screwTerminalCavities(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  const screwR = Math.min(geo.cavity_size > 0 ? geo.cavity_size / 2 : geo.pin_pitch * 0.40, geo.pin_pitch * 0.44);
+  const fill = 'fill="var(--conn-cavity,#d0d0c8)"';
+  const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
+  const parts = [];
+  const edge = geo.pin_pitch * 0.06;
+  const railInset = geo.pin_pitch * 0.08;
+  const rearDepth = geo.pin_pitch * 0.64;
+  const frontDepth = geo.pin_pitch * 0.61;
+
+  parts.push(
+    `<rect x="${f1(edge)}" y="${f1(edge)}" width="${f1(W - 2 * edge)}" ` +
+    `height="${f1(rearDepth - edge)}" ` +
+    `fill="var(--conn-stroke,#555)" fill-opacity="0.10" stroke="none"/>`
+  );
+  parts.push(
+    `<rect x="${f1(edge)}" y="${f1(H - frontDepth)}" width="${f1(W - 2 * edge)}" ` +
+    `height="${f1(frontDepth - edge)}" ` +
+    `fill="var(--conn-stroke,#555)" fill-opacity="0.08" stroke="none"/>`
+  );
+  parts.push(
+    `<path d="M ${f1(railInset)},${f1(rearDepth)} L ${f1(railInset)},${f1(railInset)} ` +
+    `L ${f1(W - railInset)},${f1(railInset)} L ${f1(W - railInset)},${f1(rearDepth)}" ` +
+    `fill="none" stroke="var(--conn-stroke,#555)" stroke-width="0.7" stroke-opacity="0.65"/>`
+  );
+  for (let slot = 1; slot < nPerRow; slot++) {
+    const x = geo.padding_left + (slot - 0.5) * geo.pin_pitch;
+    parts.push(
+      `<line x1="${f1(x)}" y1="${f1(geo.pin_pitch * 0.10)}" ` +
+      `x2="${f1(x)}" y2="${f1(H - geo.pin_pitch * 0.10)}" ` +
+      `stroke="var(--conn-stroke,#555)" stroke-width="0.6" stroke-opacity="0.55"/>`
+    );
+  }
+
+  for (const px of geo.pinCentersX(nPerRow)) {
+    parts.push(
+      `<circle cx="${f1(px)}" cy="${f1(geo.pin_cy)}" r="${f1(screwR + geo.pin_pitch * 0.07)}" ` +
+      `fill="var(--conn-body,#e8e8e0)" ${stk}/>`
+    );
+    parts.push(`<circle cx="${f1(px)}" cy="${f1(geo.pin_cy)}" r="${f1(screwR)}" ${fill} ${stk}/>`);
+    parts.push(
+      `<line x1="${f1(px - screwR * 0.62)}" y1="${f1(geo.pin_cy)}" ` +
+      `x2="${f1(px + screwR * 0.62)}" y2="${f1(geo.pin_cy)}" ` +
+      `stroke="var(--conn-stroke,#555)" stroke-width="1.4" stroke-linecap="round"/>`
+    );
+
+    const mouthW = geo.pin_pitch * 0.55;
+    const mouthH = geo.pin_pitch * 0.21;
+    const mouthX = px - mouthW / 2;
+    const mouthY = H - mouthH;
+    parts.push(
+      `<rect x="${f1(mouthX)}" y="${f1(mouthY)}" width="${f1(mouthW)}" height="${f1(mouthH)}" ` +
+      `fill="var(--conn-stroke,#555)" stroke="var(--conn-stroke,#555)" stroke-width="0.7"/>`
+    );
+    const clampW = Math.min(geo.pin_pitch * 0.39 * geo.mating_pin_scale, mouthW * 0.88);
+    const clampH = Math.min(geo.pin_pitch * 0.10 * geo.mating_pin_scale, mouthH * 0.78);
+    parts.push(
+      `<rect x="${f1(px - clampW / 2)}" y="${f1(mouthY + geo.pin_pitch * 0.01)}" ` +
+      `width="${f1(clampW)}" height="${f1(clampH)}" ${fill}/>`
+    );
+  }
+  return parts.join("\n");
+}
+
 function buttonCavities(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow);
   const H = geo.height;
@@ -313,6 +421,8 @@ export function renderConnectorSVG(connector, connType) {
   if (style === "latch")      pathD = bodyPathLatch(geo, nPerRow);
   else if (style === "grid")  pathD = bodyPathGrid(geo, nPerRow);
   else if (style === "xt30")  pathD = bodyPathXt30(geo, nPerRow);
+  else if (style === "header-female") pathD = bodyPathHeaderFemale(geo, nPerRow);
+  else if (style === "screw-terminal") pathD = bodyPathScrewTerminal(geo, nPerRow);
   else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
   else                        pathD = bodyPathBox(geo, nPerRow);
 
@@ -326,6 +436,10 @@ export function renderConnectorSVG(connector, connType) {
   const w = geo.wall;
   if (style === "xt30") {
     parts.push(xt30Cavities(geo, nPerRow));
+  } else if (style === "header-female") {
+    parts.push(headerFemaleCavities(geo, nPerRow));
+  } else if (style === "screw-terminal") {
+    parts.push(screwTerminalCavities(geo, nPerRow));
   } else if (style === "button") {
     parts.push(buttonCavities(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {

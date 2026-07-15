@@ -17,6 +17,7 @@ export class ConnectorGeometry {
     this.row2_pin_pitch_y = data.row2_pin_pitch_y ?? 0.0;
     this.row2_pin_radius = data.row2_pin_radius ?? -1.0;
     this.cavity_size = data.cavity_size ?? 0.0;
+    this.mating_pin_scale = data.mating_pin_scale ?? 1.0;
   }
 
   connectorWidth(nPins) {
