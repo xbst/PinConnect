@@ -250,20 +250,27 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     max_name = max((len(p.name) for p in pins), default=3)
     char_w = 0.6
     font_sz = 6.0
-    if n_per_row > 1 and max_name > 0:
-        font_sz = min(font_sz, geo.pin_pitch * 0.9 / (max_name * char_w))
-    font_sz = round(max(3.5, font_sz), 1)
     text_h = font_sz + 3
     max_text_w = max_name * font_sz * char_w + 4
 
-    eff_sides = {r1_eff}
-    if r2_global:
-        eff_sides.add(r2_eff)
-    max_line = max(r1_line, r2_line)
+    # Give top/bottom labels their own levels because they would otherwise share
+    # one horizontal baseline. Left/right labels already form a vertical list,
+    # so their leader lengths stay aligned.
+    side_counts = {s: 0 for s in sides}
+    label_steps: dict[int, int] = {}
+    for i in range(n):
+        row_num = pin_map[i][1]
+        eff = r2_eff if row_num == 2 else r1_eff
+        label_steps[i] = side_counts[eff] if eff in ("bottom", "top") else 0
+        side_counts[eff] += 1
 
     pad = {s: margin for s in sides}
-    for s in eff_sides:
-        pad[s] = max_line + (text_h if s in ("bottom", "top") else max_text_w)
+    for i in range(n):
+        row_num = pin_map[i][1]
+        eff = r2_eff if row_num == 2 else r1_eff
+        ll = r2_line if row_num == 2 else r1_line
+        label_extent = text_h if eff in ("bottom", "top") else max_text_w
+        pad[eff] = max(pad[eff], ll + label_steps[i] * text_h + label_extent)
 
     svg_w = pad["left"] + rot_w + pad["right"]
     svg_h = pad["top"] + rot_h + pad["bottom"]
@@ -290,12 +297,13 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         row_num = pin_map[i][1]
         eff = r2_eff if row_num == 2 else r1_eff
         ll = r2_line if row_num == 2 else r1_line
+        stair_offset = label_steps[i] * text_h
         rpx, rpy = _pin_pos(i)
         col = pins[i].color
-        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll
-        elif eff == "top":    lx2, ly2 = rpx, body_top - ll
-        elif eff == "right":  lx2, ly2 = body_rgt + ll, rpy
-        else:                 lx2, ly2 = body_lft - ll, rpy
+        if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll + stair_offset
+        elif eff == "top":    lx2, ly2 = rpx, body_top - ll - stair_offset
+        elif eff == "right":  lx2, ly2 = body_rgt + ll + stair_offset, rpy
+        else:                 lx2, ly2 = body_lft - ll - stair_offset, rpy
         parts.append(
             f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
             f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
@@ -362,6 +370,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         row_num = pin_map[i][1]
         eff = r2_eff if row_num == 2 else r1_eff
         ll = r2_line if row_num == 2 else r1_line
+        stair_offset = label_steps[i] * text_h
         rpx, rpy = _pin_pos(i)
         col = pins[i].color
         name = html.escape(pins[i].name)
@@ -372,15 +381,14 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
             f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="0.9"/>'
         )
 
-        hs = body_stroke_w / 2
         if eff == "bottom":
-            tx, ty, ta, tb = rpx, body_bot + ll + text_h - 2, "middle", "auto"
+            tx, ty, ta, tb = rpx, body_bot + ll + stair_offset + text_h - 2, "middle", "auto"
         elif eff == "top":
-            tx, ty, ta, tb = rpx, body_top - ll - 3, "middle", "auto"
+            tx, ty, ta, tb = rpx, body_top - ll - stair_offset - 3, "middle", "auto"
         elif eff == "right":
-            tx, ty, ta, tb = body_rgt + ll + 3, rpy, "start", "central"
+            tx, ty, ta, tb = body_rgt + ll + stair_offset + 3, rpy, "start", "central"
         else:
-            tx, ty, ta, tb = body_lft - ll - 3, rpy, "end", "central"
+            tx, ty, ta, tb = body_lft - ll - stair_offset - 3, rpy, "end", "central"
 
         parts.append(
             f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="{font_sz}" font-weight="500" '
