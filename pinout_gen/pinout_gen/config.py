@@ -73,6 +73,7 @@ class Connector:
     y2: int = 0
     orientation: int = 0
     description: str = ""
+    label_style: str = "staggered"
 
 
 @dataclass
@@ -110,6 +111,7 @@ def load_board(path: Path) -> Board:
             x1=c["x1"], y1=c["y1"], x2=c["x2"], y2=c["y2"],
             orientation=c.get("orientation", 0),
             description=c.get("description", ""),
+            label_style=c.get("label_style", "staggered"),
         ))
     return board
 

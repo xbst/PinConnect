@@ -216,6 +216,7 @@ export class EditorPanel {
       id: c.id, name: c.name, type: c.type,
       x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2,
       orientation: c.orientation, description: c.description,
+      label_style: c.label_style,
       pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
     }));
     const text = serializeBoardToml(
@@ -242,6 +243,7 @@ export class EditorPanel {
       id: conn.id, name: conn.name, type: conn.type,
       x1: conn.x1, y1: conn.y1, x2: conn.x2, y2: conn.y2,
       orientation: conn.orientation, description: conn.description,
+      label_style: conn.label_style,
       pins: conn.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
     };
 
