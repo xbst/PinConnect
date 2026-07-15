@@ -94,8 +94,8 @@ def _body_path_button(geo: ConnectorGeometry, n_per_row: int) -> str:
     )
 
 
-def _body_path_header_female(geo: ConnectorGeometry, n_per_row: int) -> str:
-    """Female header housing with pitch-scaled chamfers and keyed joints."""
+def _body_path_header_male(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Male header housing with pitch-scaled chamfers and keyed joints."""
     W, H = geo.connector_width(n_per_row), geo.height
     chamfer = min(geo.pin_pitch * 0.10, W / 4, H / 4)
     notch = min(geo.pin_pitch * 0.20, H / 3)
@@ -115,7 +115,7 @@ def _body_path_header_female(geo: ConnectorGeometry, n_per_row: int) -> str:
     return d + " Z"
 
 
-def _header_female_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
+def _header_male_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     cavity = geo.cavity_size if geo.cavity_size > 0 else min(geo.pin_pitch * 0.25, geo.height * 0.25)
     half = cavity / 2
     fill = 'fill="var(--conn-cavity,#d0d0c8)"'
@@ -207,14 +207,14 @@ def _screw_terminal_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     return '\n'.join(parts)
 
 
-def _body_path_open_air(geo: ConnectorGeometry, n_per_row: int) -> str:
-    """Rectangular outer frame for an open-air screw terminal strip."""
+def _body_path_barrier(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Rectangular outer frame for a barrier screw terminal strip."""
     W, H = geo.connector_width(n_per_row), geo.height
     return f"M 0,0 L {W:.1f},0 L {W:.1f},{H:.1f} L 0,{H:.1f} Z"
 
 
-def _open_air_details(geo: ConnectorGeometry, n_per_row: int) -> str:
-    """Open metal cages, frame rails, and cross-drive screw heads."""
+def _barrier_details(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Metal cages, frame rails, and cross-drive screw heads."""
     W, H, p = geo.connector_width(n_per_row), geo.height, geo.pin_pitch
     screw_r = min(geo.cavity_size / 2 if geo.cavity_size > 0 else p * 0.40, p * 0.42)
     frame_fill = 'fill="var(--conn-body,#e8e8e0)"'
@@ -484,12 +484,12 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_grid(geo, n_per_row)
     elif style == "xt30":
         path_d = _body_path_xt30(geo, n_per_row)
-    elif style == "header-female":
-        path_d = _body_path_header_female(geo, n_per_row)
+    elif style == "header-male":
+        path_d = _body_path_header_male(geo, n_per_row)
     elif style == "screw-terminal":
         path_d = _body_path_screw_terminal(geo, n_per_row)
-    elif style == "open-air":
-        path_d = _body_path_open_air(geo, n_per_row)
+    elif style == "barrier":
+        path_d = _body_path_barrier(geo, n_per_row)
     elif style == "button":
         path_d = _body_path_button(geo, n_per_row)
     else:
@@ -505,12 +505,12 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     w = geo.wall
     if style == "xt30":
         parts.append(_xt30_cavities(geo, n_per_row))
-    elif style == "header-female":
-        parts.append(_header_female_cavities(geo, n_per_row))
+    elif style == "header-male":
+        parts.append(_header_male_cavities(geo, n_per_row))
     elif style == "screw-terminal":
         parts.append(_screw_terminal_cavities(geo, n_per_row))
-    elif style == "open-air":
-        parts.append(_open_air_details(geo, n_per_row))
+    elif style == "barrier":
+        parts.append(_barrier_details(geo, n_per_row))
     elif style == "button":
         parts.append(_button_cavities(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
