@@ -8,10 +8,11 @@ import { serializeBoardToml } from "./toml-io.js";
 const state = new BoardState();
 
 async function loadConnectorTypes() {
-  const resp = await fetch("connectors/index.json");
+  const fetchOptions = { cache: "no-store" };
+  const resp = await fetch("connectors/index.json", fetchOptions);
   const names = await resp.json();
   for (const name of names) {
-    const r = await fetch(`connectors/${name}.json`);
+    const r = await fetch(`connectors/${name}.json`, fetchOptions);
     const data = await r.json();
     state.connectorTypes.set(name, new ConnectorType(
       data.name, data.style, new ConnectorGeometry(data.geometry)
