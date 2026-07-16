@@ -59,7 +59,6 @@ The project works and generates great looking pinouts already. Below are changes
 - Add slide switch as a "connector" for highlighting its positions
 - Add theming to `pinout-gen` 
 - Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
-- Improve how `pinout-design` handles undo/redo for position adjustments (add them as a state)
 - Write a more detailed doc with screenshots for `pinout-design`
 - Add a screenshot of the output to this document
 

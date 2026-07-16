@@ -48,6 +48,7 @@ export class BoardState {
         id: c.id, name: c.name, type: c.type,
         x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2,
         orientation: c.orientation, description: c.description,
+        label_style: c.label_style,
         pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
       })),
       selectedConnectorId: this.selectedConnectorId,

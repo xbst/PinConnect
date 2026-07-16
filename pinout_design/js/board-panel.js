@@ -302,9 +302,15 @@ export class BoardPanel {
     if ((drag.type === "move" || drag.type === "resize") && drag.moved) {
       const conn = this.state.getConnector(drag.id);
       if (conn) {
-        this.state.updateConnector(drag.id, {
-          x1: conn.x1, y1: conn.y1, x2: conn.x2, y2: conn.y2,
-        }, "visual");
+        const { x1, y1, x2, y2 } = conn;
+        if (x1 !== drag.origX1 || y1 !== drag.origY1 ||
+            x2 !== drag.origX2 || y2 !== drag.origY2) {
+          // The drag mutated the connector in place for live feedback; restore
+          // the pre-drag coordinates so updateConnector snapshots them for undo.
+          conn.x1 = drag.origX1; conn.y1 = drag.origY1;
+          conn.x2 = drag.origX2; conn.y2 = drag.origY2;
+          this.state.updateConnector(drag.id, { x1, y1, x2, y2 }, "visual");
+        }
       }
     }
   }
