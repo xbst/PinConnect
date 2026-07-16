@@ -395,8 +395,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     else:
         rot_w, rot_h = conn_h, conn_w
 
-    # ── Pin position helper ──
-    def _pin_pos(pin_idx: int) -> tuple[float, float]:
+    # ── Pin position helpers ──
+    def _pin_offset(pin_idx: int) -> tuple[float, float]:
+        """Rotated offset of a pin from the body centre; independent of
+        padding, so it can size the padding itself and later place pins."""
         row_slot, row_num = pin_map[pin_idx]
         if row_num == 2 and geo.row2_pin_pitch_y > 0:
             r2_pl = geo.row2_padding_left if geo.row2_padding_left >= 0 else geo.padding_left
@@ -406,8 +408,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         else:
             px0 = pxs0[row_slot]
             py0 = geo.pin_cy if row_num != 2 else geo.row2_pin_cy
-        dx, dy = px0 - cx0, py0 - cy0
-        rdx, rdy = _rotate_cw(dx, dy, ori)
+        return _rotate_cw(px0 - cx0, py0 - cy0, ori)
+
+    def _pin_pos(pin_idx: int) -> tuple[float, float]:
+        rdx, rdy = _pin_offset(pin_idx)
         return conn_cx + rdx, conn_cy + rdy
 
     # ── Effective pinout directions ──
@@ -450,6 +454,13 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         ll = r2_line if row_num == 2 else r1_line
         label_extent = text_h if eff in ("bottom", "top") else max_text_w
         pad[eff] = max(pad[eff], ll + label_steps[i] * text_h + label_extent)
+        if eff in ("bottom", "top"):
+            # Middle-anchored labels extend horizontally past the body on edge
+            # pins; widen the side paddings by the overhang so they aren't cropped.
+            half_w = len(pins[i].name) * font_sz * char_w / 2 + 2
+            rdx, _ = _pin_offset(i)
+            pad["left"] = max(pad["left"], margin + half_w - (rot_w / 2 + rdx))
+            pad["right"] = max(pad["right"], margin + half_w - (rot_w / 2 - rdx))
 
     svg_w = pad["left"] + rot_w + pad["right"]
     svg_h = pad["top"] + rot_h + pad["bottom"]
@@ -664,7 +675,7 @@ _HTML_TEMPLATE = '''\
   --line-color:#888; --label-color:#ddd;
   --desc-color:#aaa; --type-color:#888;
 }}}}
-[data-theme="dark"]{{
+:root[data-theme="dark"]{{
   --bg:#131313; --text:#e0e0e0;
   --tip-bg:#1e1e1e; --tip-border:#3a3a3a; --tip-shadow:rgba(0,0,0,.4);
   --hs-hover:rgba(96,165,250,.15); --hs-stroke:rgba(96,165,250,.5);
@@ -674,6 +685,17 @@ _HTML_TEMPLATE = '''\
   --conn-body:#3a3a35; --conn-cavity:#2e2e28; --conn-stroke:#aaa;
   --line-color:#888; --label-color:#ddd;
   --desc-color:#aaa; --type-color:#888;
+}}
+:root[data-theme="light"]{{
+  --bg:#ffffff; --text:#1a1a1a;
+  --tip-bg:#ffffff; --tip-border:#d0d0d0; --tip-shadow:rgba(0,0,0,.12);
+  --hs-hover:rgba(59,130,246,.13); --hs-stroke:rgba(59,130,246,.5);
+  --hs-active:rgba(59,130,246,.22);
+  --hint-bg:rgba(30,30,30,.75); --hint-text:#fff;
+  --divider:#e5e5e5;
+  --conn-body:#e8e8e0; --conn-cavity:#d0d0c8; --conn-stroke:#555;
+  --line-color:#777; --label-color:#333;
+  --desc-color:#555; --type-color:#888;
 }}
 *,*::before,*::after{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{height:100%;background:var(--bg);color:var(--text);
@@ -691,8 +713,12 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt{{position:absolute;background:var(--tip-bg);border:1px solid var(--tip-border);
   border-radius:10px;padding:14px 16px;box-shadow:0 6px 20px var(--tip-shadow);
   z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s ease;
-  max-width:min(420px,90vw);line-height:1.4;font-family:Roboto,sans-serif}}
-.tt.vis{{opacity:1;pointer-events:auto}}
+  max-width:min(420px,calc(100vw - 12px));max-height:calc(100vh - 16px);
+  overflow-y:auto;overscroll-behavior:contain;
+  line-height:1.4;font-family:Roboto,sans-serif}}
+.tt.vis{{opacity:1}}
+.tt.pin{{pointer-events:auto}}
+.tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--divider)}}
 .tt-n{{font-weight:600;font-size:14px;color:var(--text)}}
@@ -727,6 +753,51 @@ body{{display:flex;height:100%;overflow:hidden}}
 .cl-n{{font-weight:500;font-size:13px}}
 .cl-t{{font-size:11px;color:var(--type-color);white-space:nowrap}}
 </style>
+<script>
+/* Theme sync: ?theme=dark|light forces a theme; otherwise follow the embedding
+   page's toggle (MkDocs Material / Zensical set data-md-color-scheme on body,
+   "slate" = dark) via same-origin parent access + MutationObserver, or a
+   {{pinconnectTheme:"dark"|"light"}} postMessage for cross-origin embeds.
+   With no signal, data-theme stays unset and prefers-color-scheme applies. */
+(function(){{
+  var root=document.documentElement;
+  function apply(t){{
+    if(t==='dark'||t==='light')root.setAttribute('data-theme',t);
+    else root.removeAttribute('data-theme');
+  }}
+  window.addEventListener('message',function(e){{
+    if(e.data&&typeof e.data==='object'&&'pinconnectTheme' in e.data)apply(e.data.pinconnectTheme);
+  }});
+  var forced=null;
+  try{{forced=new URLSearchParams(location.search).get('theme')}}catch(err){{}}
+  if(forced==='dark'||forced==='light'){{apply(forced);return}}
+  function fromParent(){{
+    try{{
+      if(window.parent===window)return null;
+      var pd=window.parent.document;
+      var md=(pd.body&&pd.body.getAttribute('data-md-color-scheme'))||
+             pd.documentElement.getAttribute('data-md-color-scheme');
+      if(md)return md==='slate'?'dark':'light';
+      var dt=pd.documentElement.getAttribute('data-theme')||
+             (pd.body&&pd.body.getAttribute('data-theme'));
+      if(dt==='dark'||dt==='light')return dt;
+      if(pd.documentElement.classList.contains('dark')||
+         (pd.body&&pd.body.classList.contains('dark')))return 'dark';
+      return null;
+    }}catch(err){{return null}}
+  }}
+  function sync(){{var t=fromParent();if(t)apply(t)}}
+  sync();
+  try{{
+    if(window.parent!==window){{
+      var pd=window.parent.document;
+      var mo=new MutationObserver(sync);
+      mo.observe(pd.documentElement,{{attributes:true}});
+      if(pd.body)mo.observe(pd.body,{{attributes:true}});
+    }}
+  }}catch(err){{}}
+}})();
+</script>
 </head>
 <body>
 <div class="bd">
@@ -768,9 +839,9 @@ function show(id,el){{
   tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.name}}</span>`+
     `<span class="tt-t">${{d.typeName}} · ${{d.pinCount}}-pin</span></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
-  pos(el); tt.classList.add('vis'); aId=id;
+  pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
 }}
-function hide(){{tt.classList.remove('vis');unmark();aId=null;pinned=false}}
+function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false}}
 function pos(el){{
   tt.style.left='0';tt.style.top='0';tt.style.visibility='hidden';tt.classList.add('vis');
   const wr=pw.getBoundingClientRect(),tr=tt.getBoundingClientRect();

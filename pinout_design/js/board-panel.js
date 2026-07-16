@@ -103,6 +103,14 @@ export class BoardPanel {
     });
     this.state.on("connector-added", () => this._renderRects());
     this.state.on("connector-removed", () => this._renderRects());
+    this.state.on("connector-renamed", ({ oldId, newId }) => {
+      if (!this.svg) return;
+      const g = this.svg.querySelector(`g[data-id="${oldId}"]`);
+      if (!g) return;
+      g.setAttribute("data-id", newId);
+      const label = g.querySelector(".board-rect-label");
+      if (label) label.textContent = newId;
+    });
     this.state.on("selection-changed", ({ connectorId }) => this._highlightSelected(connectorId));
   }
 
@@ -302,9 +310,15 @@ export class BoardPanel {
     if ((drag.type === "move" || drag.type === "resize") && drag.moved) {
       const conn = this.state.getConnector(drag.id);
       if (conn) {
-        this.state.updateConnector(drag.id, {
-          x1: conn.x1, y1: conn.y1, x2: conn.x2, y2: conn.y2,
-        }, "visual");
+        const { x1, y1, x2, y2 } = conn;
+        if (x1 !== drag.origX1 || y1 !== drag.origY1 ||
+            x2 !== drag.origX2 || y2 !== drag.origY2) {
+          // The drag mutated the connector in place for live feedback; restore
+          // the pre-drag coordinates so updateConnector snapshots them for undo.
+          conn.x1 = drag.origX1; conn.y1 = drag.origY1;
+          conn.x2 = drag.origX2; conn.y2 = drag.origY2;
+          this.state.updateConnector(drag.id, { x1, y1, x2, y2 }, "visual");
+        }
       }
     }
   }
@@ -363,7 +377,10 @@ export class BoardPanel {
       const id = dialog.querySelector("#new-conn-id").value.trim();
       const name = dialog.querySelector("#new-conn-name").value.trim();
       const type = dialog.querySelector("#new-conn-type").value;
-      if (!id) return;
+      if (!id || this.state.getConnector(id)) {
+        dialog.querySelector("#new-conn-id").style.borderColor = "var(--danger)";
+        return;
+      }
       close();
       this.state.addConnector(new Connector({
         id, name: name || id, type,

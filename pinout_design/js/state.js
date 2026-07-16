@@ -48,6 +48,7 @@ export class BoardState {
         id: c.id, name: c.name, type: c.type,
         x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2,
         orientation: c.orientation, description: c.description,
+        label_style: c.label_style,
         pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
       })),
       selectedConnectorId: this.selectedConnectorId,
@@ -106,13 +107,22 @@ export class BoardState {
     this._origin = null;
   }
 
-  setImage(dataUrl, width, height) {
+  setImage(dataUrl, imageName, width, height) {
     this.imageDataUrl = dataUrl;
     if (this.board) {
+      this.board.image = imageName;
       this.board.width = width;
       this.board.height = height;
+      this.dirty = true;
     }
     this.emit("image-changed", { dataUrl, width, height });
+    // Board fields changed too; emit board-changed so the editor TOML and
+    // panels sync immediately instead of on the next unrelated mutation.
+    if (this.board) {
+      this._origin = "image";
+      this.emit("board-changed", { board: this.board, origin: "image" });
+      this._origin = null;
+    }
   }
 
   selectConnector(id) {
@@ -145,11 +155,32 @@ export class BoardState {
     this._origin = null;
   }
 
-  addConnector(data, origin = "visual") {
-    if (!this.board) return;
+  // ID changes must go through renameConnector, not updateConnector: the id is
+  // the key used by events, the canvas DOM, and the selection pointer.
+  renameConnector(oldId, newId, origin = "visual") {
+    const conn = this.getConnector(oldId);
+    if (!conn) return false;
+    if (newId === oldId) return true;
+    if (!newId || this.getConnector(newId)) return false;
     this._pushUndo();
     this._origin = origin;
+    conn.id = newId;
+    this.dirty = true;
+    this.emit("connector-renamed", { oldId, newId, connector: conn, origin });
+    if (this.selectedConnectorId === oldId) {
+      this.selectedConnectorId = newId;
+      this.emit("selection-changed", { connectorId: newId });
+    }
+    this._origin = null;
+    return true;
+  }
+
+  addConnector(data, origin = "visual") {
+    if (!this.board) return;
     const conn = data instanceof Connector ? data : new Connector(data);
+    if (!conn.id || this.getConnector(conn.id)) return null;
+    this._pushUndo();
+    this._origin = origin;
     this.board.connectors.push(conn);
     this.dirty = true;
     this.emit("connector-added", { connectorId: conn.id, connector: conn, origin });
@@ -190,7 +221,9 @@ export class BoardState {
     this._origin = origin;
     conn.pins.push(pin instanceof Pin ? pin : new Pin(pin.name, pin.color, pin.row));
     this.dirty = true;
-    this.emit("pin-changed", { connectorId, pinIndex: conn.pins.length - 1, origin });
+    // pinIndex -1 marks a structural change (same as removePin), so listeners
+    // rebuild the pin list instead of treating this as an in-place row edit.
+    this.emit("pin-changed", { connectorId, pinIndex: -1, origin });
     this._origin = null;
   }
 

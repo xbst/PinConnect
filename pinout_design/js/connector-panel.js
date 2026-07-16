@@ -244,8 +244,9 @@ export class ConnectorPanel {
         const val = transform(el.value);
         if (key === "id") {
           const oldId = this.state.selectedConnectorId;
-          this.state.updateConnector(oldId, { id: val }, "visual");
-          this.state.selectConnector(val);
+          if (!this.state.renameConnector(oldId, val.trim(), "visual")) {
+            this._render(); // invalid (empty/duplicate) — restore the current ID
+          }
         } else {
           this.state.updateConnector(cid, { [key]: val }, "visual");
         }
