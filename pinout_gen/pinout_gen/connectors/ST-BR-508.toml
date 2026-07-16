@@ -1,6 +1,6 @@
 [connector]
-name = "ST-OA (Open Air)"
-style = "open-air"
+name = "5.08mm Barrier Screw Terminal"
+style = "barrier"
 
 [geometry]
 pin_pitch = 20.0
