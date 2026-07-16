@@ -26,6 +26,8 @@ Then open <http://localhost:8000> in your browser. Stop the server with `Ctrl+C`
 
 ## The interface
 
+![The PinConnect Designer with the sample board loaded: TOML source on the left, the board image top-right, and the connector editor bottom-right](../assets/designer-overview.png)
+
 The window has a toolbar across the top and three panels:
 
 - **Toolbar**: Undo, Redo, Open Image, Open TOML, and Save TOML.
@@ -41,9 +43,13 @@ The panel dividers can be dragged to resize.
 
 Click **Open Image** and choose your board photo (PNG or JPG, top-down). The image sets the coordinate space for everything you place on it.
 
+![A board photo loaded into the Board Image panel, before any connectors are added](../assets/workflow-1-image.png)
+
 ### 2. Add connectors
 
 Click **+ Add Connector** (the button switches to **Cancel Draw**), then drag a box over a connector on the image. Release to create it. Repeat for each connector; click **Cancel Draw** to leave draw mode.
+
+![The board with a labelled box drawn over each connector](../assets/workflow-2-connectors.png)
 
 In the board panel you can:
 
@@ -64,6 +70,8 @@ With a connector selected, the **Connector Editor** shows:
 
 A small preview shows the selected connector type as it will render.
 
+![The Connector Editor showing the fields for the CAN connector, with a live preview of the MX-F-2R type below them](../assets/workflow-3-connector.png)
+
 ### 4. Edit the pins
 
 The **Pins** section lists the connector's pins in order. You can:
@@ -77,13 +85,19 @@ The **Pins** section lists the connector's pins in order. You can:
 
 Pin order in the list is the physical pin order in the output.
 
+![The Pins list for the CAN connector: a drag handle, colour swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
+
 ### 5. Edit the TOML directly (optional)
 
 The **TOML Source** pane is fully editable. Anything you type there updates the diagram live, and any change you make in the visual panels updates the text. This is handy for bulk edits or pasting in an existing config.
 
+![The TOML Source pane showing the generated, syntax-highlighted config](../assets/workflow-5-toml.png)
+
 ### 6. Save
 
 Click **Save TOML** to download the config. Save it next to your board image so `pinout-gen` can find the image later.
+
+![The toolbar, with the Save TOML button at the right-hand end](../assets/workflow-6-save.png)
 
 To resume work, use **Open TOML** to load a config back in, and **Open Image** to reload its board image.
 
