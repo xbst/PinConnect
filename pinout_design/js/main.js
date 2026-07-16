@@ -73,19 +73,9 @@ function setupFileIO(editorPanel) {
       const img = new Image();
       img.onload = () => {
         if (!state.board) {
-          state.setBoard(new Board({
-            title: "Pinout",
-            image: file.name,
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-          }), "init");
-          editorPanel._syncFromState();
-        } else {
-          state.board.image = file.name;
-          state.board.width = img.naturalWidth;
-          state.board.height = img.naturalHeight;
+          state.setBoard(new Board({ title: "Pinout" }), "init");
         }
-        state.setImage(reader.result, img.naturalWidth, img.naturalHeight);
+        state.setImage(reader.result, file.name, img.naturalWidth, img.naturalHeight);
       };
       img.src = reader.result;
     };

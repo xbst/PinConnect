@@ -107,13 +107,22 @@ export class BoardState {
     this._origin = null;
   }
 
-  setImage(dataUrl, width, height) {
+  setImage(dataUrl, imageName, width, height) {
     this.imageDataUrl = dataUrl;
     if (this.board) {
+      this.board.image = imageName;
       this.board.width = width;
       this.board.height = height;
+      this.dirty = true;
     }
     this.emit("image-changed", { dataUrl, width, height });
+    // Board fields changed too; emit board-changed so the editor TOML and
+    // panels sync immediately instead of on the next unrelated mutation.
+    if (this.board) {
+      this._origin = "image";
+      this.emit("board-changed", { board: this.board, origin: "image" });
+      this._origin = null;
+    }
   }
 
   selectConnector(id) {
