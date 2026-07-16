@@ -155,11 +155,32 @@ export class BoardState {
     this._origin = null;
   }
 
-  addConnector(data, origin = "visual") {
-    if (!this.board) return;
+  // ID changes must go through renameConnector, not updateConnector: the id is
+  // the key used by events, the canvas DOM, and the selection pointer.
+  renameConnector(oldId, newId, origin = "visual") {
+    const conn = this.getConnector(oldId);
+    if (!conn) return false;
+    if (newId === oldId) return true;
+    if (!newId || this.getConnector(newId)) return false;
     this._pushUndo();
     this._origin = origin;
+    conn.id = newId;
+    this.dirty = true;
+    this.emit("connector-renamed", { oldId, newId, connector: conn, origin });
+    if (this.selectedConnectorId === oldId) {
+      this.selectedConnectorId = newId;
+      this.emit("selection-changed", { connectorId: newId });
+    }
+    this._origin = null;
+    return true;
+  }
+
+  addConnector(data, origin = "visual") {
+    if (!this.board) return;
     const conn = data instanceof Connector ? data : new Connector(data);
+    if (!conn.id || this.getConnector(conn.id)) return null;
+    this._pushUndo();
+    this._origin = origin;
     this.board.connectors.push(conn);
     this.dirty = true;
     this.emit("connector-added", { connectorId: conn.id, connector: conn, origin });

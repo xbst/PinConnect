@@ -136,6 +136,11 @@ export class EditorPanel {
       this._suppressSync = false;
     });
 
+    this.state.on("connector-renamed", ({ newId, origin }) => {
+      if (origin === "editor") return;
+      this._patchConnector(newId);
+    });
+
     this.state.on("pin-changed", ({ connectorId, origin }) => {
       if (origin === "editor") return;
       this._patchConnector(connectorId);

@@ -103,6 +103,14 @@ export class BoardPanel {
     });
     this.state.on("connector-added", () => this._renderRects());
     this.state.on("connector-removed", () => this._renderRects());
+    this.state.on("connector-renamed", ({ oldId, newId }) => {
+      if (!this.svg) return;
+      const g = this.svg.querySelector(`g[data-id="${oldId}"]`);
+      if (!g) return;
+      g.setAttribute("data-id", newId);
+      const label = g.querySelector(".board-rect-label");
+      if (label) label.textContent = newId;
+    });
     this.state.on("selection-changed", ({ connectorId }) => this._highlightSelected(connectorId));
   }
 
@@ -369,7 +377,10 @@ export class BoardPanel {
       const id = dialog.querySelector("#new-conn-id").value.trim();
       const name = dialog.querySelector("#new-conn-name").value.trim();
       const type = dialog.querySelector("#new-conn-type").value;
-      if (!id) return;
+      if (!id || this.state.getConnector(id)) {
+        dialog.querySelector("#new-conn-id").style.borderColor = "var(--danger)";
+        return;
+      }
       close();
       this.state.addConnector(new Connector({
         id, name: name || id, type,
