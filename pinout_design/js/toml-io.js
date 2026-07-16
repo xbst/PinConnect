@@ -66,10 +66,15 @@ export function parseToml(text) {
 }
 
 function stripComment(line) {
-  let inStr = false, quote = null;
+  let inStr = false, quote = null, escaped = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (inStr) { if (ch === quote && line[i - 1] !== "\\") inStr = false; }
+    if (inStr) {
+      if (escaped) { escaped = false; continue; }
+      // Escapes only exist in basic (double-quoted) strings, not literal ones.
+      if (ch === "\\" && quote === '"') { escaped = true; continue; }
+      if (ch === quote) inStr = false;
+    }
     else if (ch === '"' || ch === "'") { inStr = true; quote = ch; }
     else if (ch === "#") return line.slice(0, i);
   }
@@ -79,11 +84,21 @@ function stripComment(line) {
 function parseTomlValue(val, lineNum) {
   // Quoted string (double)
   if (val.startsWith('"')) {
-    const end = val.indexOf('"', 1);
+    let end = -1;
+    for (let i = 1; i < val.length; i++) {
+      if (val[i] === "\\") { i++; continue; }
+      if (val[i] === '"') { end = i; break; }
+    }
     if (end === -1) throw new TomlParseError("Unterminated string", lineNum);
-    return val.slice(1, end)
-      .replace(/\\n/g, "\n").replace(/\\t/g, "\t")
-      .replace(/\\\\/g, "\\").replace(/\\"/g, '"');
+    // Single left-to-right pass so "\\n" is a backslash + n, not a newline.
+    return val.slice(1, end).replace(/\\(u[0-9A-Fa-f]{4}|.)/g, (m, esc) => {
+      if (esc === "n") return "\n";
+      if (esc === "t") return "\t";
+      if (esc === "r") return "\r";
+      if (esc === '"' || esc === "\\") return esc;
+      if (esc[0] === "u") return String.fromCharCode(parseInt(esc.slice(1), 16));
+      return m;
+    });
   }
   // Quoted string (single)
   if (val.startsWith("'")) {
@@ -194,7 +209,14 @@ export function buildSourceMap(text) {
 // --- Serialization ---
 
 function quoteStr(s) {
-  return '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+  return '"' + s.replace(/[\\"\u0000-\u001f]/g, (ch) => {
+    if (ch === "\\") return "\\\\";
+    if (ch === '"') return '\\"';
+    if (ch === "\n") return "\\n";
+    if (ch === "\t") return "\\t";
+    if (ch === "\r") return "\\r";
+    return "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0").toUpperCase();
+  }) + '"';
 }
 
 export function serializeConnectorBlock(conn) {
