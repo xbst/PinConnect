@@ -10,7 +10,7 @@ It is made of three tools, used in sequence:
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
 
-If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/Nevermore/SM3-PCB/#wiring
+If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/BNC/BNC.html
 
 ## Quick start
 
