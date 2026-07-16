@@ -556,7 +556,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         ll = r2_line if row_num == 2 else r1_line
         stair_offset = label_steps[i] * text_h
         rpx, rpy = _pin_pos(i)
-        col = pins[i].color
+        col = html.escape(pins[i].color)
         if eff == "bottom":   lx2, ly2 = rpx, body_bot + ll + stair_offset
         elif eff == "top":    lx2, ly2 = rpx, body_top - ll - stair_offset
         elif eff == "right":  lx2, ly2 = body_rgt + ll + stair_offset, rpy
@@ -574,7 +574,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         ll = r2_line if row_num == 2 else r1_line
         stair_offset = label_steps[i] * text_h
         rpx, rpy = _pin_pos(i)
-        col = pins[i].color
+        col = html.escape(pins[i].color)
         name = html.escape(pins[i].name)
 
         pr = geo.row2_pin_radius if (row_num == 2 and geo.row2_pin_radius >= 0) else geo.pin_radius
@@ -633,12 +633,18 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
             f'{len(conn.pins)}p</span></div>'
         )
     image_src = image_data_uri if image_data_uri is not None else board.image
+    # Escape <, > and & inside the JSON so no string value (e.g. a description
+    # containing "</script>") can terminate or inject into the script block.
+    data_json = (
+        json.dumps(connector_data, ensure_ascii=False)
+        .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    )
     return _HTML_TEMPLATE.format(
-        title=html.escape(board.title), image_path=image_src,
+        title=html.escape(board.title), image_path=html.escape(image_src),
         img_w=board.width, img_h=board.height,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
-        data=json.dumps(connector_data, ensure_ascii=False),
+        data=data_json,
     )
 
 
@@ -833,11 +839,13 @@ function hs(id){{return document.querySelector(`.hs[data-id="${{id}}"]`)}}
 function li(id){{return document.querySelector(`.cl-i[data-id="${{id}}"]`)}}
 function mark(id){{const h=hs(id),l=li(id);if(h)h.classList.add('active');if(l)l.classList.add('active')}}
 function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(e=>e.classList.remove('active'))}}
+function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
 function show(id,el){{
   const d=C[id]; if(!d) return;
-  let dh=d.description?`<div class="tt-d">${{d.description}}</div>`:'';
-  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.name}}</span>`+
-    `<span class="tt-t">${{d.typeName}} · ${{d.pinCount}}-pin</span></div>`+
+  let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
+  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{esc(d.name)}}</span>`+
+    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-pin</span></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
 }}
