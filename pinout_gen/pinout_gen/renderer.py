@@ -395,8 +395,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
     else:
         rot_w, rot_h = conn_h, conn_w
 
-    # ── Pin position helper ──
-    def _pin_pos(pin_idx: int) -> tuple[float, float]:
+    # ── Pin position helpers ──
+    def _pin_offset(pin_idx: int) -> tuple[float, float]:
+        """Rotated offset of a pin from the body centre; independent of
+        padding, so it can size the padding itself and later place pins."""
         row_slot, row_num = pin_map[pin_idx]
         if row_num == 2 and geo.row2_pin_pitch_y > 0:
             r2_pl = geo.row2_padding_left if geo.row2_padding_left >= 0 else geo.padding_left
@@ -406,8 +408,10 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         else:
             px0 = pxs0[row_slot]
             py0 = geo.pin_cy if row_num != 2 else geo.row2_pin_cy
-        dx, dy = px0 - cx0, py0 - cy0
-        rdx, rdy = _rotate_cw(dx, dy, ori)
+        return _rotate_cw(px0 - cx0, py0 - cy0, ori)
+
+    def _pin_pos(pin_idx: int) -> tuple[float, float]:
+        rdx, rdy = _pin_offset(pin_idx)
         return conn_cx + rdx, conn_cy + rdy
 
     # ── Effective pinout directions ──
@@ -450,6 +454,13 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         ll = r2_line if row_num == 2 else r1_line
         label_extent = text_h if eff in ("bottom", "top") else max_text_w
         pad[eff] = max(pad[eff], ll + label_steps[i] * text_h + label_extent)
+        if eff in ("bottom", "top"):
+            # Middle-anchored labels extend horizontally past the body on edge
+            # pins; widen the side paddings by the overhang so they aren't cropped.
+            half_w = len(pins[i].name) * font_sz * char_w / 2 + 2
+            rdx, _ = _pin_offset(i)
+            pad["left"] = max(pad["left"], margin + half_w - (rot_w / 2 + rdx))
+            pad["right"] = max(pad["right"], margin + half_w - (rot_w / 2 - rdx))
 
     svg_w = pad["left"] + rot_w + pad["right"]
     svg_h = pad["top"] + rot_h + pad["bottom"]

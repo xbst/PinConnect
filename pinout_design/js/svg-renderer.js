@@ -416,6 +416,22 @@ export function renderConnectorSVG(connector, connType) {
     sideCounts[eff] += 1;
   }
 
+  // Rotated offset of a pin from the body centre; independent of padding,
+  // so it can size the padding itself and later place the pins.
+  function pinOffset(pinIdx) {
+    const [rowSlot, rowNum] = pinMap.get(pinIdx);
+    let px0, py0;
+    if (rowNum === 2 && geo.row2_pin_pitch_y > 0) {
+      const r2Pl = geo.row2_padding_left >= 0 ? geo.row2_padding_left : geo.padding_left;
+      px0 = r2Pl;
+      py0 = geo.row2_pin_cy + (rowSlot - (r2Global.length - 1) / 2) * geo.row2_pin_pitch_y;
+    } else {
+      px0 = pxs0[rowSlot];
+      py0 = rowNum !== 2 ? geo.pin_cy : geo.row2_pin_cy;
+    }
+    return rotateCW(px0 - cx0, py0 - cy0, ori);
+  }
+
   const pad = {};
   for (const s of sides) pad[s] = margin;
   for (let i = 0; i < n; i++) {
@@ -424,6 +440,14 @@ export function renderConnectorSVG(connector, connType) {
     const ll = rowNum === 2 ? r2Line : r1Line;
     const labelExtent = (eff === "bottom" || eff === "top") ? textH : maxTextW;
     pad[eff] = Math.max(pad[eff], ll + labelSteps.get(i) * textH + labelExtent);
+    if (eff === "bottom" || eff === "top") {
+      // Middle-anchored labels extend horizontally past the body on edge
+      // pins; widen the side paddings by the overhang so they aren't cropped.
+      const halfW = (pins[i].name.length * fontSize * charW) / 2 + 2;
+      const [rdx] = pinOffset(i);
+      pad["left"] = Math.max(pad["left"], margin + halfW - (rotW / 2 + rdx));
+      pad["right"] = Math.max(pad["right"], margin + halfW - (rotW / 2 - rdx));
+    }
   }
 
   const svgW = pad["left"] + rotW + pad["right"];
@@ -440,19 +464,7 @@ export function renderConnectorSVG(connector, connType) {
   const pxH = Math.round(svgH * SCALE);
 
   function pinPos(pinIdx) {
-    const [rowSlot, rowNum] = pinMap.get(pinIdx);
-    let px0, py0;
-    if (rowNum === 2 && geo.row2_pin_pitch_y > 0) {
-      const r2Pl = geo.row2_padding_left >= 0 ? geo.row2_padding_left : geo.padding_left;
-      px0 = r2Pl;
-      const nR2 = r2Global.length;
-      py0 = geo.row2_pin_cy + (rowSlot - (nR2 - 1) / 2) * geo.row2_pin_pitch_y;
-    } else {
-      px0 = pxs0[rowSlot];
-      py0 = rowNum !== 2 ? geo.pin_cy : geo.row2_pin_cy;
-    }
-    const dx = px0 - cx0, dy = py0 - cy0;
-    const [rdx, rdy] = rotateCW(dx, dy, ori);
+    const [rdx, rdy] = pinOffset(pinIdx);
     return [connCx + rdx, connCy + rdy];
   }
 
