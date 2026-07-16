@@ -10,7 +10,7 @@ It is made of three tools, used in sequence:
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
 
-If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/Nevermore/SM3-PCB/#wiring
+If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/BNC/BNC.html
 
 ## Quick start
 
@@ -59,7 +59,6 @@ The project works and generates great looking pinouts already. Below are changes
 - Add slide switch as a "connector" for highlighting its positions
 - Add theming to `pinout-gen` 
 - Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
-- Write a more detailed doc with screenshots for `pinout-design`
 - Add a screenshot of the output to this document
 
 ## License

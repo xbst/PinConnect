@@ -1,5 +1,5 @@
 [connector]
-name = "9.5mm Barrier Screw Terminal"
+name = "9.5mm Barrier ST"
 style = "barrier"
 
 [geometry]
