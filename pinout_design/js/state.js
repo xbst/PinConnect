@@ -191,7 +191,9 @@ export class BoardState {
     this._origin = origin;
     conn.pins.push(pin instanceof Pin ? pin : new Pin(pin.name, pin.color, pin.row));
     this.dirty = true;
-    this.emit("pin-changed", { connectorId, pinIndex: conn.pins.length - 1, origin });
+    // pinIndex -1 marks a structural change (same as removePin), so listeners
+    // rebuild the pin list instead of treating this as an in-place row edit.
+    this.emit("pin-changed", { connectorId, pinIndex: -1, origin });
     this._origin = null;
   }
 
