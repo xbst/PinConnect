@@ -7,7 +7,7 @@ import mimetypes
 import sys
 from pathlib import Path
 
-from .config import load_all_connector_types, load_board
+from .config import load_all_connector_types, load_board, load_theme
 from .renderer import generate_html
 
 
@@ -51,6 +51,13 @@ def main(argv: list[str] | None = None) -> None:
              "Without a path, uses the image from the board config.  "
              "With a path, embeds the specified image instead.",
     )
+    parser.add_argument(
+        "-t", "--theme",
+        default=None,
+        metavar="NAME",
+        help="Theme to apply, overriding the board's [board] theme.  "
+             "Resolved from the board's theme_dir, then the bundled themes.",
+    )
 
     args = parser.parse_args(argv)
     config_path: Path = args.config.resolve()
@@ -62,6 +69,13 @@ def main(argv: list[str] | None = None) -> None:
     board = load_board(config_path)
     connector_types = load_all_connector_types(board, config_path)
 
+    theme_name = args.theme or board.theme
+    try:
+        theme = load_theme(theme_name, config_path, board.theme_dir)
+    except FileNotFoundError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
     image_data_uri: str | None = None
     if args.image_embed is not None:
         if args.image_embed is True:
@@ -70,7 +84,8 @@ def main(argv: list[str] | None = None) -> None:
             image_path = Path(args.image_embed).resolve()
         image_data_uri = _embed_image(image_path)
 
-    html = generate_html(board, connector_types, image_data_uri=image_data_uri)
+    html = generate_html(board, connector_types, theme=theme,
+                         image_data_uri=image_data_uri)
 
     out_path: Path = args.output or config_path.with_suffix(".pinout.html")
     out_path.write_text(html, encoding="utf-8")

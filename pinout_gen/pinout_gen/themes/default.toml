@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────
+# PinConnect theme — "default"
+#
+# This is the built-in default.  It sets only a name: every colour falls
+# back to PinConnect's built-in palette (defined in pinout_gen/config.py),
+# so a board with no `theme` renders exactly like this.
+#
+# To make your own theme, copy this file to `<name>.toml` (in the bundled
+# themes folder, or a board-local `theme_dir`) and uncomment/override the
+# tokens you want to change.  A theme only needs to state what differs.
+# ─────────────────────────────────────────────────────────────────────
+
+[theme]
+name = "Default"
+
+# Fonts.  `source` is "google" (loaded from Google Fonts), "bundled" (a font
+# file embedded in the output as base64, so it stays self-contained), or
+# "system" (family is used verbatim as a CSS stack).  Omit [font] to use Roboto.
+#
+# [font]
+# family  = "Inter"
+# source  = "google"
+# weights = "400;500;600"        # google only
+# file    = "inter.woff2"        # bundled only, path relative to this file
+#
+# [font.label]                   # optional pin-label font; defaults to [font]
+# family  = "JetBrains Mono"
+# source  = "google"
+# weights = "400;500"
+
+# Behaviour of the pinout chrome.  Omit [behavior] to keep the classic layout:
+# a collapsed 240px sidebar that sits beside the image at all widths.
+#
+# [behavior]
+# sidebar_default_open     = false   # start with the connector list shown
+# sidebar_max_width        = 340     # max sidebar width in px; panel sizes to content up to this (and 40vw)
+# sidebar_responsive_stack = false   # below the breakpoint, list moves below the image
+# sidebar_stack_breakpoint = 640     # px width at/under which stacking kicks in
+
+# Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
+# mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both
+# switch between them.  Token names are the generated CSS variables without
+# the leading `--`.
+#
+# [colors.light]
+# bg          = "#ffffff"                # page background
+# text        = "#1a1a1a"                # primary text
+# tip-bg      = "#ffffff"                # tooltip / sidebar background
+# tip-border  = "#d0d0d0"
+# tip-shadow  = "rgba(0,0,0,.12)"
+# hs-hover    = "rgba(59,130,246,.13)"   # hotspot hover fill
+# hs-stroke   = "rgba(59,130,246,.5)"    # hotspot outline
+# hs-active   = "rgba(59,130,246,.22)"   # pinned hotspot fill
+# hint-bg     = "rgba(30,30,30,.75)"
+# hint-text   = "#fff"
+# divider     = "#e5e5e5"
+# conn-body   = "#e8e8e0"                # connector housing fill
+# conn-cavity = "#d0d0c8"                # connector cavity fill
+# conn-stroke = "#555"                   # connector outlines
+# line-color  = "#777"
+# label-color = "#333"                   # pin label text in the pinout SVG
+# desc-color  = "#555"                   # connector description text
+# type-color  = "#888"                   # connector type / pin-count text
+# scroll-thumb= "rgba(0,0,0,.22)"        # connector-list / tooltip scrollbar thumb
+# scroll-track= "transparent"            # scrollbar track
+#
+# [colors.dark]
+# bg          = "#131313"
+# text        = "#e0e0e0"
+# ...  (same token names as light)
+
+# Raw CSS escape hatch, appended after the generated variable blocks, for
+# anything the tokens above can't express.  It is emitted verbatim and is a
+# trusted, author-controlled surface — keep board data out of it.
+#
+# [extra_css]
+# css = """
+# .bb { font-style: italic; }
+# """
