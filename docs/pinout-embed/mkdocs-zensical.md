@@ -43,6 +43,14 @@ At build time the extension turns that into an `<iframe>` that loads the HTML. D
 
 Only images tagged `type=application/pinout` are affected; ordinary images pass through untouched.
 
+## Responsive height
+
+Most pinouts render at a fixed height (your `style`, or the `min-height:60vh` default), which is what you want on a normal page — the diagram fills the frame.
+
+If you generate a pinout with a theme that **moves the connector list below the board on narrow screens** (the `sidebar_responsive_stack` theme behaviour), the content can grow taller than a fixed iframe. Those pinouts report their height to the page, and this extension adds one small listener per page that grows the matching iframe to fit — then shrinks it back to the authored height on wider screens.
+
+This is automatic and needs no configuration. It is also backward compatible in both directions: a pinout that doesn't report a height, or a page built with an older `pinout-embed`, simply keeps the iframe's authored `(min-)height`.
+
 ## Place the files so the site serves them
 
 MkDocs and Zensical copy non-Markdown files under `docs/` into the built site. Put the generated HTML **and its board image** inside your docs tree and reference the HTML by a path relative to the page.
