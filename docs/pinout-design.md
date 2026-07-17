@@ -66,6 +66,7 @@ With a connector selected, the **Connector Editor** shows:
 - **Name**: label shown on the diagram.
 - **Type**: connector type, chosen from the built-in library (drives the rendered shape).
 - **Orient.**: rotation: 0°, 90°, 180°, or 270°.
+- **Labels**: flat, staircase or staggered layout of pin labels on horizontal connectors (avoids overlaps).
 - **Desc.**: optional longer description.
 
 A small preview shows the selected connector type as it will render.
