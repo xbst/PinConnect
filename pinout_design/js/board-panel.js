@@ -21,6 +21,16 @@ export class BoardPanel {
     this._bindState();
     this._bindDrawButton();
     this._bindViewportEvents();
+    this._bindGlobalDragEvents();
+  }
+
+  _bindGlobalDragEvents() {
+    // Continue and finish drags at the document level so a drag is never
+    // stranded when the button is released outside the SVG (past the board
+    // edge, over a panel, over the toolbar, or outside the window). Bound
+    // once; both handlers no-op unless a drag started on the board.
+    document.addEventListener("mousemove", (e) => { if (this._drag) this._onMouseMove(e); });
+    document.addEventListener("mouseup", (e) => { if (this._drag) this._onMouseUp(e); });
   }
 
   _bindDrawButton() {
@@ -178,9 +188,10 @@ export class BoardPanel {
   }
 
   _bindSvgEvents() {
+    // Only the drag START and click (selection) are bound to the SVG; movement
+    // and release are handled at the document level (see _bindGlobalDragEvents)
+    // so a drag can't be lost when the pointer leaves the SVG mid-drag.
     this.svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
-    this.svg.addEventListener("mousemove", (e) => this._onMouseMove(e));
-    this.svg.addEventListener("mouseup", (e) => this._onMouseUp(e));
     this.svg.addEventListener("click", (e) => {
       if (!this._drag || !this._drag.moved) {
         const g = e.target.closest("g[data-id]");
@@ -245,6 +256,10 @@ export class BoardPanel {
 
   _onMouseMove(e) {
     if (!this._drag) return;
+    // If the button was released where we never saw the mouseup (outside the
+    // window), the next move arrives with no buttons held. Finalize the drag
+    // instead of letting the connector follow the loose cursor.
+    if (e.buttons === 0) { this._onMouseUp(e); return; }
     const pt = this._svgPoint(e);
     this._drag.moved = true;
 
