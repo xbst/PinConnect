@@ -27,7 +27,18 @@ export class ConnectorPanel {
   _bindState() {
     this.state.on("selection-changed", () => this._render());
     this.state.on("connector-changed", ({ connectorId }) => {
-      if (connectorId === this.state.selectedConnectorId) this._render();
+      if (connectorId !== this.state.selectedConnectorId) return;
+      // A connector field edit fires `change` on blur — so if we rebuilt the
+      // whole panel here, we'd destroy the element the user is clicking (e.g.
+      // "+ Add Pin", a delete button, a swatch) before the click completes,
+      // silently losing it. Only re-render when the pin-row structure actually
+      // changes (dual-row-ness, from a type change); otherwise just refresh the
+      // drawing, leaving the form and the pending click intact.
+      const conn = this.state.getSelectedConnector();
+      const ct = conn && this.state.connectorTypes.get(conn.type);
+      const isDualRow = !!(ct && ct.geometry.rows >= 2);
+      if (isDualRow !== this._isDualRow) this._render();
+      else this._updateSvgPreview();
     });
     this.state.on("pin-changed", ({ connectorId, pinIndex, origin }) => {
       if (connectorId !== this.state.selectedConnectorId) return;
@@ -64,6 +75,7 @@ export class ConnectorPanel {
 
     const ct = this.state.connectorTypes.get(conn.type);
     const isDualRow = ct && ct.geometry.rows >= 2;
+    this._isDualRow = !!isDualRow;
 
     let svgHtml = "";
     if (ct) {
