@@ -138,6 +138,8 @@ export function parseBoardToml(text) {
     width: b.width || 0,
     height: b.height || 0,
     connector_dir: b.connector_dir || "./connectors",
+    theme: b.theme || "default",
+    theme_dir: b.theme_dir || "./themes",
   };
 
   const connectors = (raw.connector || []).map(c => ({
@@ -151,6 +153,7 @@ export function parseBoardToml(text) {
     orientation: c.orientation || 0,
     description: c.description || "",
     label_style: c.label_style || "staggered",
+    symbol: c.symbol || "",
     pins: (c.pin || []).map(p => ({
       name: p.name || "",
       color: p.color || "#888888",
@@ -231,6 +234,7 @@ export function serializeConnectorBlock(conn) {
   if (conn.orientation) lines.push(`orientation = ${conn.orientation}`);
   if (conn.description) lines.push(`description = ${quoteStr(conn.description)}`);
   if (conn.label_style && conn.label_style !== "staggered") lines.push(`label_style = ${quoteStr(conn.label_style)}`);
+  if (conn.symbol) lines.push(`symbol = ${quoteStr(conn.symbol)}`);
 
   for (const pin of conn.pins) {
     lines.push("");
@@ -252,6 +256,12 @@ export function serializeBoardToml(boardData, connectors) {
   lines.push(`height = ${boardData.height}`);
   if (boardData.connector_dir && boardData.connector_dir !== "./connectors") {
     lines.push(`connector_dir = ${quoteStr(boardData.connector_dir)}`);
+  }
+  if (boardData.theme && boardData.theme !== "default") {
+    lines.push(`theme = ${quoteStr(boardData.theme)}`);
+  }
+  if (boardData.theme_dir && boardData.theme_dir !== "./themes") {
+    lines.push(`theme_dir = ${quoteStr(boardData.theme_dir)}`);
   }
 
   for (const conn of connectors) {

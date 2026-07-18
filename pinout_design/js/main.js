@@ -20,6 +20,41 @@ async function loadConnectorTypes() {
   }
 }
 
+async function loadThemes() {
+  try {
+    const resp = await fetch("themes/index.json", { cache: "no-store" });
+    state.themes = await resp.json();
+  } catch (e) {
+    state.themes = [{ name: "default", display: "Default" }];
+  }
+}
+
+async function loadSymbols() {
+  try {
+    const resp = await fetch("symbols.json", { cache: "no-store" });
+    state.symbolNames = await resp.json();
+  } catch (e) {
+    state.symbolNames = [];
+  }
+}
+
+function setupThemeSelect() {
+  const sel = document.getElementById("theme-select");
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const refresh = () => {
+    const cur = (state.board && state.board.theme) || "default";
+    const list = state.themes.slice();
+    if (!list.some(t => t.name === cur)) list.push({ name: cur, display: cur });
+    sel.innerHTML = list.map(t =>
+      `<option value="${esc(t.name)}"${t.name === cur ? " selected" : ""}>${esc(t.display)}</option>`
+    ).join("");
+  };
+  refresh();
+  sel.addEventListener("change", () => state.setTheme(sel.value, "visual"));
+  state.on("board-changed", refresh);
+}
+
 function setupResizers() {
   const resizerH = document.getElementById("resizer-h");
   const panelEditor = document.getElementById("panel-editor");
@@ -119,6 +154,8 @@ function setupFileIO(editorPanel) {
 
 async function init() {
   await loadConnectorTypes();
+  await loadThemes();
+  await loadSymbols();
 
   const editorPanel = new EditorPanel(
     document.getElementById("editor-container"), state
@@ -132,6 +169,7 @@ async function init() {
 
   setupResizers();
   setupFileIO(editorPanel);
+  setupThemeSelect();
 
   const undoBtn = document.getElementById("undo-btn");
   const redoBtn = document.getElementById("redo-btn");

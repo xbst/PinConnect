@@ -86,6 +86,34 @@ html, body {
   display: none;
 }
 
+/* Theme selector: a plain label + a dropdown styled like the connector-form
+   selects, rather than the button-like Open/Save labels. */
+.toolbar label.theme-field {
+  background: none;
+  border-color: transparent;
+  padding: 4px 0;
+  color: var(--text-dim);
+  cursor: default;
+}
+.toolbar label.theme-field:hover {
+  background: none;
+  border-color: transparent;
+}
+.toolbar label.theme-field select {
+  padding: 4px 8px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+.toolbar label.theme-field select:hover,
+.toolbar label.theme-field select:focus {
+  border-color: var(--border-focus);
+}
+
 /* --- Main layout --- */
 
 .app {

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "default",
+    "display": "Default"
+  },
+  {
+    "name": "midnight",
+    "display": "Midnight"
+  },
+  {
+    "name": "ocean",
+    "display": "Ocean"
+  },
+  {
+    "name": "slate",
+    "display": "Slate"
+  },
+  {
+    "name": "terminal",
+    "display": "Terminal"
+  }
+]
