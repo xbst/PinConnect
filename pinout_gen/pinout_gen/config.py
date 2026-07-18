@@ -76,6 +76,7 @@ class Connector:
     orientation: int = 0
     description: str = ""
     label_style: str = "staggered"
+    symbol: str = ""
 
 
 @dataclass
@@ -118,6 +119,7 @@ def load_board(path: Path) -> Board:
             orientation=c.get("orientation", 0),
             description=c.get("description", ""),
             label_style=c.get("label_style", "staggered"),
+            symbol=c.get("symbol", ""),
         ))
     return board
 
@@ -215,6 +217,10 @@ class ThemeBehavior:
                                              # content up to this (and 40vw), wrapping only if longer
     sidebar_responsive_stack: bool = False   # below the breakpoint, list moves below the image
     sidebar_stack_breakpoint: int = 640      # px width at/under which stacking kicks in
+    show_symbols: bool = True                # show per-connector symbols in the list & tooltip
+    symbol_style_fallback: bool = False      # symbol-less connectors fall back to a style default
+    font_scale: float = 1.0                  # multiplier for the list / tooltip / bottom-bar text
+    symbol_size: int = 16                    # connector-symbol icon size in px
 
 
 @dataclass
@@ -306,6 +312,10 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         beh.sidebar_max_width = int(bdict.get("sidebar_max_width", beh.sidebar_max_width))
         beh.sidebar_responsive_stack = bool(bdict.get("sidebar_responsive_stack", beh.sidebar_responsive_stack))
         beh.sidebar_stack_breakpoint = int(bdict.get("sidebar_stack_breakpoint", beh.sidebar_stack_breakpoint))
+        beh.show_symbols = bool(bdict.get("show_symbols", beh.show_symbols))
+        beh.symbol_style_fallback = bool(bdict.get("symbol_style_fallback", beh.symbol_style_fallback))
+        beh.font_scale = float(bdict.get("font_scale", beh.font_scale))
+        beh.symbol_size = int(bdict.get("symbol_size", beh.symbol_size))
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):

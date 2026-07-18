@@ -6,6 +6,7 @@ import json
 import math
 
 from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme
+from .symbols import render_symbol
 
 SCALE = 3.0
 
@@ -678,15 +679,18 @@ def _render_behavior_css(theme: Theme) -> str:
     the connector list flows below the board image instead of beside it.  Emitted
     at the end of the stylesheet so its rules override the base layout."""
     b = theme.behavior
-    parts = [f":root{{--sb-max:min({b.sidebar_max_width}px,40vw)}}"]
+    parts = [
+        f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
+        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale}}}"
+    ]
     if b.sidebar_responsive_stack:
         parts.append(
             f"@media(max-width:{b.sidebar_stack_breakpoint}px){{"
-            "html,body{height:auto;min-height:100%}"
-            "body{overflow:visible;flex-direction:column}"
+            "html,body{height:auto}"
+            "body{overflow:visible;flex-direction:column;padding-bottom:8px}"
             ".bd{flex:none;height:auto;min-height:0}"
             ".pw img{max-height:none}"
-            ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:visible;flex:none;margin:0 8px 8px}"
+            ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:visible;flex:none;margin:0 8px}"
             ".sb.hid{display:none}"
             ".sb-in{width:auto;max-width:none;min-width:0;height:auto;overflow:visible}"
             "}"
@@ -705,11 +709,18 @@ def _render_height_script(theme: Theme) -> str:
     return (
         "<script>\n"
         "(function(){\n"
-        f"  var BP={bp},last=-1;\n"
-        "  function h(){return window.matchMedia('(max-width:'+BP+'px)').matches"
-        "?Math.ceil(document.documentElement.scrollHeight):0;}\n"
-        "  function report(){var v=h();if(Math.abs(v-last)<=2)return;last=v;"
-        "try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}}\n"
+        f"  var BP={bp},last=-1,embedded=(window.parent!==window);\n"
+        "  function stacked(){return window.matchMedia('(max-width:'+BP+'px)').matches;}\n"
+        "  function report(){\n"
+        "    /* Embedded + stacked: hide our own scrollbar. The parent iframe grows to\n"
+        "       fit, so a scrollbar would only shrink the width and oscillate. */\n"
+        "    if(embedded)document.documentElement.style.overflow=(stacked()?'hidden':'');\n"
+        "    /* Report body.scrollHeight, not documentElement's (which is floored at the\n"
+        "       viewport height, so it could never shrink when the list closes). */\n"
+        "    var v=0,b=document.body;if(stacked()&&b)v=Math.ceil(b.scrollHeight);\n"
+        "    if(Math.abs(v-last)<=2)return;last=v;\n"
+        "    try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}\n"
+        "  }\n"
         "  addEventListener('load',report);addEventListener('resize',report);\n"
         "  if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}\n"
         "  report();\n"
@@ -723,13 +734,19 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
                    image_data_uri: str | None = None) -> str:
     if theme is None:
         theme = Theme()
+    show_sym = theme.behavior.show_symbols
+    style_fb = theme.behavior.symbol_style_fallback
+    sym_html: dict[str, str] = {}
     connector_data: dict[str, dict] = {}
     for conn in board.connectors:
         ct = connector_types[conn.type]
         svg = render_connector_svg(conn, ct)
+        sym = render_symbol(conn.symbol, ct.style, style_fallback=style_fb) if show_sym else ""
+        sym_html[conn.id] = sym
         connector_data[conn.id] = {
             "name": conn.name, "svg": svg, "description": conn.description,
             "typeName": ct.name, "pinCount": len(conn.pins),
+            "symbol": f'<span class="tt-sym">{sym}</span>' if sym else "",
         }
     hotspot_rects: list[str] = []
     for conn in board.connectors:
@@ -740,11 +757,16 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
             f'x="{x}" y="{y}" width="{w}" height="{h}" rx="3"/>'
         )
     sidebar_items: list[str] = []
+    any_symbols = any(sym_html.values())
     for conn in board.connectors:
         ct = connector_types[conn.type]
+        sym = sym_html.get(conn.id, "")
+        # When any connector has a symbol, reserve the (possibly empty) slot on the
+        # others too, so every connector name left-aligns.
+        sym_span = f'<span class="cl-sym">{sym}</span>' if any_symbols else ""
         sidebar_items.append(
             f'    <div class="cl-i" data-id="{html.escape(conn.id)}">'
-            f'<span class="cl-n">{html.escape(conn.name)}</span>'
+            f'{sym_span}<span class="cl-n">{html.escape(conn.name)}</span>'
             f'<span class="cl-t">{html.escape(ct.name)} &middot; '
             f'{len(conn.pins)}p</span></div>'
         )
@@ -803,14 +825,14 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--divider)}}
-.tt-n{{font-weight:600;font-size:14px;color:var(--text)}}
-.tt-t{{font-size:11px;color:var(--type-color);white-space:nowrap}}
+.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text)}}
+.tt-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
-.tt-d{{font-size:12.5px;color:var(--desc-color);margin-top:10px;padding-top:8px;
+.tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
 .bb{{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
   background:var(--tip-bg);color:var(--type-color);border:1px solid var(--tip-border);
-  padding:7px 18px;border-radius:12px;font-size:12px;font-family:var(--ui-font);
+  padding:7px 18px;border-radius:12px;font-size:calc(12px*var(--font-scale));font-family:var(--ui-font);
   box-shadow:0 2px 8px var(--tip-shadow);
   display:flex;align-items:center;gap:8px;white-space:nowrap}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
@@ -831,13 +853,17 @@ body{{display:flex;height:100%;overflow:hidden}}
 .sb-in::-webkit-scrollbar,.tt::-webkit-scrollbar{{width:8px;height:8px}}
 .sb-in::-webkit-scrollbar-thumb,.tt::-webkit-scrollbar-thumb{{background:var(--scroll-thumb);border-radius:8px}}
 .sb-in::-webkit-scrollbar-track,.tt::-webkit-scrollbar-track{{background:var(--scroll-track)}}
-.sb-t{{font-weight:600;font-size:13px;padding:0 14px 8px;
+.sb-t{{font-weight:600;font-size:calc(13px*var(--font-scale));padding:0 14px 8px;
   border-bottom:1px solid var(--divider);margin-bottom:4px;color:var(--text)}}
-.cl-i{{display:flex;justify-content:space-between;align-items:center;
+.cl-i{{display:flex;align-items:center;
   padding:8px 14px;cursor:pointer;transition:background .15s;gap:8px}}
 .cl-i:hover,.cl-i.active{{background:var(--hs-hover)}}
-.cl-n{{font-weight:500;font-size:13px}}
-.cl-t{{font-size:11px;color:var(--type-color);white-space:nowrap}}
+.cl-n{{font-weight:500;font-size:calc(13px*var(--font-scale))}}
+.cl-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap;margin-left:auto}}
+.cl-sym,.tt-sym{{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  vertical-align:middle;width:var(--sym-size);font-size:var(--sym-size);line-height:1;color:var(--label-color)}}
+.cl-sym svg,.tt-sym svg{{width:var(--sym-size);height:var(--sym-size);display:block}}
+.tt-sym{{margin-right:6px}}
 {behavior_css}
 </style>
 <script>
@@ -925,7 +951,7 @@ function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function show(id,el){{
   const d=C[id]; if(!d) return;
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
-  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{esc(d.name)}}</span>`+
+  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
     `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-pin</span></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
