@@ -24,6 +24,13 @@ EMBED_CLASS = "pinconnect-embed"
 # works with several pinouts on a page), sets the height on a positive value,
 # and clears it on 0 so the iframe reverts to its authored height on wide
 # screens.  A sanity cap ignores absurd values.
+#
+# The second block flags a broken embed instead of shipping a silently-blank
+# iframe: a same-origin HEAD that returns 404 means the target file is missing
+# (a typo, or the pinout was never generated), so the iframe is replaced with a
+# visible error.  MkDocs reports this at build time; Zensical (and plain
+# Markdown) do not, so this covers them at runtime.  Cross-origin embeds can't
+# be checked (CORS) and are left untouched.
 _LISTENER_SCRIPT = (
     "\n<script>\n"
     "(function(){\n"
@@ -47,6 +54,21 @@ _LISTENER_SCRIPT = (
     "        break;\n"
     "      }\n"
     "    }\n"
+    "  });\n"
+    "  Array.prototype.forEach.call(document.querySelectorAll('iframe." + EMBED_CLASS + "'),function(f){\n"
+    "    var src=f.getAttribute('src');if(!src)return;\n"
+    "    fetch(src,{method:'HEAD'}).then(function(r){\n"
+    "      if(r.status!==404)return;\n"
+    "      var d=document.createElement('div');\n"
+    "      d.className='" + EMBED_CLASS + "-error';\n"
+    "      d.style.cssText='display:flex;align-items:center;justify-content:center;"
+    "box-sizing:border-box;padding:16px;width:100%;text-align:center;"
+    "border:1px solid #d9534f;border-radius:8px;color:#d9534f;"
+    "font-family:system-ui,sans-serif;font-size:14px;background:rgba(217,83,79,.06);';\n"
+    "      d.style.minHeight=f.style.minHeight;\n"
+    "      d.textContent='\\u26A0 Pinout failed to load \\u2014 file not found: '+src;\n"
+    "      f.replaceWith(d);\n"
+    "    }).catch(function(){});\n"
     "  });\n"
     "})();\n"
     "</script>"
