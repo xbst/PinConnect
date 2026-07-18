@@ -144,7 +144,7 @@ export class ConnectorPanel {
     return `
       <div class="pin-row" data-idx="${index}">
         <span class="pin-drag-handle" draggable="true" data-idx="${index}">≡</span>
-        <div class="pin-color-swatch" data-idx="${index}" style="background:${pin.color}" title="${pin.color}"></div>
+        <div class="pin-color-swatch" data-idx="${index}" style="background:${this._esc(pin.color)}" title="${this._esc(pin.color)}"></div>
         <input type="text" class="pin-name-input" data-idx="${index}" value="${this._esc(pin.name)}">
         ${rowSel}
         <button class="pin-delete-btn" data-idx="${index}">×</button>
@@ -193,9 +193,13 @@ export class ConnectorPanel {
       if (e.key === "Enter") {
         e.preventDefault();
         const hex = hexInput.value.trim();
-        if (/^[0-9A-Fa-f]{3,6}$/.test(hex)) {
+        // Only 3- or 6-digit hex is a valid solid color; 4/5-digit values used
+        // to be accepted and stored as invalid colors.
+        if (/^([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex)) {
           this._applyColor(swatchEl, connId, pinIndex, "#" + hex);
           this._closePopup();
+        } else {
+          hexInput.style.borderColor = "var(--danger)";
         }
       }
       e.stopPropagation();

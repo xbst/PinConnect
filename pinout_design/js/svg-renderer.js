@@ -348,7 +348,10 @@ export function renderConnectorSVG(connector, connType) {
   const geo = connType.geometry;
   const pins = connector.pins;
   const n = pins.length;
-  const ori = connector.orientation % 360;
+  // Normalize to [0,360). JS's % keeps the sign of the dividend, so a negative
+  // orientation (e.g. -90) would give a negative index into `sides` below,
+  // yielding sides[-1] = undefined and forcing every label off-canvas.
+  const ori = ((connector.orientation % 360) + 360) % 360;
 
   const r1Global = [], r2Global = [];
   for (let i = 0; i < n; i++) {
@@ -546,7 +549,7 @@ export function renderConnectorSVG(connector, connType) {
     const ll = rowNum === 2 ? r2Line : r1Line;
     const stairOffset = labelSteps.get(i) * textH;
     const [rpx, rpy] = pinPos(i);
-    const col = pins[i].color;
+    const col = escapeHtml(pins[i].color);
     let lx2, ly2;
     if (eff === "bottom")     { lx2 = rpx; ly2 = bodyBot + ll + stairOffset; }
     else if (eff === "top")   { lx2 = rpx; ly2 = bodyTop - ll - stairOffset; }
@@ -566,7 +569,7 @@ export function renderConnectorSVG(connector, connType) {
     const ll = rowNum === 2 ? r2Line : r1Line;
     const stairOffset = labelSteps.get(i) * textH;
     const [rpx, rpy] = pinPos(i);
-    const col = pins[i].color;
+    const col = escapeHtml(pins[i].color);
     const name = escapeHtml(pins[i].name);
 
     const pr = (rowNum === 2 && geo.row2_pin_radius >= 0) ? geo.row2_pin_radius : geo.pin_radius;
