@@ -60,6 +60,8 @@ export class BoardPanel {
       this._panX = mx - (mx - this._panX) * (this._zoom / oldZoom);
       this._panY = my - (my - this._panY) * (this._zoom / oldZoom);
       this._applyTransform();
+      // Handle geometry is baked in at draw time, so re-draw at the new scale.
+      if (this._zoom !== oldZoom) this._highlightSelected(this.state.selectedConnectorId);
     }, { passive: false });
 
     this.container.addEventListener("mousedown", (e) => {
@@ -86,9 +88,16 @@ export class BoardPanel {
     this.container.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
+  // Screen-px-to-image-px factor for overlay chrome: the wrapper is scaled by
+  // zoom, so 1/zoom cancels it, keeping strokes/labels/handles a constant size.
+  _chromeK() {
+    return this._zoom > 0 ? 1 / this._zoom : 1;
+  }
+
   _applyTransform() {
     if (!this.wrapper) return;
     this.wrapper.style.transform = `translate(${this._panX}px, ${this._panY}px) scale(${this._zoom})`;
+    this.wrapper.style.setProperty("--chrome-k", this._chromeK());
   }
 
   fitToView() {
@@ -102,6 +111,8 @@ export class BoardPanel {
     this._panX = (vw - bw * this._zoom) / 2;
     this._panY = (vh - bh * this._zoom) / 2;
     this._applyTransform();
+    // Zoom changed after any rects were drawn, so re-scale the handles.
+    this._highlightSelected(this.state.selectedConnectorId);
   }
 
   _bindState() {
@@ -345,9 +356,10 @@ export class BoardPanel {
     this._previewRect.setAttribute("class", "draw-preview");
     this._previewRect.setAttribute("fill", "none");
     this._previewRect.setAttribute("stroke", "var(--accent)");
-    this._previewRect.setAttribute("stroke-width", "2");
-    this._previewRect.setAttribute("stroke-dasharray", "8 4");
-    this._previewRect.setAttribute("rx", "3");
+    const k = this._chromeK();
+    this._previewRect.setAttribute("stroke-width", 2 * k);
+    this._previewRect.setAttribute("stroke-dasharray", `${8 * k} ${4 * k}`);
+    this._previewRect.setAttribute("rx", 3 * k);
     this.svg.appendChild(this._previewRect);
   }
 
@@ -505,7 +517,8 @@ export class BoardPanel {
 
   _addHandles(g, x, y, w, h) {
     const ns = "http://www.w3.org/2000/svg";
-    const hs = HANDLE_SIZE;
+    const k = this._chromeK();
+    const hs = HANDLE_SIZE * k;
     const positions = [
       { handle: "tl", cx: x, cy: y },
       { handle: "t",  cx: x + w / 2, cy: y },
@@ -527,8 +540,8 @@ export class BoardPanel {
       r.setAttribute("height", hs);
       r.setAttribute("fill", "var(--accent)");
       r.setAttribute("stroke", "#fff");
-      r.setAttribute("stroke-width", "1");
-      r.setAttribute("rx", "2");
+      r.setAttribute("stroke-width", 1 * k);
+      r.setAttribute("rx", 2 * k);
       r.style.cursor = this._handleCursor(p.handle);
       g.appendChild(r);
     }

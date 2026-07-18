@@ -226,10 +226,14 @@ html, body {
   height: 100%;
 }
 
+/* --chrome-k (set by BoardPanel to 1/zoom) keeps strokes, labels and handles a
+   constant on-screen size regardless of the board image's pixel resolution:
+   the overlay is drawn in image-pixel units and the wrapper is scaled by zoom,
+   so multiplying by 1/zoom cancels that scaling. */
 .board-rect {
   fill: var(--hs-fill);
   stroke: var(--hs-stroke);
-  stroke-width: 2;
+  stroke-width: calc(2 * var(--chrome-k, 1));
   cursor: pointer;
   transition: fill 0.15s, stroke 0.15s;
 }
@@ -242,12 +246,12 @@ html, body {
 .board-rect.selected {
   fill: var(--hs-fill-selected);
   stroke: var(--hs-stroke-selected);
-  stroke-width: 2.5;
+  stroke-width: calc(2.5 * var(--chrome-k, 1));
 }
 
 .board-rect-label {
   fill: var(--text);
-  font-size: 14px;
+  font-size: calc(14px * var(--chrome-k, 1));
   font-weight: 600;
   pointer-events: none;
   text-anchor: middle;
