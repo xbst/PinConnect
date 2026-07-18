@@ -4,6 +4,8 @@ export class BoardState {
   constructor() {
     this.board = null;
     this.connectorTypes = new Map();
+    this.themes = [];          // [{name, display}] mirrored from the bundled themes
+    this.symbolNames = [];     // named-icon list for the connector symbol field
     this.selectedConnectorId = null;
     this.imageDataUrl = null;
     this.dirty = false;
@@ -44,11 +46,13 @@ export class BoardState {
       width: this.board.width,
       height: this.board.height,
       connector_dir: this.board.connector_dir,
+      theme: this.board.theme,
+      theme_dir: this.board.theme_dir,
       connectors: this.board.connectors.map(c => ({
         id: c.id, name: c.name, type: c.type,
         x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2,
         orientation: c.orientation, description: c.description,
-        label_style: c.label_style,
+        label_style: c.label_style, symbol: c.symbol,
         pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
       })),
       selectedConnectorId: this.selectedConnectorId,
@@ -123,6 +127,16 @@ export class BoardState {
       this.emit("board-changed", { board: this.board, origin: "image" });
       this._origin = null;
     }
+  }
+
+  setTheme(theme, origin = "visual") {
+    if (!this.board || this.board.theme === theme) return;
+    this._pushUndo();
+    this._origin = origin;
+    this.board.theme = theme;
+    this.dirty = true;
+    this.emit("board-changed", { board: this.board, origin });
+    this._origin = null;
   }
 
   selectConnector(id) {

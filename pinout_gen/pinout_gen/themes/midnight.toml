@@ -1,0 +1,62 @@
+# "Midnight" — a demo theme showing off colours + fonts.
+#
+# An indigo-tinted palette with a violet accent, Inter for the UI, and a
+# monospaced label font for crisp pin names.  Copy and tweak to taste.
+
+[theme]
+name = "Midnight"
+
+[font]
+family = "Inter"
+source = "google"
+weights = "400;500;600"
+
+[font.label]
+family = "JetBrains Mono"
+source = "google"
+weights = "400;500"
+
+[behavior]
+sidebar_default_open = true
+sidebar_responsive_stack = true
+sidebar_stack_breakpoint = 720
+
+[colors.light]
+bg          = "#f6f6fb"
+text        = "#1a1a2e"
+tip-bg      = "#ffffff"
+tip-border  = "#d9d9e8"
+tip-shadow  = "rgba(40,40,90,.14)"
+hs-hover    = "rgba(124,92,255,.14)"
+hs-stroke   = "rgba(124,92,255,.55)"
+hs-active   = "rgba(124,92,255,.24)"
+hint-bg     = "rgba(28,28,58,.78)"
+hint-text   = "#ffffff"
+divider     = "#e7e7f1"
+conn-body   = "#eaeaf3"
+conn-cavity = "#d6d6e5"
+conn-stroke = "#5a5a78"
+line-color  = "#7a7a9a"
+label-color = "#2a2a44"
+desc-color  = "#55556e"
+type-color  = "#8888a4"
+
+[colors.dark]
+bg          = "#0e0e1a"
+text        = "#e6e6f2"
+tip-bg      = "#17172a"
+tip-border  = "#2c2c47"
+tip-shadow  = "rgba(0,0,0,.5)"
+hs-hover    = "rgba(139,110,255,.20)"
+hs-stroke   = "rgba(139,110,255,.6)"
+hs-active   = "rgba(139,110,255,.30)"
+hint-bg     = "rgba(230,230,250,.88)"
+hint-text   = "#0e0e1a"
+divider     = "#2a2a45"
+conn-body   = "#24243b"
+conn-cavity = "#1b1b2e"
+conn-stroke = "#9a9ac0"
+line-color  = "#8888a8"
+label-color = "#dcdcf0"
+desc-color  = "#aaaac8"
+type-color  = "#8888a8"

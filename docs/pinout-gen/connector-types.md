@@ -95,4 +95,6 @@ After adding or editing a type, regenerate the JSON:
 python pinout_design/tools/convert-connectors.py
 ```
 
+The same script also mirrors the bundled **theme** names (to `pinout_design/themes/index.json`) and the connector **symbol** names (to `pinout_design/symbols.json`), which populate the designer's Theme selector and Symbol field — so re-run it after adding a theme, too.
+
 The TOML files are the source of truth; the JSON is a build artifact. Editing one without the other leaves the designer and generator out of sync.

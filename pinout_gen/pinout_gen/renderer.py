@@ -5,7 +5,8 @@ import html
 import json
 import math
 
-from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin
+from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme
+from .symbols import render_symbol
 
 SCALE = 3.0
 
@@ -479,7 +480,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {svg_w:.1f} {svg_h:.1f}" '
         f'width="{px_w}" height="{px_h}" '
-        f'style="font-family:Roboto,sans-serif">'
+        f'style="font-family:var(--label-font,Roboto,sans-serif)">'
     )
 
     # ── 1. Body group (rotated) ──
@@ -605,15 +606,147 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
 
 # ── Full HTML page ───────────────────────────────────────────────────
 
+def _theme_fonts(theme: Theme) -> list:
+    """The theme's fonts (main first, then a distinct label font if any)."""
+    fonts = [theme.font]
+    if theme.label_font is not None:
+        fonts.append(theme.label_font)
+    return fonts
+
+
+def _render_font_head(theme: Theme) -> str:
+    """<head> markup to load the theme's Google fonts (preconnect + one css2
+    link).  Bundled fonts ship as @font-face in the main stylesheet and system
+    fonts need nothing, so those contribute no head markup here."""
+    specs: list[str] = []
+    seen: set[str] = set()
+    for f in _theme_fonts(theme):
+        if f.source != "google" or f.family in seen:
+            continue
+        seen.add(f.family)
+        fam = f.family.replace(" ", "+")
+        specs.append(f"{fam}:wght@{f.weights}" if f.weights else fam)
+    if not specs:
+        return ""
+    href = "https://fonts.googleapis.com/css2?family=" + "&family=".join(specs) + "&display=swap"
+    return (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        f'<link href="{href}" rel="stylesheet">'
+    )
+
+
+def _render_theme_css(theme: Theme) -> str:
+    """Emit a theme's CSS: @font-face for any bundled fonts, the font-family
+    variables (--ui-font, --label-font), then the colour custom-property blocks
+    (light on :root, dark under both prefers-color-scheme and [data-theme=dark],
+    an explicit [data-theme=light] override), then any raw extra CSS."""
+    def block(selector: str, colors: dict[str, str]) -> str:
+        decls = "".join(f"--{k}:{v};" for k, v in colors.items())
+        return f"{selector}{{{decls}}}"
+
+    parts: list[str] = []
+
+    seen_faces: set[str] = set()
+    for f in _theme_fonts(theme):
+        if f.source == "bundled" and f.data_uri and f.family not in seen_faces:
+            seen_faces.add(f.family)
+            parts.append(
+                f"@font-face{{font-family:'{f.family}';"
+                f"src:url({f.data_uri}) format('{f.fmt}');font-display:swap}}"
+            )
+
+    ui_font = theme.font.css_family("system-ui,sans-serif")
+    label_font = theme.label_font.css_family("sans-serif") if theme.label_font else "var(--ui-font)"
+    parts.append(f":root{{--ui-font:{ui_font};--label-font:{label_font}}}")
+
+    light, dark = theme.colors_light, theme.colors_dark
+    parts.extend([
+        block(":root", light),
+        f"@media(prefers-color-scheme:dark){{{block(':root', dark)}}}",
+        block(':root[data-theme="dark"]', dark),
+        block(':root[data-theme="light"]', light),
+    ])
+    css = "\n".join(parts)
+    if theme.extra_css.strip():
+        css += "\n" + theme.extra_css.strip()
+    return css
+
+
+def _render_behavior_css(theme: Theme) -> str:
+    """Behaviour-driven CSS: the sidebar-width variable, plus — when the theme
+    opts in — a narrow-screen media query that switches the layout to a column so
+    the connector list flows below the board image instead of beside it.  Emitted
+    at the end of the stylesheet so its rules override the base layout."""
+    b = theme.behavior
+    parts = [
+        f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
+        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale}}}"
+    ]
+    if b.sidebar_responsive_stack:
+        parts.append(
+            f"@media(max-width:{b.sidebar_stack_breakpoint}px){{"
+            "html,body{height:auto}"
+            "body{overflow:visible;flex-direction:column;padding-bottom:8px}"
+            ".bd{flex:none;height:auto;min-height:0}"
+            ".pw img{max-height:none}"
+            ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:hidden;flex:none;margin:0 8px}"
+            ".sb.hid{display:none}"
+            ".sb-in{width:auto;max-width:none;min-width:0;height:auto;overflow:visible}"
+            "}"
+        )
+    return "\n".join(parts)
+
+
+def _render_height_script(theme: Theme) -> str:
+    """When the theme stacks the list on narrow screens, emit a script that
+    reports the document height to an embedding page so pinout-embed's listener
+    can grow the iframe to fit.  Posts 0 when not stacked (wide screens), which
+    tells the parent to revert to the author's fixed height."""
+    if not theme.behavior.sidebar_responsive_stack:
+        return ""
+    bp = theme.behavior.sidebar_stack_breakpoint
+    return (
+        "<script>\n"
+        "(function(){\n"
+        f"  var BP={bp},last=-1,embedded=(window.parent!==window);\n"
+        "  function stacked(){return window.matchMedia('(max-width:'+BP+'px)').matches;}\n"
+        "  function report(){\n"
+        "    /* Embedded + stacked: hide our own scrollbar. The parent iframe grows to\n"
+        "       fit, so a scrollbar would only shrink the width and oscillate. */\n"
+        "    if(embedded)document.documentElement.style.overflow=(stacked()?'hidden':'');\n"
+        "    /* Report body.scrollHeight, not documentElement's (which is floored at the\n"
+        "       viewport height, so it could never shrink when the list closes). */\n"
+        "    var v=0,b=document.body;if(stacked()&&b)v=Math.ceil(b.scrollHeight);\n"
+        "    if(Math.abs(v-last)<=2)return;last=v;\n"
+        "    try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}\n"
+        "  }\n"
+        "  addEventListener('load',report);addEventListener('resize',report);\n"
+        "  if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}\n"
+        "  report();\n"
+        "})();\n"
+        "</script>"
+    )
+
+
 def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
+                   theme: Theme | None = None,
                    image_data_uri: str | None = None) -> str:
+    if theme is None:
+        theme = Theme()
+    show_sym = theme.behavior.show_symbols
+    style_fb = theme.behavior.symbol_style_fallback
+    sym_html: dict[str, str] = {}
     connector_data: dict[str, dict] = {}
     for conn in board.connectors:
         ct = connector_types[conn.type]
         svg = render_connector_svg(conn, ct)
+        sym = render_symbol(conn.symbol, ct.style, style_fallback=style_fb) if show_sym else ""
+        sym_html[conn.id] = sym
         connector_data[conn.id] = {
             "name": conn.name, "svg": svg, "description": conn.description,
             "typeName": ct.name, "pinCount": len(conn.pins),
+            "symbol": f'<span class="tt-sym">{sym}</span>' if sym else "",
         }
     hotspot_rects: list[str] = []
     for conn in board.connectors:
@@ -624,11 +757,16 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
             f'x="{x}" y="{y}" width="{w}" height="{h}" rx="3"/>'
         )
     sidebar_items: list[str] = []
+    any_symbols = any(sym_html.values())
     for conn in board.connectors:
         ct = connector_types[conn.type]
+        sym = sym_html.get(conn.id, "")
+        # When any connector has a symbol, reserve the (possibly empty) slot on the
+        # others too, so every connector name left-aligns.
+        sym_span = f'<span class="cl-sym">{sym}</span>' if any_symbols else ""
         sidebar_items.append(
             f'    <div class="cl-i" data-id="{html.escape(conn.id)}">'
-            f'<span class="cl-n">{html.escape(conn.name)}</span>'
+            f'{sym_span}<span class="cl-n">{html.escape(conn.name)}</span>'
             f'<span class="cl-t">{html.escape(ct.name)} &middot; '
             f'{len(conn.pins)}p</span></div>'
         )
@@ -642,6 +780,13 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
     return _HTML_TEMPLATE.format(
         title=html.escape(board.title), image_path=html.escape(image_src),
         img_w=board.width, img_h=board.height,
+        theme_css=_render_theme_css(theme),
+        font_head=_render_font_head(theme),
+        behavior_css=_render_behavior_css(theme),
+        height_script=_render_height_script(theme),
+        sb_hidden="" if theme.behavior.sidebar_default_open else " hid",
+        sb_stack="true" if theme.behavior.sidebar_responsive_stack else "false",
+        sb_bp=theme.behavior.sidebar_stack_breakpoint,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -655,57 +800,12 @@ _HTML_TEMPLATE = '''\
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
+{font_head}
 <style>
-:root {{
-  --bg:#ffffff; --text:#1a1a1a;
-  --tip-bg:#ffffff; --tip-border:#d0d0d0; --tip-shadow:rgba(0,0,0,.12);
-  --hs-hover:rgba(59,130,246,.13); --hs-stroke:rgba(59,130,246,.5);
-  --hs-active:rgba(59,130,246,.22);
-  --hint-bg:rgba(30,30,30,.75); --hint-text:#fff;
-  --divider:#e5e5e5;
-  --conn-body:#e8e8e0; --conn-cavity:#d0d0c8; --conn-stroke:#555;
-  --line-color:#777; --label-color:#333;
-  --desc-color:#555; --type-color:#888;
-}}
-@media(prefers-color-scheme:dark){{:root{{
-  --bg:#131313; --text:#e0e0e0;
-  --tip-bg:#1e1e1e; --tip-border:#3a3a3a; --tip-shadow:rgba(0,0,0,.4);
-  --hs-hover:rgba(96,165,250,.15); --hs-stroke:rgba(96,165,250,.5);
-  --hs-active:rgba(96,165,250,.25);
-  --hint-bg:rgba(240,240,240,.85); --hint-text:#131313;
-  --divider:#333;
-  --conn-body:#3a3a35; --conn-cavity:#2e2e28; --conn-stroke:#aaa;
-  --line-color:#888; --label-color:#ddd;
-  --desc-color:#aaa; --type-color:#888;
-}}}}
-:root[data-theme="dark"]{{
-  --bg:#131313; --text:#e0e0e0;
-  --tip-bg:#1e1e1e; --tip-border:#3a3a3a; --tip-shadow:rgba(0,0,0,.4);
-  --hs-hover:rgba(96,165,250,.15); --hs-stroke:rgba(96,165,250,.5);
-  --hs-active:rgba(96,165,250,.25);
-  --hint-bg:rgba(240,240,240,.85); --hint-text:#131313;
-  --divider:#333;
-  --conn-body:#3a3a35; --conn-cavity:#2e2e28; --conn-stroke:#aaa;
-  --line-color:#888; --label-color:#ddd;
-  --desc-color:#aaa; --type-color:#888;
-}}
-:root[data-theme="light"]{{
-  --bg:#ffffff; --text:#1a1a1a;
-  --tip-bg:#ffffff; --tip-border:#d0d0d0; --tip-shadow:rgba(0,0,0,.12);
-  --hs-hover:rgba(59,130,246,.13); --hs-stroke:rgba(59,130,246,.5);
-  --hs-active:rgba(59,130,246,.22);
-  --hint-bg:rgba(30,30,30,.75); --hint-text:#fff;
-  --divider:#e5e5e5;
-  --conn-body:#e8e8e0; --conn-cavity:#d0d0c8; --conn-stroke:#555;
-  --line-color:#777; --label-color:#333;
-  --desc-color:#555; --type-color:#888;
-}}
+{theme_css}
 *,*::before,*::after{{margin:0;padding:0;box-sizing:border-box}}
 html,body{{height:100%;background:var(--bg);color:var(--text);
-  font-family:Roboto,system-ui,sans-serif}}
+  font-family:var(--ui-font)}}
 body{{display:flex;height:100%;overflow:hidden}}
 .bd{{flex:1;display:flex;align-items:center;justify-content:center;
   min-width:0;height:100%;overflow:hidden;position:relative}}
@@ -721,20 +821,20 @@ body{{display:flex;height:100%;overflow:hidden}}
   z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s ease;
   max-width:min(420px,calc(100vw - 12px));max-height:calc(100vh - 16px);
   overflow-y:auto;overscroll-behavior:contain;
-  line-height:1.4;font-family:Roboto,sans-serif}}
+  line-height:1.4;font-family:var(--ui-font)}}
 .tt.vis{{opacity:1}}
 .tt.pin{{pointer-events:auto}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--divider)}}
-.tt-n{{font-weight:600;font-size:14px;color:var(--text)}}
-.tt-t{{font-size:11px;color:var(--type-color);white-space:nowrap}}
+.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text)}}
+.tt-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
-.tt-d{{font-size:12.5px;color:var(--desc-color);margin-top:10px;padding-top:8px;
+.tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
 .bb{{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
   background:var(--tip-bg);color:var(--type-color);border:1px solid var(--tip-border);
-  padding:7px 18px;border-radius:12px;font-size:12px;font-family:Roboto,sans-serif;
+  padding:7px 18px;border-radius:12px;font-size:calc(12px*var(--font-scale));font-family:var(--ui-font);
   box-shadow:0 2px 8px var(--tip-shadow);
   display:flex;align-items:center;gap:8px;white-space:nowrap}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
@@ -745,19 +845,28 @@ body{{display:flex;height:100%;overflow:hidden}}
   color:var(--text);display:flex;align-items:center;justify-content:center;
   line-height:1;transition:background .15s;opacity:.85}}
 .sb-btn:hover{{opacity:1;background:var(--hs-hover)}}
-.sb{{width:240px;height:calc(100% - 16px);flex-shrink:0;overflow:hidden;
+.sb{{width:fit-content;max-width:var(--sb-max);height:calc(100% - 16px);flex-shrink:0;overflow:hidden;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:12px;
   margin:8px 8px 8px 0;box-shadow:0 2px 8px var(--tip-shadow);
-  transition:width .2s ease,margin .2s ease,opacity .2s ease,border-width .2s ease}}
-.sb.hid{{width:0;margin-right:0;margin-left:0;opacity:0;border-width:0}}
-.sb-in{{width:240px;height:100%;overflow-y:auto;padding:12px 0}}
-.sb-t{{font-weight:600;font-size:13px;padding:0 14px 8px;
+  transition:max-width .2s ease,margin .2s ease,opacity .2s ease,border-width .2s ease}}
+.sb.hid{{max-width:0;margin-right:0;margin-left:0;opacity:0;border-width:0}}
+.sb-in{{width:max-content;min-width:9rem;max-width:var(--sb-max);height:100%;overflow-y:auto;padding:12px 0}}
+.sb-in,.tt{{scrollbar-width:thin;scrollbar-color:var(--scroll-thumb) var(--scroll-track)}}
+.sb-in::-webkit-scrollbar,.tt::-webkit-scrollbar{{width:8px;height:8px}}
+.sb-in::-webkit-scrollbar-thumb,.tt::-webkit-scrollbar-thumb{{background:var(--scroll-thumb);border-radius:8px}}
+.sb-in::-webkit-scrollbar-track,.tt::-webkit-scrollbar-track{{background:var(--scroll-track)}}
+.sb-t{{font-weight:600;font-size:calc(13px*var(--font-scale));padding:0 14px 8px;
   border-bottom:1px solid var(--divider);margin-bottom:4px;color:var(--text)}}
-.cl-i{{display:flex;justify-content:space-between;align-items:center;
+.cl-i{{display:flex;align-items:center;
   padding:8px 14px;cursor:pointer;transition:background .15s;gap:8px}}
 .cl-i:hover,.cl-i.active{{background:var(--hs-hover)}}
-.cl-n{{font-weight:500;font-size:13px}}
-.cl-t{{font-size:11px;color:var(--type-color);white-space:nowrap}}
+.cl-n{{font-weight:500;font-size:calc(13px*var(--font-scale))}}
+.cl-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap;margin-left:auto}}
+.cl-sym,.tt-sym{{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  vertical-align:middle;width:var(--sym-size);font-size:var(--sym-size);line-height:1;color:var(--label-color)}}
+.cl-sym svg,.tt-sym svg{{width:var(--sym-size);height:var(--sym-size);display:block}}
+.tt-sym{{margin-right:6px}}
+{behavior_css}
 </style>
 <script>
 /* Theme sync: ?theme=dark|light forces a theme; otherwise follow the embedding
@@ -821,7 +930,7 @@ body{{display:flex;height:100%;overflow:hidden}}
     <span>Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
   </div>
 </div>
-<div class="sb hid" id="sb">
+<div class="sb{sb_hidden}" id="sb">
   <div class="sb-in">
     <div class="sb-t">Connectors</div>
 {connector_list}
@@ -833,7 +942,29 @@ const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
 let aId=null,pinned=false,isTouch=false;
 document.addEventListener('touchstart',function(){{isTouch=true}},{{once:true,passive:true}});
-sbBtn.addEventListener('click',e=>{{e.stopPropagation();sb.classList.toggle('hid');
+/* When the list is stacked below the board, animate its height (expand down /
+   shrink up) instead of snapping.  Embedded, the iframe auto-height tracks the
+   animating body height frame-by-frame. */
+const SB_STACK={sb_stack},SB_BP={sb_bp};
+function sbAnim(){{return SB_STACK&&window.matchMedia('(max-width:'+SB_BP+'px)').matches}}
+function sbEnd(cb){{let done=false;
+  function h(e){{if(e&&e.propertyName&&e.propertyName!=='height')return;if(done)return;
+    done=true;sb.removeEventListener('transitionend',h);cb()}}
+  sb.addEventListener('transitionend',h);setTimeout(()=>h(),380)}}
+function toggleSb(){{
+  if(!sbAnim()){{sb.classList.toggle('hid');return}}
+  const opening=sb.classList.contains('hid');sb.style.overflow='hidden';
+  if(opening){{
+    sb.classList.remove('hid');sb.style.height='0px';const t=sb.scrollHeight;void sb.offsetHeight;
+    requestAnimationFrame(()=>{{sb.style.transition='height .28s ease';sb.style.height=t+'px'}});
+    sbEnd(()=>{{sb.style.height='';sb.style.transition='';sb.style.overflow=''}});
+  }}else{{
+    sb.style.height=sb.scrollHeight+'px';void sb.offsetHeight;
+    requestAnimationFrame(()=>{{sb.style.transition='height .28s ease';sb.style.height='0px'}});
+    sbEnd(()=>{{sb.classList.add('hid');sb.style.height='';sb.style.transition='';sb.style.overflow=''}});
+  }}
+}}
+sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();
   if(aId){{const el=hs(aId);if(el)setTimeout(()=>pos(el),0)}}}});
 function hs(id){{return document.querySelector(`.hs[data-id="${{id}}"]`)}}
 function li(id){{return document.querySelector(`.cl-i[data-id="${{id}}"]`)}}
@@ -844,7 +975,7 @@ function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function show(id,el){{
   const d=C[id]; if(!d) return;
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
-  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{esc(d.name)}}</span>`+
+  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
     `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-pin</span></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
@@ -885,6 +1016,7 @@ document.addEventListener('click',e=>{{
 document.querySelectorAll('.hs').forEach(el=>{{el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),2000)}});
 window.addEventListener('resize',()=>{{if(aId){{const el=hs(aId);if(el)pos(el)}}}});
 </script>
+{height_script}
 </body>
 </html>
 '''

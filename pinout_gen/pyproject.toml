@@ -23,4 +23,4 @@ extension = ["markdown>=3.4"]
 packages = ["pinout_gen"]
 
 [tool.setuptools.package-data]
-pinout_gen = ["connectors/*.toml"]
+pinout_gen = ["connectors/*.toml", "themes/*.toml"]

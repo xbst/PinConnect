@@ -85,6 +85,9 @@ export class ConnectorPanel {
       .map(s => `<option value="${s}" ${s === (conn.label_style || "staggered") ? "selected" : ""}>${s[0].toUpperCase() + s.slice(1)}</option>`)
       .join("");
 
+    const symbolOptions = (this.state.symbolNames || [])
+      .map(n => `<option value="${n}">`).join("");
+
     this.container.innerHTML = `
       <div class="conn-form">
         <div class="conn-form-row">
@@ -109,6 +112,12 @@ export class ConnectorPanel {
           <label>Desc.</label>
           <input type="text" id="conn-desc" value="${this._esc(conn.description)}">
         </div>
+        <div class="conn-form-row">
+          <label>Symbol</label>
+          <input type="text" id="conn-symbol" list="conn-symbol-list"
+            value="${this._esc(conn.symbol)}" placeholder="none · power · &#9889;">
+        </div>
+        <datalist id="conn-symbol-list">${symbolOptions}</datalist>
 
         <div class="conn-svg-preview">${svgHtml}</div>
 
@@ -259,6 +268,7 @@ export class ConnectorPanel {
     onFieldChange("#conn-orient", "orientation", v => parseInt(v));
     onFieldChange("#conn-label-style", "label_style");
     onFieldChange("#conn-desc", "description");
+    onFieldChange("#conn-symbol", "symbol", v => v.trim());
 
     this.container.querySelectorAll(".pin-name-input").forEach(el => {
       el.addEventListener("change", () => {

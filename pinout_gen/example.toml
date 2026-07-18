@@ -15,6 +15,7 @@ x2 = 1427
 y2 = 361
 orientation = 180
 description = "Always-on fan connector, VIN"
+symbol = "fan"
 
   [[connector.pin]]
   name = "VIN"
@@ -109,6 +110,7 @@ x2 = 1427
 y2 = 950
 orientation = 180
 description = "Switch connector: Lane 1-Prep"
+symbol = "switch"
 
   [[connector.pin]]
   name = "GND"
@@ -155,6 +157,7 @@ x2 = 1245
 y2 = 920
 orientation = 90
 description = "Lane 1 extruder stepper connector"
+symbol = "motor"
 
   [[connector.pin]]
   name  = "B"
@@ -213,6 +216,7 @@ x2 = 618
 y2 = 996
 orientation = 0
 description = "USB Type-C port"
+symbol = "usb"
 
 [[connector]]
 id = "CAN+VIN"
@@ -224,6 +228,7 @@ x2 = 331
 y2 = 510
 orientation = 270
 description = "12-24VIN, CAN or USB data (H: CAN_H or D+, L: CAN_L or D-)"
+symbol = "power"
 
   [[connector.pin]]
   name = "GND"
@@ -257,6 +262,7 @@ x2 = 150
 y2 = 150
 orientation = 270
 description = "Dummy 2x2 MF"
+symbol = "⚡"
 
   [[connector.pin]]
   name = "VIN"
@@ -288,6 +294,7 @@ x2 = 250
 y2 = 150
 orientation = 0
 description = "Dummy 4P MF"
+symbol = "none"
 
   [[connector.pin]]
   name = "VIN"

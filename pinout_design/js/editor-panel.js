@@ -221,11 +221,12 @@ export class EditorPanel {
       id: c.id, name: c.name, type: c.type,
       x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2,
       orientation: c.orientation, description: c.description,
-      label_style: c.label_style,
+      label_style: c.label_style, symbol: c.symbol,
       pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
     }));
     const text = serializeBoardToml(
-      { title: b.title, image: b.image, width: b.width, height: b.height, connector_dir: b.connector_dir },
+      { title: b.title, image: b.image, width: b.width, height: b.height,
+        connector_dir: b.connector_dir, theme: b.theme, theme_dir: b.theme_dir },
       connData
     );
     this.textarea.value = text;
@@ -248,7 +249,7 @@ export class EditorPanel {
       id: conn.id, name: conn.name, type: conn.type,
       x1: conn.x1, y1: conn.y1, x2: conn.x2, y2: conn.y2,
       orientation: conn.orientation, description: conn.description,
-      label_style: conn.label_style,
+      label_style: conn.label_style, symbol: conn.symbol,
       pins: conn.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
     };
 

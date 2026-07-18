@@ -30,12 +30,14 @@ Then open <http://localhost:8000> in your browser. Stop the server with `Ctrl+C`
 
 The window has a toolbar across the top and three panels:
 
-- **Toolbar**: Undo, Redo, Open Image, Open TOML, and Save TOML.
+- **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, and a **Theme** selector.
 - **TOML Source** (left): a live, editable view of the config. Edits here update the diagram, and vice versa.
 - **Board Image** (top right): your board photo with connector boxes overlaid. Has an **+ Add Connector** button.
 - **Connector Editor** (bottom right): fields and pin list for the currently selected connector.
 
 The panel dividers can be dragged to resize.
+
+The **Theme** selector sets the board's `theme` — the colours, fonts, and behaviours `pinout-gen` applies *around* the connectors (the connector diagrams themselves look the same). It lists the bundled themes; a custom theme name you type into the TOML is preserved and shown too. See [themes](pinout-gen/themes.md) for what a theme controls and how to make your own.
 
 ## Workflow
 
@@ -66,7 +68,9 @@ With a connector selected, the **Connector Editor** shows:
 - **Name**: label shown on the diagram.
 - **Type**: connector type, chosen from the built-in library (drives the rendered shape).
 - **Orient.**: rotation: 0°, 90°, 180°, or 270°.
+- **Labels**: flat, staircase or staggered layout of pin labels on horizontal connectors (avoids overlaps).
 - **Desc.**: optional longer description.
+- **Symbol**: optional icon shown beside the connector in the generated pinout's list and tooltip — a named icon (`power`, `fan`, …), a literal glyph, or `none`. The field suggests the built-in names as you type. See [`symbol`](pinout-gen/board-toml.md#symbol).
 
 A small preview shows the selected connector type as it will render.
 

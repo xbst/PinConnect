@@ -67,6 +67,7 @@ export class Connector {
     this.orientation = data.orientation ?? 0;
     this.description = data.description ?? "";
     this.label_style = data.label_style ?? "staggered";
+    this.symbol = data.symbol ?? "";
   }
 }
 
@@ -77,6 +78,8 @@ export class Board {
     this.width = data.width ?? 0;
     this.height = data.height ?? 0;
     this.connector_dir = data.connector_dir ?? "./connectors";
+    this.theme = data.theme ?? "default";
+    this.theme_dir = data.theme_dir ?? "./themes";
     this.connectors = (data.connectors ?? []).map(
       c => c instanceof Connector ? c : new Connector(c)
     );

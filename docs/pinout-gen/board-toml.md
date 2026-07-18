@@ -48,6 +48,8 @@ y2 = 742
 | `height` | yes | — | Image height in pixels. |
 | `title` | no | `"Pinout"` | Shown as the diagram title. |
 | `connector_dir` | no | `"./connectors"` | Folder holding connector type `.toml` files, relative to the config. Types not found here fall back to the built-in types bundled with the package. |
+| `theme` | no | `"default"` | Name of the [theme](themes.md) to apply — colours, fonts, and behaviours around the connectors. |
+| `theme_dir` | no | `"./themes"` | Folder holding theme `.toml` files, relative to the config. Names not found here fall back to the built-in themes. |
 
 `width` and `height` set the coordinate space that all connector positions are measured in, so they should match the actual image dimensions.
 
@@ -64,6 +66,7 @@ One entry per connector on the board.
 | `orientation` | no | `0` | Rotation of the connector body in degrees: `0`, `90`, `180`, or `270`. |
 | `label_style` | no | `"staggered"` | How pin labels are arranged on horizontal connectors: `"staggered"`, `"staircase"`, or `"flat"`. See below. |
 | `description` | no | `""` | Longer text shown for the connector (e.g. a tooltip / detail line). |
+| `symbol` | no | `""` | Icon shown beside the connector in the list and tooltip when the theme shows symbols: a named icon, a literal glyph, or `"none"`. See below. |
 
 The bounding box places and sizes the connector graphic over the image; `orientation` rotates it so the rendered connector matches what's on the board. The designer sets all of these for you when you drag a box and pick an orientation.
 
@@ -87,6 +90,28 @@ y1 = 200
 x2 = 250
 y2 = 220
 label_style = "flat"
+```
+
+### symbol
+
+An optional icon shown beside the connector in the list and tooltip, hinting at what it is for. Themes that show symbols (most do by default; a theme can disable them) render it. The value is one of:
+
+- **A named icon** — resolved to a built-in SVG. Names, with some aliases: `power`, `lightning`, `fan`, `heater`, `fire`, `temperature` (`thermistor`), `switch`, `led`, `setting` (`jumper`, `dip`), `gear`, `usb`, `data` (`i2c`, `spi`, `uart`, `can`), `motor` (`stepper`, `servo`), `fuse`, `ground` (`gnd`), `signal`, `button`, `speaker` (`buzzer`), `battery`. `lightning`, `fire`, and `gear` are alternative looks for `power`, `heater`, and `setting`.
+- **A literal glyph** — any other text renders as-is, e.g. `symbol = "⚡"` or an emoji.
+- **`"none"`** — no symbol, even where the theme would otherwise show one.
+
+Omitted, a connector shows no symbol (unless the theme opts into style-based fallbacks). The right symbol usually depends on what the connector is *used for* rather than its shape, so set it explicitly per connector when you use a symbol-showing theme.
+
+```toml
+[[connector]]
+id = "FAN0"
+name = "Hotend Fan"
+type = "XH-F"
+x1 = 100
+y1 = 200
+x2 = 180
+y2 = 240
+symbol = "fan"
 ```
 
 ## `[[connector.pin]]`
