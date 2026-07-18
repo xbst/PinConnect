@@ -108,8 +108,16 @@ class PinoutHeightPostprocessor(Postprocessor):
 
 class PinoutExtension(Extension):
     def extendMarkdown(self, md):
+        # Negative priority so this runs AFTER the host's relative-path pass.
+        # MkDocs' `relpath` treeprocessor (priority 0) rewrites relative links,
+        # but only on <a href>/<img src>. If we converted <img> to <iframe>
+        # first (as at priority 1), relpath would skip the iframe and its
+        # relative src would 404 under use_directory_urls (the default). Running
+        # later lets relpath resolve the <img src>, which we then carry onto the
+        # iframe. Zensical rewrites every element's src regardless of order, so
+        # it is unaffected either way.
         md.treeprocessors.register(
-            PinoutTreeprocessor(md), "pinout_embed", 1
+            PinoutTreeprocessor(md), "pinout_embed", -5
         )
         md.postprocessors.register(
             PinoutHeightPostprocessor(md), "pinout_embed_height", 1
