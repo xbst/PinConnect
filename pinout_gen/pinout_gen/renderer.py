@@ -787,6 +787,8 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         sb_hidden="" if theme.behavior.sidebar_default_open else " hid",
         sb_stack="true" if theme.behavior.sidebar_responsive_stack else "false",
         sb_bp=theme.behavior.sidebar_stack_breakpoint,
+        tt_box_scale=theme.behavior.tooltip_box_scale,
+        tt_min_scale=theme.behavior.tooltip_min_scale,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -981,7 +983,25 @@ function show(id,el){{
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
 }}
 function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false}}
+/* Scale the tooltip's connector drawing off the connector's box on the board:
+   the drawing's long side tracks TT_BOX x the box's on-screen long side, so it
+   shrinks with the board instead of holding its generated pixel size and
+   swamping a small screen.  Only the width is set -- the stylesheet's
+   height:auto keeps the aspect ratio and its max-* caps still apply.  Clamped to
+   the natural size (never upscale) and to TT_MIN of it (labels stay readable). */
+const TT_BOX={tt_box_scale},TT_MIN={tt_min_scale};
+function fit(el){{
+  const g=tt.querySelector('.tt-s>svg');if(!g||!TT_BOX)return;
+  const nw=+g.getAttribute('width'),nh=+g.getAttribute('height');
+  const svg=el.ownerSVGElement,sr=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;
+  if(!(nw>0&&nh>0&&sr.width>0&&vb.width>0&&vb.height>0))return;
+  const box=Math.max(+el.getAttribute('width')*sr.width/vb.width,
+                     +el.getAttribute('height')*sr.height/vb.height);
+  const s=Math.max(TT_MIN,Math.min(1,TT_BOX*box/Math.max(nw,nh)));
+  g.style.width=(nw*s).toFixed(1)+'px';
+}}
 function pos(el){{
+  fit(el);
   tt.style.left='0';tt.style.top='0';tt.style.visibility='hidden';tt.classList.add('vis');
   const wr=pw.getBoundingClientRect(),tr=tt.getBoundingClientRect();
   const svg=el.ownerSVGElement,sr=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;
@@ -1014,7 +1034,11 @@ document.addEventListener('click',e=>{{
   if(pinned&&!tt.contains(e.target)&&!e.target.closest('.cl-i')&&!e.target.closest('.hs'))hide();
 }});
 document.querySelectorAll('.hs').forEach(el=>{{el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),2000)}});
-window.addEventListener('resize',()=>{{if(aId){{const el=hs(aId);if(el)pos(el)}}}});
+function reflow(){{if(aId){{const el=hs(aId);if(el)pos(el)}}}}
+window.addEventListener('resize',reflow);
+/* The board also resizes without a window resize (sidebar toggle, iframe
+   auto-height, container reflow) -- re-fit the tooltip whenever it does. */
+if(window.ResizeObserver){{try{{new ResizeObserver(reflow).observe(pw)}}catch(e){{}}}}
 </script>
 {height_script}
 </body>

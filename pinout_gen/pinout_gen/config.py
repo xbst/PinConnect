@@ -221,6 +221,10 @@ class ThemeBehavior:
     symbol_style_fallback: bool = False      # symbol-less connectors fall back to a style default
     font_scale: float = 1.0                  # multiplier for the list / tooltip / bottom-bar text
     symbol_size: int = 16                    # connector-symbol icon size in px
+    tooltip_box_scale: float = 1.5           # tooltip drawing's long side, as a multiple of the
+                                             # connector's on-screen box; 0 disables (natural size)
+    tooltip_min_scale: float = 0.5           # never shrink the drawing below this fraction of its
+                                             # natural size, so pin labels stay readable
 
 
 @dataclass
@@ -316,6 +320,9 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         beh.symbol_style_fallback = bool(bdict.get("symbol_style_fallback", beh.symbol_style_fallback))
         beh.font_scale = float(bdict.get("font_scale", beh.font_scale))
         beh.symbol_size = int(bdict.get("symbol_size", beh.symbol_size))
+        beh.tooltip_box_scale = max(0.0, float(bdict.get("tooltip_box_scale", beh.tooltip_box_scale)))
+        beh.tooltip_min_scale = min(1.0, max(0.0, float(
+            bdict.get("tooltip_min_scale", beh.tooltip_min_scale))))
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):
