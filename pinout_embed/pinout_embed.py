@@ -35,7 +35,15 @@ _LISTENER_SCRIPT = (
     "    var f=document.querySelectorAll('iframe." + EMBED_CLASS + "');\n"
     "    for(var i=0;i<f.length;i++){\n"
     "      if(f[i].contentWindow===e.source){\n"
-    "        f[i].style.height=d.pinconnectHeight>0?d.pinconnectHeight+'px':'';\n"
+    "        var el=f[i];\n"
+    "        if(el.dataset.pcMinh===undefined)el.dataset.pcMinh=el.style.minHeight||'';\n"
+    "        if(d.pinconnectHeight>0){\n"
+    "          el.style.minHeight='0';\n"                     # content drives the height; drop the min-height floor
+    "          el.style.height=d.pinconnectHeight+'px';\n"
+    "        }else{\n"
+    "          el.style.minHeight=el.dataset.pcMinh;\n"       # wide again: restore the authored min-height
+    "          el.style.height='';\n"
+    "        }\n"
     "        break;\n"
     "      }\n"
     "    }\n"
@@ -54,8 +62,12 @@ class PinoutTreeprocessor(Treeprocessor):
             if not src:
                 continue
 
-            # Preserve any inline style the author specified
+            # Preserve any inline style the author specified.  Add a height
+            # transition so the auto-height resize (e.g. toggling the connector
+            # list when it is stacked below the board) animates smoothly.
             style = img.get("style", "min-height:60vh;width:100%")
+            if "transition" not in style:
+                style = style.rstrip(";") + ";transition:height .28s ease"
 
             # Convert <img> → <iframe>
             img.tag = "iframe"
