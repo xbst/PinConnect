@@ -1,6 +1,6 @@
 # Themes
 
-A theme controls how a generated pinout looks and behaves **around** the connectors — colours, fonts, the connector list, symbols, and a few responsive behaviours. The connector diagrams and pin colours themselves are board data and stay the same across themes; a theme restyles the page, the tooltips, and the list.
+A theme controls how a generated pinout looks and behaves **around** the connectors — colors, fonts, the connector list, symbols, and a few responsive behaviors. The connector diagrams and pin colors themselves are board data and stay the same across themes; a theme restyles the page, the tooltips, and the list.
 
 Themes are bundled with `pinout-gen` the same way connector types are, and you can add your own.
 
@@ -30,12 +30,48 @@ Precedence is **`--theme` → `[board] theme` → `default`**. A theme name is r
 | Theme | Look |
 |-------|------|
 | `default` | The stock light/dark palette with Roboto. What you get with no theme. |
-| `slate` | Cool blue-grey, Inter. |
-| `ocean` | Teal and cyan, Inter. |
-| `terminal` | Green, monospaced, connector list open by default. |
-| `midnight` | Indigo/violet, Inter UI with a monospaced pin-label font. |
+| `slate` | Cool blue-grey, Glegoo — a serif face. |
+| `ocean` | Teal and cyan, Lexend. Roomy: larger list text and symbols, and the list always sits below the board. |
+| `terminal` | Green and pixel-monospaced (Geist Pixel), connector list open by default, symbols off. |
+| `midnight` | Indigo/violet, Inter UI with a monospaced pin-label font. Stacks below 720px. |
 
 Every theme provides both a light and a dark palette; the viewer's light/dark toggle and OS scheme switch between them, exactly like the default.
+
+## Theme gallery
+
+The same board in each bundled theme, light and dark. Every shot has the connector list open and one connector selected, so the list, tooltip and pin-label styling are all visible — `default` and `slate` ship with the list collapsed until you press the ☰ button.
+
+### `default`
+
+| Light | Dark |
+|:-----:|:----:|
+| ![default theme, light mode](../../assets/theme-default-light.webp) | ![default theme, dark mode](../../assets/theme-default-dark.webp) |
+
+### `slate`
+
+| Light | Dark |
+|:-----:|:----:|
+| ![slate theme, light mode](../../assets/theme-slate-light.webp) | ![slate theme, dark mode](../../assets/theme-slate-dark.webp) |
+
+### `ocean`
+
+Ocean sets `sidebar_stack_breakpoint = 6000`, so the connector list is stacked **below** the board at any window width. These shots are full-page to show it.
+
+| Light | Dark |
+|:-----:|:----:|
+| ![ocean theme, light mode](../../assets/theme-ocean-light.webp) | ![ocean theme, dark mode](../../assets/theme-ocean-dark.webp) |
+
+### `terminal`
+
+| Light | Dark |
+|:-----:|:----:|
+| ![terminal theme, light mode](../../assets/theme-terminal-light.webp) | ![terminal theme, dark mode](../../assets/theme-terminal-dark.webp) |
+
+### `midnight`
+
+| Light | Dark |
+|:-----:|:----:|
+| ![midnight theme, light mode](../../assets/theme-midnight-light.webp) | ![midnight theme, dark mode](../../assets/theme-midnight-dark.webp) |
 
 ## Anatomy of a theme file
 
@@ -156,5 +192,5 @@ css = """
 ## Tips
 
 - Because tokens merge over the defaults, start from a couple of overrides (`bg`, `text`, an accent) and add more only as needed.
-- Keep pin colours meaningful — they come from the board, not the theme, so they stay consistent for readers no matter which theme is applied.
+- Pin colors meaningful come from the board, not the theme, so they stay consistent for readers no matter which theme is applied.
 - The designer shows a **Theme** selector in its toolbar; a custom theme name it doesn't know about is still preserved when you save.

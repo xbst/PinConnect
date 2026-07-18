@@ -2,6 +2,10 @@
 
 An interactive pinout generator for PCBs. PinConnect turns a photo of a board into an interactive pinout diagram you can open in a browser or embed in a documentation site.
 
+![A generated PinConnect pinout: hovering connectors on the board, then opening the connector list and picking connectors from it](assets/pinout-demo.gif)
+
+*A generated pinout for the [Birds' Nest CAN](https://store.isiks.tech/products/birds-nest-CAN) board — hover a connector on the board for its pinout, or open the connector list to browse every connector at once.*
+
 It is made of three tools, used in sequence:
 
 - **pinout-design**: a browser-based designer that turns a board image into a TOML config.
@@ -10,7 +14,7 @@ It is made of three tools, used in sequence:
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
 
-If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/BNC/BNC.html
+If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/bnc/bnc.pinout.html
 
 ## Quick start
 
@@ -58,7 +62,6 @@ The project works and generates great looking pinouts already. Below are changes
 - Add female Sherlock connectors
 - Add slide switch as a "connector" for highlighting its positions
 - Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
-- Add a screenshot of the output to this document
 
 ## License
 
