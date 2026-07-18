@@ -690,7 +690,7 @@ def _render_behavior_css(theme: Theme) -> str:
             "body{overflow:visible;flex-direction:column;padding-bottom:8px}"
             ".bd{flex:none;height:auto;min-height:0}"
             ".pw img{max-height:none}"
-            ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:visible;flex:none;margin:0 8px}"
+            ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:hidden;flex:none;margin:0 8px}"
             ".sb.hid{display:none}"
             ".sb-in{width:auto;max-width:none;min-width:0;height:auto;overflow:visible}"
             "}"
@@ -785,6 +785,8 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         behavior_css=_render_behavior_css(theme),
         height_script=_render_height_script(theme),
         sb_hidden="" if theme.behavior.sidebar_default_open else " hid",
+        sb_stack="true" if theme.behavior.sidebar_responsive_stack else "false",
+        sb_bp=theme.behavior.sidebar_stack_breakpoint,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -940,7 +942,29 @@ const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
 let aId=null,pinned=false,isTouch=false;
 document.addEventListener('touchstart',function(){{isTouch=true}},{{once:true,passive:true}});
-sbBtn.addEventListener('click',e=>{{e.stopPropagation();sb.classList.toggle('hid');
+/* When the list is stacked below the board, animate its height (expand down /
+   shrink up) instead of snapping.  Embedded, the iframe auto-height tracks the
+   animating body height frame-by-frame. */
+const SB_STACK={sb_stack},SB_BP={sb_bp};
+function sbAnim(){{return SB_STACK&&window.matchMedia('(max-width:'+SB_BP+'px)').matches}}
+function sbEnd(cb){{let done=false;
+  function h(e){{if(e&&e.propertyName&&e.propertyName!=='height')return;if(done)return;
+    done=true;sb.removeEventListener('transitionend',h);cb()}}
+  sb.addEventListener('transitionend',h);setTimeout(()=>h(),380)}}
+function toggleSb(){{
+  if(!sbAnim()){{sb.classList.toggle('hid');return}}
+  const opening=sb.classList.contains('hid');sb.style.overflow='hidden';
+  if(opening){{
+    sb.classList.remove('hid');sb.style.height='0px';const t=sb.scrollHeight;void sb.offsetHeight;
+    requestAnimationFrame(()=>{{sb.style.transition='height .28s ease';sb.style.height=t+'px'}});
+    sbEnd(()=>{{sb.style.height='';sb.style.transition='';sb.style.overflow=''}});
+  }}else{{
+    sb.style.height=sb.scrollHeight+'px';void sb.offsetHeight;
+    requestAnimationFrame(()=>{{sb.style.transition='height .28s ease';sb.style.height='0px'}});
+    sbEnd(()=>{{sb.classList.add('hid');sb.style.height='';sb.style.transition='';sb.style.overflow=''}});
+  }}
+}}
+sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();
   if(aId){{const el=hs(aId);if(el)setTimeout(()=>pos(el),0)}}}});
 function hs(id){{return document.querySelector(`.hs[data-id="${{id}}"]`)}}
 function li(id){{return document.querySelector(`.cl-i[data-id="${{id}}"]`)}}

@@ -62,12 +62,11 @@ class PinoutTreeprocessor(Treeprocessor):
             if not src:
                 continue
 
-            # Preserve any inline style the author specified.  Add a height
-            # transition so the auto-height resize (e.g. toggling the connector
-            # list when it is stacked below the board) animates smoothly.
+            # Preserve any inline style the author specified.  (The pinout animates
+            # its own height when the list is toggled, and the auto-height listener
+            # tracks that frame-by-frame — so the iframe must NOT have its own height
+            # transition, or the two would fight.)
             style = img.get("style", "min-height:60vh;width:100%")
-            if "transition" not in style:
-                style = style.rstrip(";") + ";transition:height .28s ease"
 
             # Convert <img> → <iframe>
             img.tag = "iframe"
