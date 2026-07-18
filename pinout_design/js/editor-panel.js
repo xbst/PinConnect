@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, patchConnectorInSource, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -122,23 +122,19 @@ export class EditorPanel {
       this._patchConnector(connectorId);
     });
 
-    this.state.on("connector-added", ({ origin }) => {
+    this.state.on("connector-added", ({ connectorId, origin }) => {
       if (origin === "editor") return;
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
+      this._appendConnector(connectorId);
     });
 
-    this.state.on("connector-removed", ({ origin }) => {
+    this.state.on("connector-removed", ({ connectorId, origin }) => {
       if (origin === "editor") return;
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
+      this._removeConnectorFromSource(connectorId);
     });
 
-    this.state.on("connector-renamed", ({ newId, origin }) => {
+    this.state.on("connector-renamed", ({ oldId, newId, origin }) => {
       if (origin === "editor") return;
-      this._patchConnector(newId);
+      this._patchConnector(newId, oldId);
     });
 
     this.state.on("pin-changed", ({ connectorId, origin }) => {
@@ -233,29 +229,67 @@ export class EditorPanel {
     this._updateHighlight();
   }
 
-  _patchConnector(connectorId) {
-    const text = this.textarea.value;
-    const sourceMap = buildSourceMap(text);
-    const idx = this.state.getConnectorIndex(connectorId);
-    if (idx < 0 || !sourceMap.connectors[idx]) {
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
-      return;
-    }
-
-    const conn = this.state.getConnector(connectorId);
-    const connData = {
+  _connData(conn) {
+    return {
       id: conn.id, name: conn.name, type: conn.type,
       x1: conn.x1, y1: conn.y1, x2: conn.x2, y2: conn.y2,
       orientation: conn.orientation, description: conn.description,
       label_style: conn.label_style, symbol: conn.symbol,
       pins: conn.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
     };
+  }
+
+  // Rewrite one connector's block in place. Locate it by the id it currently
+  // carries in the text (lookupId — the OLD id on a rename), not by state-array
+  // position: text and state can be ordered differently, and patching the
+  // wrong block would corrupt an unrelated connector.
+  _patchConnector(connectorId, lookupId = connectorId) {
+    const text = this.textarea.value;
+    const range = buildSourceMap(text).connectors.find(c => c.id === lookupId);
+    const conn = this.state.getConnector(connectorId);
+    if (!range || !conn) {
+      this._suppressSync = true;
+      this._syncFromState();
+      this._suppressSync = false;
+      return;
+    }
 
     this._suppressSync = true;
-    const newText = patchConnectorInSource(text, sourceMap, idx, connData);
-    this.textarea.value = newText;
+    this.textarea.value = patchConnectorInSource(text, range, this._connData(conn));
+    this._updateHighlight();
+    this._suppressSync = false;
+  }
+
+  // Append a newly-added connector's block rather than regenerating the whole
+  // document, so hand-written comments and formatting elsewhere survive.
+  _appendConnector(connectorId) {
+    const conn = this.state.getConnector(connectorId);
+    if (!conn) return;
+    let text = this.textarea.value;
+    if (text && !text.endsWith("\n")) text += "\n";
+    this._suppressSync = true;
+    this.textarea.value = text + "\n" + serializeConnectorBlock(this._connData(conn)) + "\n";
+    this._updateHighlight();
+    this._suppressSync = false;
+  }
+
+  // Delete just the removed connector's block (found by id), plus one blank
+  // separator above it, leaving the rest of the document — including comments —
+  // untouched. The connector is already gone from state, so match on the text.
+  _removeConnectorFromSource(connectorId) {
+    const text = this.textarea.value;
+    const range = buildSourceMap(text).connectors.find(c => c.id === connectorId);
+    if (!range) {
+      this._suppressSync = true;
+      this._syncFromState();
+      this._suppressSync = false;
+      return;
+    }
+    const lines = text.split("\n");
+    let from = range.start;
+    if (from > 0 && lines[from - 1].trim() === "") from--;
+    this._suppressSync = true;
+    this.textarea.value = [...lines.slice(0, from), ...lines.slice(range.end + 1)].join("\n");
     this._updateHighlight();
     this._suppressSync = false;
   }
