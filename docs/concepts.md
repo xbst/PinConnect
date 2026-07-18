@@ -71,3 +71,4 @@ These JSON files are generated from the canonical TOML definitions by `pinout_de
 - [Getting Started](getting-started.md): run the whole pipeline once.
 - [board TOML reference](pinout-gen/board-toml.md): every field in a board config.
 - [connector types](pinout-gen/connector-types.md): the type library and adding your own.
+- [themes](pinout-gen/themes.md): restyle the pinout's colours, fonts, and behaviours.

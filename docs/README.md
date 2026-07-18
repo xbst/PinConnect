@@ -21,6 +21,7 @@ Start with **[Getting Started](getting-started.md)** for a quick run through the
 - [Generating HTML](pinout-gen/generating-html.md): run the generator.
 - [Board TOML reference](pinout-gen/board-toml.md): every field in a board config.
 - [Connector types](pinout-gen/connector-types.md): the type library and adding your own.
+- [Themes](pinout-gen/themes.md): restyle the pinout's colours, fonts, and behaviours, or make your own theme.
 
 ### pinout-embed
 

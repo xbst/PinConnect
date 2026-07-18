@@ -43,6 +43,16 @@ For example, if `board.toml` has `image = "board.png"`, then `board.png` must si
 
 To avoid this requirement, use `-i` to embed the image directly — see below.
 
+## Choosing a theme
+
+Use `-t` / `--theme` to apply a [theme](themes.md) — colours, fonts, and behaviours around the connectors — overriding the board's `[board] theme`:
+
+```bash
+pinout-gen board.toml --theme midnight
+```
+
+The built-in themes are `default`, `slate`, `ocean`, `terminal`, and `midnight`. See [themes](themes.md) to use them or create your own.
+
 ## Embedding the board image
 
 Use `-i` / `--image-embed` to base64-encode the board image into the HTML so the output is fully self-contained with no external image file needed. This is ideal if you're sharing the pinout file instead of embedding into a website since the person opening the pinout doesn't have to worry about having the image file in the same location the HTML file is opened from as well.
