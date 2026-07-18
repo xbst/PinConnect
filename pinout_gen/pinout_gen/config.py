@@ -108,13 +108,23 @@ def load_board(path: Path) -> Board:
         theme_dir=b.get("theme_dir", "./themes"),
     )
 
+    seen_ids: set[str] = set()
     for c in raw.get("connector", []):
+        cid = c["id"]
+        # Ids key the connector data, the hotspot rects, and the sidebar entries
+        # in the generated page; a duplicate would silently overwrite one
+        # connector's pinout and mis-target hover/click. Reject it up front.
+        if cid in seen_ids:
+            raise ValueError(
+                f"duplicate connector id '{cid}': every [[connector]] must have a unique id"
+            )
+        seen_ids.add(cid)
         pins = [
             Pin(name=p["name"], color=p.get("color", "#888888"), row=p.get("row", 1))
             for p in c.get("pin", [])
         ]
         board.connectors.append(Connector(
-            id=c["id"], name=c["name"], type=c["type"], pins=pins,
+            id=cid, name=c["name"], type=c["type"], pins=pins,
             x1=c["x1"], y1=c["y1"], x2=c["x2"], y2=c["y2"],
             orientation=c.get("orientation", 0),
             description=c.get("description", ""),

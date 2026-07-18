@@ -66,7 +66,11 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Error: config file not found: {config_path}", file=sys.stderr)
         sys.exit(1)
 
-    board = load_board(config_path)
+    try:
+        board = load_board(config_path)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
     connector_types = load_all_connector_types(board, config_path)
 
     theme_name = args.theme or board.theme
