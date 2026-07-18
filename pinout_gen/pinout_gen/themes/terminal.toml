@@ -1,0 +1,52 @@
+# "Terminal" — a green, monospaced theme; connector list open by default.
+[theme]
+name = "Terminal"
+
+[font]
+family = "Geist Pixel"
+source = "google"
+weights = "400;500;700"
+
+[font.label]
+family = "Geist Pixel"
+source = "google"
+weights = "400;700"
+
+[behavior]
+sidebar_default_open = true
+show_symbols = false
+
+[colors.light]
+bg          = "#f4f6f0"
+text        = "#1b2416"
+tip-bg      = "#ffffff"
+tip-border  = "#d6dcc9"
+tip-shadow  = "rgba(30,40,20,.12)"
+hs-hover    = "rgba(101,163,13,.14)"
+hs-stroke   = "rgba(77,124,15,.55)"
+hs-active   = "rgba(101,163,13,.24)"
+divider     = "#dde3d0"
+conn-body   = "#e8ecdf"
+conn-cavity = "#d5dcc4"
+conn-stroke = "#5c6b45"
+label-color = "#26331a"
+desc-color  = "#4f5e39"
+type-color  = "#8a9770"
+
+[colors.dark]
+bg          = "#0b0f0a"
+text        = "#b7d99b"
+tip-bg      = "#111710"
+tip-border  = "#243020"
+tip-shadow  = "rgba(0,0,0,.6)"
+hs-hover    = "rgba(132,204,22,.16)"
+hs-stroke   = "rgba(132,204,22,.6)"
+hs-active   = "rgba(132,204,22,.30)"
+divider     = "#243020"
+conn-body   = "#1a2416"
+conn-cavity = "#111a0e"
+conn-stroke = "#6f8a54"
+label-color = "#c3e6a1"
+desc-color  = "#93b578"
+type-color  = "#6b8551"
+scroll-thumb = "rgba(132,204,22,.30)"

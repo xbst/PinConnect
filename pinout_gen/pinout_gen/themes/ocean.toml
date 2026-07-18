@@ -1,0 +1,50 @@
+# "Ocean" — teal and cyan, with the Lexend typeface.
+[theme]
+name = "Ocean"
+
+[font]
+family = "Lexend"
+source = "google"
+weights = "400;500;600"
+
+[behavior]
+sidebar_default_open = true
+sidebar_max_width = 360
+sidebar_responsive_stack = true
+sidebar_stack_breakpoint = 6000
+font_scale               = 1.5
+symbol_size              = 36
+
+[colors.light]
+bg          = "#f0fdfa"
+text        = "#0f2e2a"
+tip-bg      = "#ffffff"
+tip-border  = "#cbeae4"
+tip-shadow  = "rgba(13,90,80,.12)"
+hs-hover    = "rgba(20,184,166,.14)"
+hs-stroke   = "rgba(13,148,136,.55)"
+hs-active   = "rgba(20,184,166,.24)"
+divider     = "#d5efe9"
+conn-body   = "#e2f2ee"
+conn-cavity = "#c9e6df"
+conn-stroke = "#4b8b82"
+label-color = "#123b35"
+desc-color  = "#3f6f68"
+type-color  = "#7ba79f"
+
+[colors.dark]
+bg          = "#04201d"
+text        = "#d7f0eb"
+tip-bg      = "#0a2e2a"
+tip-border  = "#155049"
+tip-shadow  = "rgba(0,0,0,.5)"
+hs-hover    = "rgba(45,212,191,.16)"
+hs-stroke   = "rgba(45,212,191,.55)"
+hs-active   = "rgba(45,212,191,.28)"
+divider     = "#154b45"
+conn-body   = "#0f3a34"
+conn-cavity = "#0a2b27"
+conn-stroke = "#6fb3a9"
+label-color = "#c7ede7"
+desc-color  = "#8fc4bc"
+type-color  = "#5f948c"

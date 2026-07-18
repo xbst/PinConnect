@@ -1,0 +1,42 @@
+# "Slate" — a cool blue-grey theme with the Glegoo typeface.
+[theme]
+name = "Slate"
+
+[font]
+family = "Glegoo"
+source = "google"
+weights = "400;500;600"
+
+[colors.light]
+bg          = "#f8fafc"
+text        = "#0f172a"
+tip-bg      = "#ffffff"
+tip-border  = "#e2e8f0"
+tip-shadow  = "rgba(15,23,42,.10)"
+hs-hover    = "rgba(59,130,246,.12)"
+hs-stroke   = "rgba(37,99,235,.55)"
+hs-active   = "rgba(59,130,246,.22)"
+divider     = "#e2e8f0"
+conn-body   = "#e8edf3"
+conn-cavity = "#d3dbe6"
+conn-stroke = "#64748b"
+label-color = "#1e293b"
+desc-color  = "#475569"
+type-color  = "#94a3b8"
+
+[colors.dark]
+bg          = "#0b1220"
+text        = "#e2e8f0"
+tip-bg      = "#131c2e"
+tip-border  = "#243044"
+tip-shadow  = "rgba(0,0,0,.5)"
+hs-hover    = "rgba(96,165,250,.15)"
+hs-stroke   = "rgba(96,165,250,.55)"
+hs-active   = "rgba(96,165,250,.26)"
+divider     = "#243044"
+conn-body   = "#1c2739"
+conn-cavity = "#141d2b"
+conn-stroke = "#8ea3bd"
+label-color = "#dbe4f0"
+desc-color  = "#9fb0c7"
+type-color  = "#7688a0"

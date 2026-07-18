@@ -36,6 +36,10 @@ name = "Default"
 # sidebar_max_width        = 340     # max sidebar width in px; panel sizes to content up to this (and 40vw)
 # sidebar_responsive_stack = false   # below the breakpoint, list moves below the image
 # sidebar_stack_breakpoint = 640     # px width at/under which stacking kicks in
+# show_symbols             = true    # false hides all connector symbols, even those set in the board TOML
+# symbol_style_fallback    = false   # symbol-less connectors fall back to a style-based default icon
+# font_scale               = 1.0     # scales the connector list / tooltip / bottom-bar text
+# symbol_size              = 16       # connector-symbol icon size in px
 
 # Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both
