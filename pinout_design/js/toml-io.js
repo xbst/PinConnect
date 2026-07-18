@@ -132,14 +132,17 @@ function parseInlineArray(val, lineNum) {
 export function parseBoardToml(text) {
   const raw = parseToml(text);
   const b = raw.board || {};
+  // Use ?? (not ||) for fields with a non-empty default, so an explicit empty
+  // string the user typed (e.g. title = "") survives the round-trip instead of
+  // being silently replaced by the default.
   const board = {
-    title: b.title || "Pinout",
-    image: b.image || "",
+    title: b.title ?? "Pinout",
+    image: b.image ?? "",
     width: b.width || 0,
     height: b.height || 0,
-    connector_dir: b.connector_dir || "./connectors",
-    theme: b.theme || "default",
-    theme_dir: b.theme_dir || "./themes",
+    connector_dir: b.connector_dir ?? "./connectors",
+    theme: b.theme ?? "default",
+    theme_dir: b.theme_dir ?? "./themes",
   };
 
   const connectors = (raw.connector || []).map(c => ({
@@ -169,40 +172,55 @@ export function parseBoardToml(text) {
 export function buildSourceMap(text) {
   const lines = text.split("\n");
   const map = { board: null, connectors: [] };
+  let scope = null;          // "board" | "connector" | "pin" | null
   let currentConn = null;
   let currentPin = null;
 
   for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
+    // Classify on the comment-stripped, trimmed line. A blank or comment-only
+    // line is never part of a block's range, so ranges end at the last real
+    // content line — trailing blanks/comments between blocks are preserved.
+    const trimmed = stripComment(lines[i]).trim();
+    if (!trimmed) continue;
 
-    if (trimmed.startsWith("[board]")) {
+    if (trimmed === "[board]") {
       map.board = { start: i, end: i };
+      scope = "board"; currentConn = null; currentPin = null;
       continue;
     }
-
     if (trimmed === "[[connector]]") {
-      if (currentConn) currentConn.end = i - 1;
-      currentConn = { start: i, end: i, pins: [] };
-      currentPin = null;
+      currentConn = { start: i, end: i, id: null, pins: [] };
+      currentPin = null; scope = "connector";
       map.connectors.push(currentConn);
       continue;
     }
-
     if (trimmed === "[[connector.pin]]") {
       currentPin = { start: i, end: i };
-      if (currentConn) currentConn.pins.push(currentPin);
+      scope = "pin";
+      if (currentConn) { currentConn.pins.push(currentPin); currentConn.end = i; }
+      continue;
+    }
+    if (trimmed.startsWith("[")) {
+      // Any other table header closes the current block, so its lines aren't
+      // swallowed into the previous connector's (or board's) range.
+      scope = null; currentConn = null; currentPin = null;
       continue;
     }
 
-    if (currentPin) currentPin.end = i;
-    else if (currentConn) currentConn.end = i;
-    else if (map.board) map.board.end = i;
-  }
-
-  if (currentConn) {
-    currentConn.end = lines.length - 1;
-    while (currentConn.end > currentConn.start && !lines[currentConn.end].trim()) {
-      currentConn.end--;
+    // A key = value content line extends only the innermost open block.
+    if (scope === "pin" && currentPin) {
+      currentPin.end = i;
+      if (currentConn) currentConn.end = i;
+    } else if (scope === "connector" && currentConn) {
+      currentConn.end = i;
+      if (currentConn.id === null) {
+        const m = trimmed.match(/^id\s*=\s*(.+)$/);
+        if (m) {
+          try { currentConn.id = parseTomlValue(m[1].trim(), i + 1); } catch { /* leave null */ }
+        }
+      }
+    } else if (scope === "board" && map.board) {
+      map.board.end = i;
     }
   }
 
@@ -272,15 +290,11 @@ export function serializeBoardToml(boardData, connectors) {
   return lines.join("\n") + "\n";
 }
 
-export function patchConnectorInSource(sourceText, sourceMap, connIndex, newConn) {
-  const lines = sourceText.split("\n");
-  const range = sourceMap.connectors[connIndex];
+export function patchConnectorInSource(sourceText, range, newConn) {
   if (!range) return sourceText;
-
-  const newBlock = serializeConnectorBlock(newConn);
-  const newLines = newBlock.split("\n");
+  const lines = sourceText.split("\n");
+  const newLines = serializeConnectorBlock(newConn).split("\n");
   const before = lines.slice(0, range.start);
   const after = lines.slice(range.end + 1);
-
   return [...before, ...newLines, ...after].join("\n");
 }

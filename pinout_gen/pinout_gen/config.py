@@ -93,29 +93,78 @@ class Board:
 
 # ── Loading ──────────────────────────────────────────────────────────
 
-def load_board(path: Path) -> Board:
-    with open(path, "rb") as f:
-        raw = tomllib.load(f)
+def _require(table: dict, key: str, ctx: str):
+    """Fetch a required key, raising a clear ValueError (not a bare KeyError)
+    naming the missing field and where it belongs. The board TOML is meant to
+    be hand-editable, so a missing key must read as a message, not a traceback.
+    """
+    try:
+        return table[key]
+    except (KeyError, TypeError):
+        raise ValueError(f"{ctx}: missing required key '{key}'") from None
 
+
+def load_board(path: Path) -> Board:
+    try:
+        with open(path, "rb") as f:
+            raw = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(f"invalid TOML in {path.name}: {e}") from None
+
+    if "board" not in raw:
+        raise ValueError(f"{path.name}: missing required [board] table")
     b = raw["board"]
+
+    width = _require(b, "width", "[board]")
+    height = _require(b, "height", "[board]")
+    image = _require(b, "image", "[board]")
+    for dim, val in (("width", width), ("height", height)):
+        if isinstance(val, bool) or not isinstance(val, (int, float)) or val <= 0:
+            raise ValueError(
+                f"[board]: {dim} must be a positive number (got {val!r}); "
+                f"set width/height to the board image's pixel dimensions"
+            )
+    if not image:
+        raise ValueError("[board]: 'image' must name the board image the pinout overlays")
+
     board = Board(
         title=b.get("title", "Pinout"),
-        image=b["image"],
-        width=b["width"],
-        height=b["height"],
+        image=image, width=width, height=height,
         connector_dir=b.get("connector_dir", "./connectors"),
         theme=b.get("theme", "default"),
         theme_dir=b.get("theme_dir", "./themes"),
     )
 
-    for c in raw.get("connector", []):
+    connectors_raw = raw.get("connector", [])
+    if isinstance(connectors_raw, dict):
+        # A single `[connector]` table instead of `[[connector]]` (array of
+        # tables) is a classic TOML slip; tomllib parses it as a dict.
+        raise ValueError(
+            "connectors must be written as '[[connector]]' (an array of tables), not '[connector]'"
+        )
+
+    seen_ids: set[str] = set()
+    for i, c in enumerate(connectors_raw):
+        cid = _require(c, "id", f"[[connector]] #{i + 1}")
+        # Ids key the connector data, the hotspot rects, and the sidebar entries
+        # in the generated page; a duplicate would silently overwrite one
+        # connector's pinout and mis-target hover/click. Reject it up front.
+        if cid in seen_ids:
+            raise ValueError(
+                f"duplicate connector id '{cid}': every [[connector]] must have a unique id"
+            )
+        seen_ids.add(cid)
+        ctx = f"connector '{cid}'"
         pins = [
-            Pin(name=p["name"], color=p.get("color", "#888888"), row=p.get("row", 1))
-            for p in c.get("pin", [])
+            Pin(name=_require(p, "name", f"{ctx} pin #{j + 1}"),
+                color=p.get("color", "#888888"), row=p.get("row", 1))
+            for j, p in enumerate(c.get("pin", []))
         ]
         board.connectors.append(Connector(
-            id=c["id"], name=c["name"], type=c["type"], pins=pins,
-            x1=c["x1"], y1=c["y1"], x2=c["x2"], y2=c["y2"],
+            id=cid,
+            name=_require(c, "name", ctx), type=_require(c, "type", ctx), pins=pins,
+            x1=_require(c, "x1", ctx), y1=_require(c, "y1", ctx),
+            x2=_require(c, "x2", ctx), y2=_require(c, "y2", ctx),
             orientation=c.get("orientation", 0),
             description=c.get("description", ""),
             label_style=c.get("label_style", "staggered"),
@@ -125,19 +174,39 @@ def load_board(path: Path) -> Board:
 
 
 def load_connector_type(path: Path) -> ConnectorType:
-    with open(path, "rb") as f:
-        raw = tomllib.load(f)
+    try:
+        with open(path, "rb") as f:
+            raw = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(f"invalid TOML in {path.name}: {e}") from None
 
+    if "connector" not in raw:
+        raise ValueError(f"{path.name}: missing required [connector] table")
     info = raw["connector"]
     geo_raw = raw.get("geometry", {})
-    geo = ConnectorGeometry(**{
-        k: v for k, v in geo_raw.items()
-        if k in ConnectorGeometry.__dataclass_fields__
-    })
+
+    # A misspelled geometry key used to be silently dropped, so the field kept
+    # its default and the connector drew wrong with no warning. Reject unknown
+    # keys, and coerce each value to its field's type so a wrong-typed value is
+    # a clear error here rather than a deep TypeError during rendering.
+    fields = ConnectorGeometry.__dataclass_fields__
+    unknown = sorted(k for k in geo_raw if k not in fields)
+    if unknown:
+        raise ValueError(f"{path.name}: unknown [geometry] key(s): {', '.join(unknown)}")
+    geo_kwargs = {}
+    for k, v in geo_raw.items():
+        target = type(fields[k].default)
+        try:
+            geo_kwargs[k] = target(v)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"{path.name}: [geometry] '{k}' must be {target.__name__}, got {v!r}"
+            ) from None
+
     return ConnectorType(
-        name=info["name"],
+        name=_require(info, "name", f"{path.name} [connector]"),
         style=info.get("style", "box"),
-        geometry=geo,
+        geometry=ConnectorGeometry(**geo_kwargs),
     )
 
 
@@ -221,6 +290,10 @@ class ThemeBehavior:
     symbol_style_fallback: bool = False      # symbol-less connectors fall back to a style default
     font_scale: float = 1.0                  # multiplier for the list / tooltip / bottom-bar text
     symbol_size: int = 16                    # connector-symbol icon size in px
+    tooltip_box_scale: float = 1.5           # tooltip drawing's long side, as a multiple of the
+                                             # connector's on-screen box; 0 disables (natural size)
+    tooltip_min_scale: float = 0.5           # never shrink the drawing below this fraction of its
+                                             # natural size, so pin labels stay readable
 
 
 @dataclass
@@ -316,6 +389,9 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         beh.symbol_style_fallback = bool(bdict.get("symbol_style_fallback", beh.symbol_style_fallback))
         beh.font_scale = float(bdict.get("font_scale", beh.font_scale))
         beh.symbol_size = int(bdict.get("symbol_size", beh.symbol_size))
+        beh.tooltip_box_scale = max(0.0, float(bdict.get("tooltip_box_scale", beh.tooltip_box_scale)))
+        beh.tooltip_min_scale = min(1.0, max(0.0, float(
+            bdict.get("tooltip_min_scale", beh.tooltip_min_scale))))
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):

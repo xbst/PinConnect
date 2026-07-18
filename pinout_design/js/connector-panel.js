@@ -27,7 +27,18 @@ export class ConnectorPanel {
   _bindState() {
     this.state.on("selection-changed", () => this._render());
     this.state.on("connector-changed", ({ connectorId }) => {
-      if (connectorId === this.state.selectedConnectorId) this._render();
+      if (connectorId !== this.state.selectedConnectorId) return;
+      // A connector field edit fires `change` on blur — so if we rebuilt the
+      // whole panel here, we'd destroy the element the user is clicking (e.g.
+      // "+ Add Pin", a delete button, a swatch) before the click completes,
+      // silently losing it. Only re-render when the pin-row structure actually
+      // changes (dual-row-ness, from a type change); otherwise just refresh the
+      // drawing, leaving the form and the pending click intact.
+      const conn = this.state.getSelectedConnector();
+      const ct = conn && this.state.connectorTypes.get(conn.type);
+      const isDualRow = !!(ct && ct.geometry.rows >= 2);
+      if (isDualRow !== this._isDualRow) this._render();
+      else this._updateSvgPreview();
     });
     this.state.on("pin-changed", ({ connectorId, pinIndex, origin }) => {
       if (connectorId !== this.state.selectedConnectorId) return;
@@ -64,6 +75,7 @@ export class ConnectorPanel {
 
     const ct = this.state.connectorTypes.get(conn.type);
     const isDualRow = ct && ct.geometry.rows >= 2;
+    this._isDualRow = !!isDualRow;
 
     let svgHtml = "";
     if (ct) {
@@ -144,7 +156,7 @@ export class ConnectorPanel {
     return `
       <div class="pin-row" data-idx="${index}">
         <span class="pin-drag-handle" draggable="true" data-idx="${index}">≡</span>
-        <div class="pin-color-swatch" data-idx="${index}" style="background:${pin.color}" title="${pin.color}"></div>
+        <div class="pin-color-swatch" data-idx="${index}" style="background:${this._esc(pin.color)}" title="${this._esc(pin.color)}"></div>
         <input type="text" class="pin-name-input" data-idx="${index}" value="${this._esc(pin.name)}">
         ${rowSel}
         <button class="pin-delete-btn" data-idx="${index}">×</button>
@@ -193,9 +205,13 @@ export class ConnectorPanel {
       if (e.key === "Enter") {
         e.preventDefault();
         const hex = hexInput.value.trim();
-        if (/^[0-9A-Fa-f]{3,6}$/.test(hex)) {
+        // Only 3- or 6-digit hex is a valid solid color; 4/5-digit values used
+        // to be accepted and stored as invalid colors.
+        if (/^([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex)) {
           this._applyColor(swatchEl, connId, pinIndex, "#" + hex);
           this._closePopup();
+        } else {
+          hexInput.style.borderColor = "var(--danger)";
         }
       }
       e.stopPropagation();

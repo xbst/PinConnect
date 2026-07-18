@@ -116,6 +116,8 @@ weights = "400;500"
 | `symbol_style_fallback` | `false` | Give symbol-less connectors a default icon based on their type's style |
 | `font_scale` | `1.0` | Scale the list / tooltip / bottom-bar text |
 | `symbol_size` | `16` | Connector-symbol icon size in px |
+| `tooltip_box_scale` | `1.5` | Tooltip drawing's long side, as a multiple of the connector's box on the board. `0` pins it to its natural size |
+| `tooltip_min_scale` | `0.5` | Smallest fraction of natural size the drawing may shrink to |
 
 ```toml
 [behavior]
@@ -124,6 +126,8 @@ sidebar_responsive_stack = true
 sidebar_stack_breakpoint = 720
 font_scale               = 1.1
 ```
+
+> **Tooltip sizing.** The connector drawing in a tooltip is sized from the connector's box on the board rather than a fixed pixel size, so it shrinks along with the board instead of covering it on a small screen. It tracks the board live — resizing the window or opening the list re-fits the open tooltip. Two bounds keep it sane: it never grows past the drawing's natural size (so wide screens look exactly as they did before), and never shrinks below `tooltip_min_scale` of it (so pin labels stay readable). Raise `tooltip_box_scale` for larger tooltips, or set it to `0` to opt out entirely.
 
 > **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../pinout-embed/mkdocs-zensical.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
 

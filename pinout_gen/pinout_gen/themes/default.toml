@@ -40,6 +40,8 @@ name = "Default"
 # symbol_style_fallback    = false   # symbol-less connectors fall back to a style-based default icon
 # font_scale               = 1.0     # scales the connector list / tooltip / bottom-bar text
 # symbol_size              = 16       # connector-symbol icon size in px
+# tooltip_box_scale        = 1.5     # tooltip drawing's long side vs the connector's box on the board; 0 = natural size
+# tooltip_min_scale        = 0.5     # smallest fraction of natural size the drawing may shrink to
 
 # Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both
