@@ -68,10 +68,10 @@ def main(argv: list[str] | None = None) -> None:
 
     try:
         board = load_board(config_path)
-    except ValueError as e:
+        connector_types = load_all_connector_types(board, config_path)
+    except (ValueError, FileNotFoundError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    connector_types = load_all_connector_types(board, config_path)
 
     theme_name = args.theme or board.theme
     try:
