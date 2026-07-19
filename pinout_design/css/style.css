@@ -27,6 +27,10 @@
   --toolbar-h: 40px;
   --panel-header-h: 32px;
   --resizer: 4px;
+
+  /* Matches --ui-font in pinout-gen's default theme, so the designer and the
+     pinouts it produces read the same. */
+  --ui-font: "Roboto", system-ui, sans-serif;
 }
 
 *, *::before, *::after {
@@ -35,11 +39,17 @@
   box-sizing: border-box;
 }
 
+/* Form controls don't inherit the page font, so the chrome would otherwise
+   stay on the browser's UI font. */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--ui-font);
   font-size: 13px;
   overflow: hidden;
 }
@@ -541,8 +551,12 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: "Consolas", "Fira Code", "Courier New", monospace;
+  /* Absolute line height shared by the text and the gutter. A unitless 1.5 is
+     relative to each element's own font-size, so the gutter's smaller 12px font
+     made its rows 18px vs the 19.5px text rows and the line numbers drifted. */
+  --code-lh: calc(13px * 1.5);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: var(--code-lh);
 }
 
 .code-gutter {
@@ -559,7 +573,7 @@ html, body {
 }
 
 .code-gutter div {
-  height: 1.5em;
+  height: var(--code-lh);
 }
 
 .code-body {

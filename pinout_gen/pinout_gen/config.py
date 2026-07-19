@@ -37,14 +37,30 @@ class ConnectorGeometry:
     row2_pin_radius: float = -1.0
     cavity_size: float = 0.0
     mating_pin_scale: float = 1.0
+    flare_max_pins: int = 0    # pin count at/below which the housing flares wider
+    flare_width: float = 0.0   # extra body width per side while flared
+
+    def flare_for(self, n_pins: int) -> float:
+        """Extra half-width a low-pin-count housing carries.
+
+        Some families keep the same edge-to-first-pin distance at every size but
+        widen the moulding below a few ways, because the latch needs more room
+        than the pin field gives it.  The widened body is the outer box, so the
+        flare has to move the pin centres along with the width.
+        """
+        if self.flare_max_pins > 0 and n_pins <= self.flare_max_pins:
+            return self.flare_width
+        return 0.0
 
     def connector_width(self, n_pins: int) -> float:
+        flare = 2 * self.flare_for(n_pins)
         if n_pins < 1:
-            return self.padding_left + self.padding_right
-        return self.padding_left + (n_pins - 1) * self.pin_pitch + self.padding_right
+            return self.padding_left + self.padding_right + flare
+        return self.padding_left + (n_pins - 1) * self.pin_pitch + self.padding_right + flare
 
     def pin_centers_x(self, n_pins: int) -> list[float]:
-        return [self.padding_left + i * self.pin_pitch for i in range(n_pins)]
+        left = self.padding_left + self.flare_for(n_pins)
+        return [left + i * self.pin_pitch for i in range(n_pins)]
 
 
 @dataclass
@@ -110,6 +126,7 @@ def _require(table: dict, key: str, ctx: str):
 _LABEL_STYLES = frozenset({"staggered", "staircase", "flat"})
 _BODY_STYLES = frozenset({
     "box", "latch", "grid", "header-male", "screw-terminal", "barrier", "button", "xt30",
+    "sherlock", "slide-switch",
 })
 _PINOUT_SIDES = frozenset({"bottom", "left", "top", "right"})
 

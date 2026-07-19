@@ -55,14 +55,6 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 - `pinout_embed/`: the Markdown embedding extension.
 - `docs/`: documentation.
 
-## Todo
-
-The project works and generates great looking pinouts already. Below are changes/features not implemented yet, planned to be implemented soon:
-
-- Add female Sherlock connectors
-- Add slide switch as a "connector" for highlighting its positions
-- Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
-
 ## License
 
 This project is licensed under GPL-3.0. See [LICENSE](LICENSE).

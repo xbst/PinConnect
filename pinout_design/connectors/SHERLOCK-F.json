@@ -1,0 +1,25 @@
+{
+  "name": "Sherlock-F",
+  "style": "sherlock",
+  "geometry": {
+    "pin_pitch": 8.0,
+    "padding_left": 8.6,
+    "padding_right": 8.6,
+    "height": 20.4,
+    "wall": 2.4,
+    "pin_cy": 10.0,
+    "pin_radius": 2.0,
+    "pinout_side": "top",
+    "line_length": 10.0,
+    "rows": 1,
+    "row2_pin_cy": 0.0,
+    "row2_pinout_side": "top",
+    "row2_line_length": 20.0,
+    "row2_padding_left": -1.0,
+    "row2_pin_pitch_y": 0.0,
+    "row2_pin_radius": -1.0,
+    "cavity_size": 0.0,
+    "flare_max_pins": 3,
+    "flare_width": 2.8
+  }
+}
