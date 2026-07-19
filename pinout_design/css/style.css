@@ -551,8 +551,12 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: "Consolas", "Fira Code", "Courier New", monospace;
+  /* Absolute line height shared by the text and the gutter. A unitless 1.5 is
+     relative to each element's own font-size, so the gutter's smaller 12px font
+     made its rows 18px vs the 19.5px text rows and the line numbers drifted. */
+  --code-lh: calc(13px * 1.5);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: var(--code-lh);
 }
 
 .code-gutter {
@@ -569,7 +573,7 @@ html, body {
 }
 
 .code-gutter div {
-  height: 1.5em;
+  height: var(--code-lh);
 }
 
 .code-body {
