@@ -688,7 +688,10 @@ def _render_behavior_css(theme: Theme) -> str:
             f"@media(max-width:{b.sidebar_stack_breakpoint}px){{"
             "html,body{height:auto}"
             "body{overflow:visible;flex-direction:column;padding-bottom:8px}"
-            ".bd{flex:none;height:auto;min-height:0}"
+            # overflow:visible so a tooltip taller than the (now short) board
+            # isn't clipped at the board's bottom edge, where the stacked list
+            # begins -- clipped tooltips read as the list overlapping them.
+            ".bd{flex:none;height:auto;min-height:0;overflow:visible}"
             ".pw img{max-height:none}"
             ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:hidden;flex:none;margin:0 8px}"
             ".sb.hid{display:none}"
@@ -835,10 +838,11 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
 .bb{{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  max-width:calc(100% - 20px);
   background:var(--tip-bg);color:var(--type-color);border:1px solid var(--tip-border);
   padding:7px 18px;border-radius:12px;font-size:calc(12px*var(--font-scale));font-family:var(--ui-font);
-  box-shadow:0 2px 8px var(--tip-shadow);
-  display:flex;align-items:center;gap:8px;white-space:nowrap}}
+  box-shadow:0 2px 8px var(--tip-shadow);text-align:center;
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
 .bb a:hover{{text-decoration:underline}}
 .sb-btn{{position:absolute;right:10px;top:10px;z-index:600;width:36px;height:36px;
@@ -942,8 +946,7 @@ body{{display:flex;height:100%;overflow:hidden}}
 const C={data};
 const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
-let aId=null,pinned=false,isTouch=false;
-document.addEventListener('touchstart',function(){{isTouch=true}},{{once:true,passive:true}});
+let aId=null,pinned=false;
 /* When the list is stacked below the board, animate its height (expand down /
    shrink up) instead of snapping.  Embedded, the iframe auto-height tracks the
    animating body height frame-by-frame. */
@@ -966,10 +969,12 @@ function toggleSb(){{
     sbEnd(()=>{{sb.classList.add('hid');sb.style.height='';sb.style.transition='';sb.style.overflow=''}});
   }}
 }}
-sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();
-  if(aId){{const el=hs(aId);if(el)setTimeout(()=>pos(el),0)}}}});
-function hs(id){{return document.querySelector(`.hs[data-id="${{id}}"]`)}}
-function li(id){{return document.querySelector(`.cl-i[data-id="${{id}}"]`)}}
+sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();reflow();}});
+/* Match by data-id in JS rather than a `[data-id="..."]` selector, so an id
+   containing a quote or backslash can't produce an invalid selector (which
+   throws and kills hover/click for that connector). */
+function hs(id){{return [...document.querySelectorAll('.hs')].find(e=>e.dataset.id===id)||null}}
+function li(id){{return [...document.querySelectorAll('.cl-i')].find(e=>e.dataset.id===id)||null}}
 function mark(id){{const h=hs(id),l=li(id);if(h)h.classList.add('active');if(l)l.classList.add('active')}}
 function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(e=>e.classList.remove('active'))}}
 function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -1018,15 +1023,15 @@ function pos(el){{
 }}
 document.querySelectorAll('.hs').forEach(el=>{{
   const id=el.dataset.id;
-  el.addEventListener('mouseenter',()=>{{if(!isTouch&&!pinned){{mark(id);show(id,el)}}}});
-  el.addEventListener('mouseleave',()=>{{if(!isTouch&&!pinned){{unmark();hide()}}}});
+  el.addEventListener('pointerenter',e=>{{if(e.pointerType!=='touch'&&!pinned){{mark(id);show(id,el)}}}});
+  el.addEventListener('pointerleave',e=>{{if(e.pointerType!=='touch'&&!pinned){{unmark();hide()}}}});
   el.addEventListener('click',e=>{{e.stopPropagation();if(pinned&&aId===id){{hide();return}}
     hide();pinned=true;mark(id);show(id,el)}});
 }});
 document.querySelectorAll('.cl-i').forEach(el=>{{
   const id=el.dataset.id;
-  el.addEventListener('mouseenter',()=>{{if(!isTouch&&!pinned){{const h=hs(id);if(h){{mark(id);show(id,h)}}}}}});
-  el.addEventListener('mouseleave',()=>{{if(!isTouch&&!pinned){{unmark();hide()}}}});
+  el.addEventListener('pointerenter',e=>{{if(e.pointerType!=='touch'&&!pinned){{const h=hs(id);if(h){{mark(id);show(id,h)}}}}}});
+  el.addEventListener('pointerleave',e=>{{if(e.pointerType!=='touch'&&!pinned){{unmark();hide()}}}});
   el.addEventListener('click',e=>{{e.stopPropagation();const h=hs(id);if(!h)return;
     if(pinned&&aId===id){{hide();return}}hide();pinned=true;mark(id);show(id,h)}});
 }});
@@ -1036,6 +1041,9 @@ document.addEventListener('click',e=>{{
 document.querySelectorAll('.hs').forEach(el=>{{el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),2000)}});
 function reflow(){{if(aId){{const el=hs(aId);if(el)pos(el)}}}}
 window.addEventListener('resize',reflow);
+/* Re-fit a pinned tooltip once the sidebar's show/hide transition settles the
+   board layout -- the immediate reflow above runs before the .2s transition. */
+sb.addEventListener('transitionend',reflow);
 /* The board also resizes without a window resize (sidebar toggle, iframe
    auto-height, container reflow) -- re-fit the tooltip whenever it does. */
 if(window.ResizeObserver){{try{{new ResizeObserver(reflow).observe(pw)}}catch(e){{}}}}

@@ -113,12 +113,28 @@ function parseTomlValue(val, lineNum) {
   if (val.startsWith("[")) {
     return parseInlineArray(val, lineNum);
   }
-  // Number (float)
-  if (val.includes(".") && !isNaN(Number(val))) return parseFloat(val);
-  // Number (int)
-  if (/^-?\d+$/.test(val)) return parseInt(val, 10);
+  // Number — accept the forms tomllib does (was stricter, so valid TOML like
+  // 1_000, +90, 1e3, 0xFF flagged a false parse error in the editor).
+  const num = parseTomlNumber(val);
+  if (num !== undefined) return num;
 
   throw new TomlParseError(`Cannot parse value: ${val}`, lineNum);
+}
+
+// Parse a TOML numeric value, or return undefined if it isn't one. Covers the
+// forms tomllib accepts: optional +/- sign, digit-group underscores, decimals,
+// exponents, hex/octal/binary integers, and inf/nan.
+function parseTomlNumber(val) {
+  const special = val.match(/^([+-]?)(inf|nan)$/);
+  if (special) return special[2] === "nan" ? NaN : (special[1] === "-" ? -Infinity : Infinity);
+  if (/^0x[0-9A-Fa-f](_?[0-9A-Fa-f])*$/.test(val)) return parseInt(val.slice(2).replace(/_/g, ""), 16);
+  if (/^0o[0-7](_?[0-7])*$/.test(val)) return parseInt(val.slice(2).replace(/_/g, ""), 8);
+  if (/^0b[01](_?[01])*$/.test(val)) return parseInt(val.slice(2).replace(/_/g, ""), 2);
+  if (/^[+-]?\d(_?\d)*(\.\d(_?\d)*)?([eE][+-]?\d(_?\d)*)?$/.test(val)) {
+    const clean = val.replace(/_/g, "");
+    return /[.eE]/.test(clean) ? parseFloat(clean) : parseInt(clean, 10);
+  }
+  return undefined;
 }
 
 function parseInlineArray(val, lineNum) {

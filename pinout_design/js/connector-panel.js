@@ -280,7 +280,24 @@ export class ConnectorPanel {
 
     onFieldChange("#conn-id", "id");
     onFieldChange("#conn-name", "name");
-    onFieldChange("#conn-type", "type");
+    // Type change gets a custom handler: switching to a single-row type would
+    // strand any row-2 pins (no R2 selector to fix them, mis-rendered at y=0),
+    // so pull them back to row 1 in the same update.
+    const typeEl = this.container.querySelector("#conn-type");
+    if (typeEl) {
+      typeEl.addEventListener("change", () => {
+        const newType = typeEl.value;
+        const c = this.state.getConnector(cid);
+        const ct = this.state.connectorTypes.get(newType);
+        const isDual = !!(ct && ct.geometry.rows >= 2);
+        if (!isDual && c && c.pins.some(p => p.row === 2)) {
+          const pins = c.pins.map(p => new Pin(p.name, p.color, 1));
+          this.state.updateConnector(cid, { type: newType, pins }, "visual");
+        } else {
+          this.state.updateConnector(cid, { type: newType }, "visual");
+        }
+      });
+    }
     onFieldChange("#conn-orient", "orientation", v => parseInt(v));
     onFieldChange("#conn-label-style", "label_style");
     onFieldChange("#conn-desc", "description");
@@ -322,19 +339,31 @@ export class ConnectorPanel {
       });
     }
 
+    // A custom drag type marks our own pin-reorder drags, so dropping arbitrary
+    // external text/files onto a pin row can't be parsed as an index and
+    // silently reorder a pin (parseInt of stray text was NaN -> spliced pin 0).
+    const PIN_DND = "application/x-pinconnect-pin";
     this.container.querySelectorAll(".pin-drag-handle").forEach(el => {
       el.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData(PIN_DND, el.dataset.idx);
         e.dataTransfer.setData("text/plain", el.dataset.idx);
         e.dataTransfer.effectAllowed = "move";
       });
     });
 
     this.container.querySelectorAll(".pin-row").forEach(row => {
-      row.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+      row.addEventListener("dragover", (e) => {
+        if (![...e.dataTransfer.types].includes(PIN_DND)) return; // not our drag
+        e.preventDefault(); e.dataTransfer.dropEffect = "move";
+      });
       row.addEventListener("drop", (e) => {
+        const raw = e.dataTransfer.getData(PIN_DND);
+        if (raw === "") return; // not a pin-reorder drag
         e.preventDefault();
-        const from = parseInt(e.dataTransfer.getData("text/plain"));
-        const to = parseInt(row.dataset.idx);
+        const from = parseInt(raw, 10);
+        const to = parseInt(row.dataset.idx, 10);
+        const c = this.state.getConnector(cid);
+        if (!c || !Number.isInteger(from) || from < 0 || from >= c.pins.length) return;
         if (from !== to) this.state.reorderPins(cid, from, to, "visual");
       });
     });

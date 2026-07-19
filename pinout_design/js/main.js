@@ -186,17 +186,20 @@ async function init() {
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
       state.removeConnector(state.selectedConnectorId, "visual");
     }
-    if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+    // Normalize the letter: with Shift held (or Caps Lock), e.key for a letter
+    // is uppercase, so `e.key === "z"` never matched for Ctrl+Shift+Z (redo).
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key === "s" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       document.getElementById("save-toml").click();
     }
-    if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+    if (key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();
       state.undo();
       editorPanel._syncFromState();
     }
-    if ((e.key === "y" && (e.ctrlKey || e.metaKey)) ||
-        (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+    if ((key === "y" && (e.ctrlKey || e.metaKey)) ||
+        (key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
       e.preventDefault();
       state.redo();
       editorPanel._syncFromState();

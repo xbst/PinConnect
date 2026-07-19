@@ -103,10 +103,15 @@ class PinoutTreeprocessor(Treeprocessor):
             existing = img.get("class")
             img.set("class", f"{existing} {EMBED_CLASS}".strip() if existing else EMBED_CLASS)
 
-            # Move alt text into title (screen-reader / tooltip)
-            alt = img.get("alt", "")
-            if alt:
-                img.set("title", alt)
+            # iframes have no alt; give it a title (tooltip / accessible name).
+            # Prefer an explicit Markdown image title -- ![alt](src "title") --
+            # and only fall back to the alt text, instead of always clobbering
+            # the title with alt.
+            if not img.get("title"):
+                alt = img.get("alt", "")
+                if alt:
+                    img.set("title", alt)
+            if "alt" in img.attrib:
                 del img.attrib["alt"]
 
             # Clean up image-only attributes
