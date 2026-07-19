@@ -23,10 +23,11 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `USB-C` | box | Simple rectangular body |
 | `XT30-2+2` | xt30 | XT30 power + 2 signal pins |
 | `button` | button | Tactile push-button / switch footprint |
+| `slide-switch` | slide-switch | Slide switch; its pins are the slider's positions |
 
 `Male` and `Female` refer to the gender of the plastic housing of the connector, not the pins, as that's what the end user will see when using the board.
 
-`USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML.
+`USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML. `slide-switch` also highlights a location rather than a pinout, but it uses pins. Pins mark slider positions, rendered without pin circles.
 
 ## Anatomy of a type file
 
@@ -64,6 +65,7 @@ cavity_size = 10.5
   - `screw-terminal` — a screw-terminal with circular screw heads and side wire-entry slots.
   - `barrier` — a barrier screw-terminal with individual metal cages and cross-drive screws.
   - `button` — a tactile push-button / switch footprint (a round actuator between two pads).
+  - `slide-switch` — a slide switch: a recessed actuator track carrying a knurled slider block at each of its labelled positions; uses `cavity_size` for the slider.
   - `sherlock` — a Sherlock housing: two latch ears on the body edge, and a stepped, chamfered mating half on the narrow sizes; uses `flare_max_pins` / `flare_width`.
 
 ### `[geometry]`

@@ -126,7 +126,7 @@ def _require(table: dict, key: str, ctx: str):
 _LABEL_STYLES = frozenset({"staggered", "staircase", "flat"})
 _BODY_STYLES = frozenset({
     "box", "latch", "grid", "header-male", "screw-terminal", "barrier", "button", "xt30",
-    "sherlock",
+    "sherlock", "slide-switch",
 })
 _PINOUT_SIDES = frozenset({"bottom", "left", "top", "right"})
 

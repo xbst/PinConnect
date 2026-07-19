@@ -354,6 +354,69 @@ function buttonCavities(geo, nPerRow) {
   return parts.join("\n");
 }
 
+// Slide-switch housing: a squared-off block with the corners barely broken.
+function bodyPathSlideSwitch(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  const r = Math.min(H * 0.06, W * 0.06);
+  return (
+    `M ${f1(r)},0 L ${f1(W - r)},0 A ${f1(r)},${f1(r)} 0 0 1 ${f1(W)},${f1(r)} ` +
+    `L ${f1(W)},${f1(H - r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(W - r)},${f1(H)} ` +
+    `L ${f1(r)},${f1(H)} A ${f1(r)},${f1(r)} 0 0 1 0,${f1(H - r)} ` +
+    `L 0,${f1(r)} A ${f1(r)},${f1(r)} 0 0 1 ${f1(r)},0 Z`
+  );
+}
+
+const SLIDE_SWITCH_RIBS = 6; // grip ribs across the actuator face
+
+// Recessed actuator track with the knurled slider drawn at every position. A
+// slide switch carries one actuator, but what a pinout labels are the places it
+// can sit, so each pin gets its own slider block and the label under it reads as
+// "slider here means this". The track is derived from the pin field rather than
+// from a padding, so it always ends half an actuator past the outermost position
+// however the type is sized; with no pins at all the switch still draws,
+// actuator centred.
+function slideSwitchDetails(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height;
+  const pxs = geo.pinCentersX(nPerRow);
+  const positions = pxs.length ? pxs : [W / 2];
+  const ty = Math.max(0.5, Math.min(geo.wall, H / 3));
+  const trackH = H - 2 * ty;
+  const clr = trackH * 0.024;                 // actuator-to-track clearance
+  const knobH = Math.max(0.5, trackH - 2 * clr);
+  let knobW = geo.cavity_size > 0 ? geo.cavity_size : knobH;
+  if (positions.length > 1) {
+    // Neighbouring detents must stay separate blocks, not merge into a bar.
+    knobW = Math.min(knobW, geo.pin_pitch * 0.92);
+  }
+  knobW = Math.max(0.5, Math.min(knobW, W - 2 * ty - 2 * clr));
+  const tx1 = Math.max(ty, positions[0] - knobW / 2 - clr);
+  const tx2 = Math.min(W - ty, positions[positions.length - 1] + knobW / 2 + clr);
+
+  const bodyFill = 'fill="var(--conn-body,#e8e8e0)"';
+  const cavFill = 'fill="var(--conn-cavity,#d0d0c8)"';
+  const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
+
+  const parts = [
+    `<rect x="${f1(tx1)}" y="${f1(ty)}" width="${f1(tx2 - tx1)}" height="${f1(trackH)}" ` +
+    `rx="${f1(Math.min(1.0, trackH * 0.06))}" ${cavFill} ${stk}/>`,
+  ];
+  for (const px of positions) {
+    const kx = px - knobW / 2, ky = ty + clr;
+    parts.push(
+      `<rect x="${f1(kx)}" y="${f1(ky)}" width="${f1(knobW)}" height="${f1(knobH)}" ` +
+      `rx="${f1(Math.min(0.8, knobW * 0.05))}" ${bodyFill} ${stk}/>`
+    );
+    for (let rib = 1; rib < SLIDE_SWITCH_RIBS; rib++) {
+      const lx = kx + rib * knobW / SLIDE_SWITCH_RIBS;
+      parts.push(
+        `<line x1="${f1(lx)}" y1="${f1(ky)}" x2="${f1(lx)}" y2="${f1(ky + knobH)}" ` +
+        `stroke="var(--conn-stroke,#555)" stroke-width="0.45" stroke-opacity="0.55"/>`
+      );
+    }
+  }
+  return parts.join("\n");
+}
+
 function bodyPathXt30(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow);
   const H = geo.height;
@@ -559,6 +622,7 @@ export function renderConnectorSVG(connector, connType) {
   else if (style === "screw-terminal") pathD = bodyPathScrewTerminal(geo, nPerRow);
   else if (style === "barrier") pathD = bodyPathBarrier(geo, nPerRow);
   else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
+  else if (style === "slide-switch") pathD = bodyPathSlideSwitch(geo, nPerRow);
   else if (style === "sherlock") pathD = bodyPathSherlock(geo, nPerRow);
   else                        pathD = bodyPathBox(geo, nPerRow);
 
@@ -580,6 +644,8 @@ export function renderConnectorSVG(connector, connType) {
     parts.push(barrierDetails(geo, nPerRow));
   } else if (style === "button") {
     parts.push(buttonCavities(geo, nPerRow));
+  } else if (style === "slide-switch") {
+    parts.push(slideSwitchDetails(geo, nPerRow));
   } else if (style === "sherlock") {
     parts.push(sherlockCavity(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {

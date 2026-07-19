@@ -368,6 +368,68 @@ def _button_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     return '\n'.join(parts)
 
 
+def _body_path_slide_switch(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Slide-switch housing: a squared-off block with the corners barely broken."""
+    W, H = geo.connector_width(n_per_row), geo.height
+    r = min(H * 0.06, W * 0.06)
+    return (
+        f"M {r:.1f},0 L {W-r:.1f},0 A {r:.1f},{r:.1f} 0 0 1 {W:.1f},{r:.1f} "
+        f"L {W:.1f},{H-r:.1f} A {r:.1f},{r:.1f} 0 0 1 {W-r:.1f},{H:.1f} "
+        f"L {r:.1f},{H:.1f} A {r:.1f},{r:.1f} 0 0 1 0,{H-r:.1f} "
+        f"L 0,{r:.1f} A {r:.1f},{r:.1f} 0 0 1 {r:.1f},0 Z"
+    )
+
+
+_SLIDE_SWITCH_RIBS = 6   # grip ribs across the actuator face
+
+
+def _slide_switch_details(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """Recessed actuator track with the knurled slider drawn at every position.
+
+    A slide switch carries one actuator, but what a pinout labels are the places
+    it can sit, so each pin gets its own slider block and the label under it
+    reads as "slider here means this".  The track is derived from the pin field
+    rather than from a padding, so it always ends half an actuator past the
+    outermost position however the type is sized; with no pins at all the switch
+    still draws, actuator centred.
+    """
+    W, H = geo.connector_width(n_per_row), geo.height
+    pxs = geo.pin_centers_x(n_per_row) or [W / 2]
+    ty = max(0.5, min(geo.wall, H / 3))
+    track_h = H - 2 * ty
+    clr = track_h * 0.024                     # actuator-to-track clearance
+    knob_h = max(0.5, track_h - 2 * clr)
+    knob_w = geo.cavity_size if geo.cavity_size > 0 else knob_h
+    if len(pxs) > 1:
+        # Neighbouring detents must stay separate blocks, not merge into a bar.
+        knob_w = min(knob_w, geo.pin_pitch * 0.92)
+    knob_w = max(0.5, min(knob_w, W - 2 * ty - 2 * clr))
+    tx1 = max(ty, pxs[0] - knob_w / 2 - clr)
+    tx2 = min(W - ty, pxs[-1] + knob_w / 2 + clr)
+
+    body_fill = 'fill="var(--conn-body,#e8e8e0)"'
+    cav_fill = 'fill="var(--conn-cavity,#d0d0c8)"'
+    stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+
+    parts = [
+        f'<rect x="{tx1:.1f}" y="{ty:.1f}" width="{tx2 - tx1:.1f}" height="{track_h:.1f}" '
+        f'rx="{min(1.0, track_h * 0.06):.1f}" {cav_fill} {stk}/>'
+    ]
+    for px in pxs:
+        kx, ky = px - knob_w / 2, ty + clr
+        parts.append(
+            f'<rect x="{kx:.1f}" y="{ky:.1f}" width="{knob_w:.1f}" height="{knob_h:.1f}" '
+            f'rx="{min(0.8, knob_w * 0.05):.1f}" {body_fill} {stk}/>'
+        )
+        for rib in range(1, _SLIDE_SWITCH_RIBS):
+            lx = kx + rib * knob_w / _SLIDE_SWITCH_RIBS
+            parts.append(
+                f'<line x1="{lx:.1f}" y1="{ky:.1f}" x2="{lx:.1f}" y2="{ky + knob_h:.1f}" '
+                f'stroke="var(--conn-stroke,#555)" stroke-width="0.45" stroke-opacity="0.55"/>'
+            )
+    return '\n'.join(parts)
+
+
 def _body_path_xt30(geo: ConnectorGeometry, n_per_row: int) -> str:
     """XT30(2+2): rectangular body with centred guide tabs on left & right."""
     W = geo.connector_width(n_per_row)
@@ -573,6 +635,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_barrier(geo, n_per_row)
     elif style == "button":
         path_d = _body_path_button(geo, n_per_row)
+    elif style == "slide-switch":
+        path_d = _body_path_slide_switch(geo, n_per_row)
     elif style == "sherlock":
         path_d = _body_path_sherlock(geo, n_per_row)
     else:
@@ -596,6 +660,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         parts.append(_barrier_details(geo, n_per_row))
     elif style == "button":
         parts.append(_button_cavities(geo, n_per_row))
+    elif style == "slide-switch":
+        parts.append(_slide_switch_details(geo, n_per_row))
     elif style == "sherlock":
         parts.append(_sherlock_cavity(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
@@ -822,6 +888,9 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         connector_data[conn.id] = {
             "name": conn.name, "svg": svg, "description": conn.description,
             "typeName": ct.name, "pinCount": len(conn.pins),
+            # A slide switch's "pins" are the places its actuator can sit, so the
+            # tooltip counts positions rather than calling them pins.
+            "pinUnit": "position" if ct.style == "slide-switch" else "pin",
             "symbol": f'<span class="tt-sym">{sym}</span>' if sym else "",
         }
     hotspot_rects: list[str] = []
@@ -1056,7 +1125,7 @@ function show(id,el){{
   const d=C[id]; if(!d) return;
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
   tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
-    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-pin</span></div>`+
+    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
 }}

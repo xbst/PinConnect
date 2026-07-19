@@ -108,6 +108,7 @@ _ALIASES: dict[str, str] = {
 # opts in with symbol_style_fallback and the connector sets no symbol.
 _STYLE_DEFAULTS: dict[str, str] = {
     "button": "button",
+    "slide-switch": "switch",
     "xt30": "power",
 }
 
