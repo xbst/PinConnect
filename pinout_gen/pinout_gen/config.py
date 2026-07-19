@@ -104,6 +104,16 @@ def _require(table: dict, key: str, ctx: str):
         raise ValueError(f"{ctx}: missing required key '{key}'") from None
 
 
+# Enum-like fields: an unlisted value used to silently change the drawing
+# (label_style/style fell through to a default) or crash deep in rendering
+# (pinout_side -> sides.index ValueError). Validate them at load time instead.
+_LABEL_STYLES = frozenset({"staggered", "staircase", "flat"})
+_BODY_STYLES = frozenset({
+    "box", "latch", "grid", "header-male", "screw-terminal", "barrier", "button", "xt30",
+})
+_PINOUT_SIDES = frozenset({"bottom", "left", "top", "right"})
+
+
 def load_board(path: Path) -> Board:
     try:
         with open(path, "rb") as f:
@@ -160,14 +170,23 @@ def load_board(path: Path) -> Board:
                 color=p.get("color", "#888888"), row=p.get("row", 1))
             for j, p in enumerate(c.get("pin", []))
         ]
+        orientation = c.get("orientation", 0)
+        if isinstance(orientation, bool) or not isinstance(orientation, (int, float)) \
+                or orientation % 90 != 0:
+            raise ValueError(f"{ctx}: orientation must be a multiple of 90 (got {orientation!r})")
+        label_style = c.get("label_style", "staggered")
+        if label_style not in _LABEL_STYLES:
+            raise ValueError(
+                f"{ctx}: label_style must be one of {sorted(_LABEL_STYLES)} (got {label_style!r})"
+            )
         board.connectors.append(Connector(
             id=cid,
             name=_require(c, "name", ctx), type=_require(c, "type", ctx), pins=pins,
             x1=_require(c, "x1", ctx), y1=_require(c, "y1", ctx),
             x2=_require(c, "x2", ctx), y2=_require(c, "y2", ctx),
-            orientation=c.get("orientation", 0),
+            orientation=orientation,
             description=c.get("description", ""),
-            label_style=c.get("label_style", "staggered"),
+            label_style=label_style,
             symbol=c.get("symbol", ""),
         ))
     return board
@@ -203,9 +222,21 @@ def load_connector_type(path: Path) -> ConnectorType:
                 f"{path.name}: [geometry] '{k}' must be {target.__name__}, got {v!r}"
             ) from None
 
+    style = info.get("style", "box")
+    if style not in _BODY_STYLES:
+        raise ValueError(
+            f"{path.name}: unknown connector style {style!r}; valid: {sorted(_BODY_STYLES)}"
+        )
+    for side_key in ("pinout_side", "row2_pinout_side"):
+        if side_key in geo_kwargs and geo_kwargs[side_key] not in _PINOUT_SIDES:
+            raise ValueError(
+                f"{path.name}: [geometry] {side_key} must be one of "
+                f"{sorted(_PINOUT_SIDES)} (got {geo_kwargs[side_key]!r})"
+            )
+
     return ConnectorType(
         name=_require(info, "name", f"{path.name} [connector]"),
-        style=info.get("style", "box"),
+        style=style,
         geometry=ConnectorGeometry(**geo_kwargs),
     )
 
