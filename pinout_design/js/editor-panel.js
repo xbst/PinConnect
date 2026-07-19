@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -112,9 +112,17 @@ export class EditorPanel {
   _bindState() {
     this.state.on("board-changed", ({ origin }) => {
       if (origin === "editor") return;
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
+      // Theme selection ("visual") and image load ("image") change only the
+      // [board] fields, so patch that block in place -- hand-written comments
+      // and every connector block survive. Other origins (init, undo/redo) can
+      // change the whole structure, so fall back to a full regen.
+      if (origin === "image" || origin === "visual") {
+        this._patchBoard();
+      } else {
+        this._suppressSync = true;
+        this._syncFromState();
+        this._suppressSync = false;
+      }
     });
 
     this.state.on("connector-changed", ({ connectorId, origin }) => {
@@ -227,6 +235,31 @@ export class EditorPanel {
     );
     this.textarea.value = text;
     this._updateHighlight();
+  }
+
+  _boardData() {
+    const b = this.state.board;
+    return {
+      title: b.title, image: b.image, width: b.width, height: b.height,
+      connector_dir: b.connector_dir, theme: b.theme, theme_dir: b.theme_dir,
+    };
+  }
+
+  // Update just the [board] table's keys, leaving comments and connector blocks
+  // intact -- so picking a theme or loading an image doesn't wipe the document.
+  _patchBoard() {
+    const text = this.textarea.value;
+    const range = buildSourceMap(text).board;
+    if (!range) { // no [board] block to patch -- fall back to a full sync
+      this._suppressSync = true;
+      this._syncFromState();
+      this._suppressSync = false;
+      return;
+    }
+    this._suppressSync = true;
+    this.textarea.value = patchBoardInSource(text, range, this._boardData());
+    this._updateHighlight();
+    this._suppressSync = false;
   }
 
   _connData(conn) {
