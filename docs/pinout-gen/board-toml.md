@@ -1,6 +1,6 @@
 # Board TOML reference
 
-A board config describes one board: the image, its size, and every connector on it. The designer produces this file, and `pinout-gen` reads it. You can also write or edit it by hand.
+A board config describes one board: the image, its size, and every connector on it. The [designer](../pinout-design.md) produces this file, and `pinout-gen` reads it. You can also write or edit it by hand.
 
 A config has one `[board]` table followed by a `[[connector]]` array, and each connector holds a `[[connector.pin]]` array. Example:
 
@@ -46,9 +46,9 @@ y2 = 742
 | `image` | yes | — | Path to the board image, relative to the config. By default referenced (not embedded) by the output, so keep it next to the generated HTML. Use `pinout-gen -i` to embed it instead. |
 | `width` | yes | — | Image width in pixels. |
 | `height` | yes | — | Image height in pixels. |
-| `title` | no | `"Pinout"` | Shown as the diagram title. |
+| `title` | no | `"Pinout"` | Page title of the generated HTML (the browser tab) and the board image's alt text. Not drawn on the diagram itself. |
 | `connector_dir` | no | `"./connectors"` | Folder holding connector type `.toml` files, relative to the config. Types not found here fall back to the built-in types bundled with the package. |
-| `theme` | no | `"default"` | Name of the [theme](themes.md) to apply — colours, fonts, and behaviours around the connectors. |
+| `theme` | no | `"default"` | Name of the [theme](themes.md) to apply — colors, fonts, and behaviors of the generated page. |
 | `theme_dir` | no | `"./themes"` | Folder holding theme `.toml` files, relative to the config. Names not found here fall back to the built-in themes. |
 
 `width` and `height` set the coordinate space that all connector positions are measured in, so they should match the actual image dimensions.
@@ -74,7 +74,7 @@ The bounding box places and sizes the connector graphic over the image; `orienta
 
 Controls how pin labels are spaced on horizontal (top/bottom) pinout sides. Has no effect on vertical (left/right) sides, where labels naturally stack without overlapping.
 
-| Value | Behaviour |
+| Value | Behavior |
 |-------|-----------|
 | `"staggered"` | Odd and even pin labels alternate between two levels. Compact while still avoiding overlap. **(default)** |
 | `"staircase"` | Each pin label gets its own level, stepping further from the connector body. Clearest separation, but tall with many pins. |
@@ -92,15 +92,43 @@ y2 = 220
 label_style = "flat"
 ```
 
-### symbol
+### `symbol`
 
 An optional icon shown beside the connector in the list and tooltip, hinting at what it is for. Themes that show symbols (most do by default; a theme can disable them) render it. The value is one of:
 
-- **A named icon** — resolved to a built-in SVG. Names, with some aliases: `power`, `lightning`, `fan`, `heater`, `fire`, `temperature` (`thermistor`), `switch`, `led`, `setting` (`jumper`, `dip`), `gear`, `usb`, `data` (`i2c`, `spi`, `uart`, `can`), `motor` (`stepper`, `servo`), `fuse`, `ground` (`gnd`), `signal`, `button`, `speaker` (`buzzer`), `battery`. `lightning`, `fire`, and `gear` are alternative looks for `power`, `heater`, and `setting`.
+- **A named icon** — resolved to a built-in SVG. The 19 built-in names and their aliases are listed below; an alias renders exactly the same icon as its canonical name.
 - **A literal glyph** — any other text renders as-is, e.g. `symbol = "⚡"` or an emoji.
 - **`"none"`** — no symbol, even where the theme would otherwise show one.
 
 Omitted, a connector shows no symbol (unless the theme opts into style-based fallbacks). The right symbol usually depends on what the connector is *used for* rather than its shape, so set it explicitly per connector when you use a symbol-showing theme.
+
+#### Built-in icons
+
+Names are matched case-insensitively, and surrounding whitespace is ignored.
+
+| Icon | Name | Aliases |
+|------|------|---------|
+| ![power icon](../../assets/symbols/power.svg) | `power` | — |
+| ![lightning icon](../../assets/symbols/lightning.svg) | `lightning` | `bolt`, `flash`, `zap` |
+| ![battery icon](../../assets/symbols/battery.svg) | `battery` | `batt` |
+| ![ground icon](../../assets/symbols/ground.svg) | `ground` | `earth`, `gnd` |
+| ![fuse icon](../../assets/symbols/fuse.svg) | `fuse` | — |
+| ![data icon](../../assets/symbols/data.svg) | `data` | `bus`, `can`, `i2c`, `spi`, `uart` |
+| ![signal icon](../../assets/symbols/signal.svg) | `signal` | — |
+| ![usb icon](../../assets/symbols/usb.svg) | `usb` | — |
+| ![fan icon](../../assets/symbols/fan.svg) | `fan` | — |
+| ![motor icon](../../assets/symbols/motor.svg) | `motor` | `servo`, `stepper` |
+| ![heater icon](../../assets/symbols/heater.svg) | `heater` | — |
+| ![fire icon](../../assets/symbols/fire.svg) | `fire` | `flame` |
+| ![temperature icon](../../assets/symbols/temperature.svg) | `temperature` | `temp`, `thermal`, `thermistor` |
+| ![led icon](../../assets/symbols/led.svg) | `led` | — |
+| ![button icon](../../assets/symbols/button.svg) | `button` | — |
+| ![switch icon](../../assets/symbols/switch.svg) | `switch` | — |
+| ![setting icon](../../assets/symbols/setting.svg) | `setting` | `config`, `dip`, `dipswitch`, `jumper`, `jumpers`, `settings` |
+| ![gear icon](../../assets/symbols/gear.svg) | `gear` | `cog`, `cogwheel` |
+| ![speaker icon](../../assets/symbols/speaker.svg) | `speaker` | `buzzer`, `spkr` |
+
+Some icons are deliberate alternatives for the same idea — `lightning` for `power`, `fire` for `heater`, `gear` for `setting` — so pick whichever reads better on your board.
 
 ```toml
 [[connector]]
@@ -121,7 +149,7 @@ Pins are listed in physical order. The first pin is pin 1.
 | Field | Required | Default | Meaning |
 |-------|----------|---------|---------|
 | `name` | yes | — | Pin label (e.g. `VIN`, `GND`, `CAN_H`). |
-| `color` | no | `#888888` | Hex color for the pin marker and label. |
+| `color` | no | `#888888` | Color of the pin's marker dot and its wire stub. Any CSS color works (`"#E74C3C"`, `"red"`), though the designer writes hex. Pin *label* text is colored by the [theme](themes.md), not by this. |
 | `row` | no | `1` | Which row the pin belongs to, for two-row connectors. Use `2` for the second row. |
 
 For single-row connectors, omit `row` (everything defaults to row 1). For two-row types like `MX-F-2R`, assign each pin to `row = 1` or `row = 2`; order within each row is the order the pins appear in the file.
@@ -130,4 +158,4 @@ For single-row connectors, omit `row` (everything defaults to row 1). For two-ro
 
 - Connectors that are not physically on the image (for testing a new type, say) still render — just give them a bounding box in an empty area.
 - Comments use `#` and are ignored, so you can annotate the file freely.
-- If a `type` has no matching file in `connector_dir`, `pinout-gen` stops with a clear error naming the missing type.
+- If a `type` has no matching file in `connector_dir` *or* the built-in types, `pinout-gen` stops with a clear error naming the missing type and both folders it searched.
