@@ -4,7 +4,7 @@ The designer is a browser-based tool for building a [board TOML config](pinout-g
 
 ## Running the designer
 
-The designer reads its connector library over `fetch()`, so it must be served over HTTP. Opening `index.html` directly with `file://` will not work.
+The designer reads its connector, theme, and symbol data over `fetch()`, so it must be served over HTTP. Opening `index.html` directly with `file://` will not work.
 
 Start a local server from the `pinout_design` folder:
 
@@ -37,28 +37,31 @@ The window has a toolbar across the top and three panels:
 
 The panel dividers can be dragged to resize.
 
-The **Theme** selector sets the board's `theme` — the colours, fonts, and behaviours `pinout-gen` applies *around* the connectors (the connector diagrams themselves look the same). It lists the bundled themes; a custom theme name you type into the TOML is preserved and shown too. See [themes](pinout-gen/themes.md) for what a theme controls and how to make your own.
+The **Theme** selector sets the board's `theme` — the colors, fonts, and behaviors `pinout-gen` applies to the generated page, including the connector drawings' housing, cavity, outline, and pin-label colors (the connector *shapes* are unchanged). Note that the designer's own preview always uses its own fixed colors, so a theme's effect only shows in the generated pinout. The selector lists the bundled themes; a custom theme name you type into the TOML is preserved and shown too. See [themes](pinout-gen/themes.md) for what a theme controls and how to make your own.
 
 ## Workflow
 
 ### 1. Load a board image
 
-Click **Open Image** and choose your board photo (PNG or JPG, top-down). The image sets the coordinate space for everything you place on it.
+Click **Open Image** and choose your board image (top-down; any image format your browser can display). The image sets the coordinate space for everything you place on it.
 
 ![A board photo loaded into the Board Image panel, before any connectors are added](../assets/workflow-1-image.png)
 
 ### 2. Add connectors
 
-Click **+ Add Connector** (the button switches to **Cancel Draw**), then drag a box over a connector on the image. Release to create it. Repeat for each connector; click **Cancel Draw** to leave draw mode.
+Click **+ Add Connector** (the button switches to **Cancel Draw**), then drag a box over a connector on the image. Releasing the drag opens the **New Connector** dialog, where you set the **ID** (one is suggested — it must be unique and non-empty), an optional **Name** (defaults to the ID), and the **Type**. Click **Create** to place it, or **Cancel** to discard the box. Very small boxes are ignored, so drag a real rectangle rather than clicking.
 
-![The board with a labelled box drawn over each connector](../assets/workflow-2-connectors.png)
+Draw mode switches off after each connector is created, so click **+ Add Connector** again for the next one. Click **Cancel Draw** to leave draw mode without adding anything.
+
+![The board with a labeled box drawn over each connector](../assets/workflow-2-connectors.png)
 
 In the board panel you can:
 
 - **Select** a connector by clicking its box.
 - **Move** it by dragging.
 - **Resize** it using the handles on a selected box.
-- **Zoom** with the mouse wheel and **pan** by dragging the background, to line boxes up precisely.
+- **Delete** the selected connector with the `Delete` key (ignored while you are typing in a text field).
+- **Zoom** with the mouse wheel, centered on the cursor, and **pan** by dragging with the middle or right mouse button, to line boxes up precisely.
 
 ### 3. Edit the connector
 
@@ -89,7 +92,7 @@ The **Pins** section lists the connector's pins in order. You can:
 
 Pin order in the list is the physical pin order in the output.
 
-![The Pins list for the CAN connector: a drag handle, colour swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
+![The Pins list for the CAN connector: a drag handle, color swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
 
 ### 5. Edit the TOML directly (optional)
 
@@ -99,15 +102,24 @@ The **TOML Source** pane is fully editable. Anything you type there updates the 
 
 ### 6. Save
 
-Click **Save TOML** to download the config. Save it next to your board image so `pinout-gen` can find the image later.
+Click **Save TOML** to save the config. Put it next to your board image so `pinout-gen` can find the image later.
+
+> **The designer does not auto-save.** There is no recovery of unsaved work: closing or reloading the tab discards everything without warning. Save your TOML before you leave.
 
 ![The toolbar, with the Save TOML button at the right-hand end](../assets/workflow-6-save.png)
 
 To resume work, use **Open TOML** to load a config back in, and **Open Image** to reload its board image.
 
-## Undo / redo
+## Keyboard shortcuts
 
-Use the **Undo** and **Redo** toolbar buttons (or `Ctrl+Z` / `Ctrl+Y`) to step through your changes.
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` or `Ctrl+Shift+Z` | Redo |
+| `Ctrl+S` | Save TOML |
+| `Delete` | Delete the selected connector |
+
+Use `Cmd` in place of `Ctrl` on macOS. Undo and Redo are also toolbar buttons, and `Delete` is ignored while you are typing in a text field.
 
 ## After the designer
 
@@ -115,4 +127,6 @@ The designer produces the TOML needed for `pinout-gen`, it doesn't generate the 
 
 ## Adding new connector types
 
-The type dropdown is populated from JSON files in `pinout_design/connectors/`, which are generated from the canonical TOML type definitions. If a type you need is missing, see [connector types](pinout-gen/connector-types.md) for how to add one and regenerate the designer's JSON.
+The type dropdown is populated from JSON files in `pinout_design/connectors/`, which are generated from the canonical TOML type definitions (the Theme dropdown and Symbol suggestions come from generated JSON the same way). If a type you need is missing, see [connector types](pinout-gen/connector-types.md) for how to add one and regenerate the designer's JSON.
+
+Note that types are mirrored from the bundled library only, so a connector type you add to a board's own `connector_dir` will render in `pinout-gen` but will not appear in the designer's dropdown.

@@ -1,8 +1,15 @@
-# pinout-gen: Installation
+# Installation
 
 `pinout-gen` is a Python CLI. It needs **Python 3.9 or newer**.
 
 ## Install from the repository
+
+Clone the repository first, and run the commands below from its root:
+
+```bash
+git clone https://github.com/xbst/PinConnect.git
+cd PinConnect
+```
 
 Using a virtual environment is recommended so the tool and its dependencies stay isolated, but it is optional.
 
@@ -39,6 +46,16 @@ If you plan to modify the generator, install it in editable mode so code changes
 ```bash
 pip install -e ./pinout_gen
 ```
+
+## Install without cloning
+
+`pip` can install straight from GitHub, which is convenient in CI:
+
+```bash
+pip install "git+https://github.com/xbst/PinConnect.git@master#subdirectory=pinout_gen"
+```
+
+Installing from `master` means each run picks up the latest generator, so regenerated pinouts carry the newest fixes and features — see [publishing with GitHub Pages](../pinout-embed/mkdocs-zensical.md#publishing-with-github-pages).
 
 ## Note on the `extension` extra
 

@@ -30,12 +30,28 @@ Precedence is **`--theme` → `[board] theme` → `default`**. A theme name is r
 | Theme | Look |
 |-------|------|
 | `default` | The stock light/dark palette with Roboto. What you get with no theme. |
-| `slate` | Cool blue-grey, Glegoo — a serif face. |
+| `slate` | Cool blue-gray, Glegoo — a serif face. |
 | `ocean` | Teal and cyan, Lexend. Roomy: larger list text and symbols, and the list always sits below the board. |
 | `terminal` | Green and pixel-monospaced (Geist Pixel), connector list open by default, symbols off. |
 | `midnight` | Indigo/violet, Inter UI with a monospaced pin-label font. Stacks below 720px. |
 
-Every theme provides both a light and a dark palette; the viewer's light/dark toggle and OS scheme switch between them, exactly like the default.
+Every theme provides both a light and a dark palette. See [Light and dark mode](#light-and-dark-mode) for how the page chooses between them.
+
+## Light and dark mode
+
+The generated pinout has no light/dark control of its own — it takes the scheme from its surroundings. On load it decides like this:
+
+1. **A `?theme=` parameter.** Opening `board.pinout.html?theme=dark` (or `?theme=light`) pins that scheme and stops the page from following its surroundings. Handy for linking straight to one, or for an iframe you always want dark.
+2. **The embedding page,** when the pinout is embedded from the same origin. It reads MkDocs Material / Zensical's `data-md-color-scheme` (where `slate` means dark), a generic `data-theme="dark"|"light"`, or a `dark` class on `<html>`/`<body>` — and keeps watching, so flipping your docs site's toggle re-colors the embedded pinout live. This needs same-origin access, so it does not apply across origins.
+3. **The reader's OS preference** (`prefers-color-scheme`), when neither applies.
+
+A parent page can also set the scheme at any time by posting to the iframe, which is how a **cross-origin** embed drives it:
+
+```js
+iframe.contentWindow.postMessage({ pinconnectTheme: "dark" }, "*");
+```
+
+Send `"light"` or `"dark"` to set the scheme — this takes effect immediately and overrides all of the above, including `?theme=`. Any other value clears the override and hands control back to the reader's OS preference.
 
 ## Theme gallery
 
@@ -82,11 +98,13 @@ A theme is a TOML file whose name is the theme name (`midnight.toml` defines `mi
 name = "My Theme"
 ```
 
+`name` is the display name — what the designer's Theme dropdown shows. It defaults to the file's own name, so it is only worth setting when you want something friendlier than the filename. Boards and `--theme` always refer to a theme by its **filename**, not this.
+
 ### `[colors.light]` / `[colors.dark]`
 
-CSS colour values (hex, `rgb()`, `rgba()`, …). Token names are the generated CSS variables without the leading `--`. `light` applies in light mode, `dark` in dark mode.
+CSS color values (hex, `rgb()`, `rgba()`, …). Token names are the generated CSS variables without the leading `--`. `light` applies in light mode, `dark` in dark mode.
 
-| Token | What it colours |
+| Token | What it colors |
 |-------|-----------------|
 | `bg` | Page background |
 | `text` | Primary text |
@@ -114,6 +132,8 @@ conn-body   = "#e8edf3"
 bg          = "#0b1220"
 text        = "#e2e8f0"
 ```
+
+Names outside this table are not rejected — they are emitted as CSS variables too. Defining `my-accent` in both palettes gives you `var(--my-accent)` to use from [`[extra_css]`](#extra_css), with light/dark switching handled for you.
 
 ### `[font]` and `[font.label]`
 
@@ -192,5 +212,5 @@ css = """
 ## Tips
 
 - Because tokens merge over the defaults, start from a couple of overrides (`bg`, `text`, an accent) and add more only as needed.
-- Pin colors meaningful come from the board, not the theme, so they stay consistent for readers no matter which theme is applied.
+- Pin colors come from the board rather than the theme — a reader sees the same wire colors no matter which theme is applied.
 - The designer shows a **Theme** selector in its toolbar; a custom theme name it doesn't know about is still preserved when you save.

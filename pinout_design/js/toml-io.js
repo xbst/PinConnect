@@ -314,3 +314,46 @@ export function patchConnectorInSource(sourceText, range, newConn) {
   const after = lines.slice(range.end + 1);
   return [...before, ...newLines, ...after].join("\n");
 }
+
+// Optional [board] keys the serializer omits at their default; a patch only
+// *adds* one of these when it's non-default, so a minimal board stays minimal.
+const _BOARD_OPTIONAL = { connector_dir: "./connectors", theme: "default", theme_dir: "./themes" };
+
+function boardKeyLines(b) {
+  return new Map([
+    ["title", `title = ${quoteStr(b.title)}`],
+    ["image", `image = ${quoteStr(b.image)}`],
+    ["width", `width = ${b.width}`],
+    ["height", `height = ${b.height}`],
+    ["connector_dir", `connector_dir = ${quoteStr(b.connector_dir)}`],
+    ["theme", `theme = ${quoteStr(b.theme)}`],
+    ["theme_dir", `theme_dir = ${quoteStr(b.theme_dir)}`],
+  ]);
+}
+
+// Update only the [board] table's key lines in place, so hand-written comments,
+// blank lines, unknown keys, and every connector block survive (unlike a full
+// serializeBoardToml regen). Present keys have their value refreshed; a missing
+// key is appended only when it's non-default.
+export function patchBoardInSource(sourceText, range, boardData) {
+  if (!range) return sourceText;
+  const lines = sourceText.split("\n");
+  const desired = boardKeyLines(boardData);
+  const seen = new Set();
+  const block = [lines[range.start]]; // keep the [board] header line
+  for (let i = range.start + 1; i <= range.end; i++) {
+    const m = stripComment(lines[i]).trim().match(/^([A-Za-z0-9_.-]+)\s*=/);
+    if (m && desired.has(m[1])) {
+      block.push(desired.get(m[1]));
+      seen.add(m[1]);
+    } else {
+      block.push(lines[i]); // comment, blank line, or an unmanaged key
+    }
+  }
+  for (const [k, line] of desired) {
+    if (seen.has(k)) continue;
+    if (k in _BOARD_OPTIONAL && String(boardData[k]) === _BOARD_OPTIONAL[k]) continue;
+    block.push(line);
+  }
+  return [...lines.slice(0, range.start), ...block, ...lines.slice(range.end + 1)].join("\n");
+}

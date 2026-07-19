@@ -5,7 +5,7 @@ This guide takes you end to end: from a photo of your board to an interactive pi
 PinConnect has three tools, used in sequence:
 
 1. **pinout-design**: a browser-based designer that turns a board image into a TOML config.
-2. **pinout-gen**: a CLI that reads that TOML and generates a self-contained interactive HTML pinout.
+2. **pinout-gen**: a CLI that reads that TOML and generates a single interactive HTML pinout.
 3. **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
 
 You only need the first two to get a working pinout. The third is for people publishing to a Markdown docs site.
@@ -13,14 +13,14 @@ You only need the first two to get a working pinout. The third is for people pub
 ## Prerequisites
 
 - **Python 3.9 or newer** (`python --version`)
-- A **top-down image** of your board (PNG or JPG)
+- A **top-down image** of your board (PNG, JPG, or any other format your browser can display)
 - A copy of this repository
 
 ---
 
 ## Step 1: Design your pinout
 
-The designer is a static web app. It reads its connector library over `fetch()`, so it must be served over HTTP — opening `index.html` directly with `file://` will not work.
+The designer is a static web app. It reads its connector, theme, and symbol data over `fetch()`, so it must be served over HTTP — opening `index.html` directly with `file://` will not work.
 
 Start a local server from the `pinout_design` folder:
 
@@ -43,12 +43,13 @@ Then open <http://localhost:8000> in your browser.
 In the designer:
 
 1. Click **Open Image** and select your board photo.
-2. Click **+ Add Connector** and drag a box over each connector on the image.
-3. Select a connector to set its type, name, description, and per-pin labels and colors in the editor panel.
-4. Watch the **TOML Source** pane update live as you work.
-5. Click **Save TOML** to download your board config (for example `board.toml`).
+2. Click **+ Add Connector**, drag a box over a connector on the image, then fill in the **New Connector** dialog (an ID is suggested for you, and the name defaults to the ID) and click **Create**. Draw mode switches off after each one, so click the button again for the next connector.
+3. Select a connector to refine it in the editor panel: its type, name, description, and per-pin labels and colors.
+4. Optionally pick a **Theme** from the toolbar to change how the generated pinout will look.
+5. Watch the **TOML Source** pane update live as you work.
+6. Click **Save TOML** to save your board config (for example `board.toml`).
 
-Save the downloaded `.toml` next to your board image — the next step expects them together.
+Put the saved `.toml` next to your board image — the next step expects them together.
 
 See [pinout-design](pinout-design.md) for a full tour of the designer.
 
@@ -86,11 +87,19 @@ By default this writes `board.pinout.html` next to the config. Use `-o` to choos
 pinout-gen board.toml -o docs/my-board.html
 ```
 
-> **Keep the image alongside the output.** By default the generated HTML links to your board image by the same relative path used in the TOML — it is not embedded. Make sure the image file sits next to the HTML (or serve both from the same folder) or the diagram will show a broken image. To make the HTML fully self-contained, add `-i` to embed the image: `pinout-gen board.toml -i`.
+A theme sets the generated page's colors, fonts, and layout behavior. Five ship with the tool — `default`, `midnight`, `ocean`, `slate`, and `terminal` — and `-t` picks one for a single run, overriding whatever the board config says:
 
-Open the resulting `.html` file in a browser to check your interactive pinout.
+```bash
+pinout-gen board.toml -t midnight
+```
 
-See [pinout-gen: generating HTML](pinout-gen/generating-html.md) and [board TOML reference](pinout-gen/board-toml.md) for more.
+> **Keep the image alongside the output.** By default the generated HTML links to your board image by the same relative path used in the TOML — it is not embedded. Make sure the image file sits next to the HTML (or serve both from the same folder) or the diagram will show a broken image. To embed the image into the file instead, add `-i`: `pinout-gen board.toml -i`. Note that `-i` covers the image only — the default theme still loads its font from Google Fonts, so see [themes](pinout-gen/themes.md) if you need output with no external references at all.
+
+Open the resulting `.html` file in a browser to check your interactive pinout. You should get something like this:
+
+![A generated PinConnect pinout: hovering a connector on the board shows its pinout, and the connector list browses every connector at once](../assets/pinout-demo.gif)
+
+See [generating HTML](pinout-gen/generating-html.md) and [board TOML reference](pinout-gen/board-toml.md) for more, or [Installation](pinout-gen/install.md) for editable installs and optional extras.
 
 ---
 
@@ -110,7 +119,8 @@ See [pinout-embed](pinout-embed/mkdocs-zensical.md) for installation and configu
 
 ## Where to go next
 
-- [Concepts](concepts.md): how the pieces fit together and the two kinds of TOML files.
+- [Concepts](concepts.md): how the pieces fit together and the three kinds of TOML file — board, connector type, and theme.
 - [pinout-design](pinout-design.md): designing configs visually.
 - [pinout-gen](pinout-gen/generating-html.md): CLI usage, board TOML, and connector types.
+- [themes](pinout-gen/themes.md): restyle the pinout's colors, fonts, and behaviors, or write your own theme.
 - [pinout-embed](pinout-embed/mkdocs-zensical.md): embedding in a Markdown site.
