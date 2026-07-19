@@ -99,7 +99,7 @@ Open the resulting `.html` file in a browser to check your interactive pinout. Y
 
 ![A generated PinConnect pinout: hovering a connector on the board shows its pinout, and the connector list browses every connector at once](../assets/pinout-demo.gif)
 
-See [pinout-gen: generating HTML](pinout-gen/generating-html.md) and [board TOML reference](pinout-gen/board-toml.md) for more, or [Installation](pinout-gen/install.md) for editable installs and optional extras.
+See [generating HTML](pinout-gen/generating-html.md) and [board TOML reference](pinout-gen/board-toml.md) for more, or [Installation](pinout-gen/install.md) for editable installs and optional extras.
 
 ---
 

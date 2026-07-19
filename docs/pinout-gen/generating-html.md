@@ -1,4 +1,4 @@
-# pinout-gen: Generating HTML
+# Generating HTML
 
 `pinout-gen` reads a board config (see [board TOML reference](board-toml.md)) and writes a single interactive HTML file with its CSS and JavaScript inlined.
 

@@ -9,7 +9,7 @@ An interactive pinout generator for PCBs. PinConnect turns a photo of a board in
 It is made of three tools, used in sequence:
 
 - **pinout-design**: a browser-based designer that turns a board image into a TOML config.
-- **pinout-gen**: a CLI that reads that config and generates a self-contained interactive HTML pinout.
+- **pinout-gen**: a CLI that reads that config and generates a single interactive HTML pinout.
 - **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
 
 You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
@@ -34,7 +34,7 @@ If you'd like to see a live demo of the generated pinouts, you can find it on th
    pinout-gen board.toml         # writes board.pinout.html
    ```
 
-3. (Optional) Embed the result in an MkDocs / Zensical page — see the docs.
+3. (Optional) Embed the result in an MkDocs / Zensical page — see [pinout-embed](docs/pinout-embed/mkdocs-zensical.md).
 
 Full walkthrough: **[docs/getting-started.md](docs/getting-started.md)**.
 
@@ -50,13 +50,15 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 
 ## Repository layout
 
-- `pinout_design/`: the visual designer (static web app).
-- `pinout_gen/`: the `pinout-gen` CLI and connector type library.
-- `pinout_embed/`: the Markdown embedding extension.
-- `docs/`: documentation.
+- [`pinout_design/`](pinout_design/): the visual designer (static web app).
+- [`pinout_gen/`](pinout_gen/): the `pinout-gen` CLI, connector type library, and themes.
+- [`pinout_embed/`](pinout_embed/): the Markdown embedding extension.
+- [`docs/`](docs/): documentation.
+
+Each package folder has its own README with a short overview.
 
 ## License
 
 This project is licensed under GPL-3.0. See [LICENSE](LICENSE).
 
-If you'd like to support the development of this and other open-source projects, you can donate on [GitHub](https://github.com/sponsors/xbst/).
+If you'd like to support the development of this and other open-source projects, you can donate on [GitHub Sponsors](https://github.com/sponsors/xbst/) or [Patreon](https://patreon.com/isikstech).
