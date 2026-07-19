@@ -29,6 +29,7 @@ The tools are named with hyphens in prose (they are the command names); the unde
   - `tools/` — `convert-connectors.py`; `bundle-deps.mjs` and `package.json` belong to the unused `lib/` path above.
 - `pinout_embed/` — single-module Markdown extension (`pinout_embed.py`).
 - `docs/` — human documentation.
+- `tools/` — repo-level doc-asset generators, each its own folder with a `generate.py` and a `README.md` (see "Regenerating doc images" below). Distinct from `pinout_design/tools/`, which holds the designer's own build scripts.
 
 ## Key facts and gotchas
 
@@ -70,6 +71,17 @@ Install the Markdown extension:
 ```bash
 pip install ./pinout_embed
 ```
+
+## Regenerating doc images
+
+The images in `docs/` are generated, not hand-made, so they can be refreshed when the thing they show changes. Each generator is a `tools/<name>/generate.py` with its own README, run from the repo root (all need `pip install playwright pillow`; Playwright drives the system Chrome, no download). Regenerate the relevant set and commit the updated assets in the same change:
+
+- `tools/symbol-icons/` — the symbol SVGs in `assets/symbols/` (after editing `symbols.py`).
+- `tools/connector-gallery/` — `connector-gallery.webp` and `label-styles.webp` (after adding/changing a connector type or body style).
+- `tools/theme-gallery/` — the 10 `theme-*.webp` (after a theme or renderer change that affects appearance).
+- `tools/designer-screenshots/` — the 7 `designer-overview`/`workflow-*` PNGs (after a change to the designer's chrome).
+
+`connector-gallery` and `symbol-icons` render straight from the package and need no board. `theme-gallery` and `designer-screenshots` need a sample board+image; they default to the maintainer's board (outside the repo), so pass your own as arguments. `tools/demo-gif/` is intentionally git-ignored (local-only).
 
 ## Conventions
 
