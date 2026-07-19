@@ -25,6 +25,8 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 
 `Male` and `Female` refer to the gender of the plastic housing of the connector, not the pins, as that's what the end user will see when using the board.
 
+`USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML.
+
 ## Anatomy of a type file
 
 A type file has a `[connector]` table and a `[geometry]` table:
