@@ -10,6 +10,7 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 |------|-------|-------|
 | `XH-F` | latch | JST XH female, single row |
 | `PH-F` | latch | JST PH female, single row |
+| `SHERLOCK-F` | sherlock | Sherlock female, single row; body adapts at 4 ways |
 | `HDR-127` | header-male | 1.27 mm male pin header |
 | `HDR-200` | header-male | 2.00 mm male pin header |
 | `HDR-254` | header-male | 2.54 mm male pin header |
@@ -63,6 +64,7 @@ cavity_size = 10.5
   - `screw-terminal` — a screw-terminal with circular screw heads and side wire-entry slots.
   - `barrier` — a barrier screw-terminal with individual metal cages and cross-drive screws.
   - `button` — a tactile push-button / switch footprint (a round actuator between two pads).
+  - `sherlock` — a Sherlock housing: two latch ears on the body edge, and a stepped, chamfered mating half on the narrow sizes; uses `flare_max_pins` / `flare_width`.
 
 ### `[geometry]`
 
@@ -76,8 +78,11 @@ The geometry fields position the pins and the lines that run from each pin to it
 - `rows` — `1` or `2`. For two-row types, the `row2_*` fields (`row2_pin_cy`, `row2_pinout_side`, `row2_line_length`, and so on) describe the second row.
 - `cavity_size` — size of the cavities for the `grid` style.
 - `mating_pin_scale` — optional scale for the visible metal contact inside a `screw-terminal` wire opening; defaults to `1.0`.
+- `flare_max_pins`, `flare_width` — for families that widen the moulding below a few ways, because the latch needs more room than the pin field gives it. At or below `flare_max_pins`, the body gains `flare_width` per side, and the pin centres move with it so the pins stay centred. Both default to `0` (never flare).
 
 Any field you omit falls back to a built-in default, so a minimal type only needs to specify what differs from the defaults.
+
+A type is one shape per family, not one per size: the pin count comes from the board config, and `pin_pitch` plus the paddings size the body to match. Where a family changes shape rather than just width — as `SHERLOCK` does at 4 ways — the style handles the branch, so a board only ever names `SHERLOCK`.
 
 ## Adding a new type
 

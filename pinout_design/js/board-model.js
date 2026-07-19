@@ -18,17 +18,30 @@ export class ConnectorGeometry {
     this.row2_pin_radius = data.row2_pin_radius ?? -1.0;
     this.cavity_size = data.cavity_size ?? 0.0;
     this.mating_pin_scale = data.mating_pin_scale ?? 1.0;
+    this.flare_max_pins = data.flare_max_pins ?? 0;
+    this.flare_width = data.flare_width ?? 0.0;
+  }
+
+  // Extra half-width a low-pin-count housing carries. Some families keep the
+  // same edge-to-first-pin distance at every size but widen the moulding below
+  // a few ways, because the latch needs more room than the pin field gives it.
+  // The widened body is the outer box, so the flare has to move the pin
+  // centres along with the width.
+  flareFor(nPins) {
+    return (this.flare_max_pins > 0 && nPins <= this.flare_max_pins) ? this.flare_width : 0.0;
   }
 
   connectorWidth(nPins) {
-    if (nPins < 1) return this.padding_left + this.padding_right;
-    return this.padding_left + (nPins - 1) * this.pin_pitch + this.padding_right;
+    const flare = 2 * this.flareFor(nPins);
+    if (nPins < 1) return this.padding_left + this.padding_right + flare;
+    return this.padding_left + (nPins - 1) * this.pin_pitch + this.padding_right + flare;
   }
 
   pinCentersX(nPins) {
+    const left = this.padding_left + this.flareFor(nPins);
     const centers = [];
     for (let i = 0; i < nPins; i++) {
-      centers.push(this.padding_left + i * this.pin_pitch);
+      centers.push(left + i * this.pin_pitch);
     }
     return centers;
   }

@@ -39,6 +39,9 @@ def connector_type_to_dict(ct):
     }
     if geo.mating_pin_scale != 1.0:
         geometry["mating_pin_scale"] = geo.mating_pin_scale
+    if geo.flare_max_pins:
+        geometry["flare_max_pins"] = geo.flare_max_pins
+        geometry["flare_width"] = geo.flare_width
     return {
         "name": ct.name,
         "style": ct.style,

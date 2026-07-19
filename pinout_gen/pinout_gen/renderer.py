@@ -128,6 +128,75 @@ def _header_male_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
     )
 
 
+def _poly_d(points: list[tuple[float, float]]) -> str:
+    d = f"M {points[0][0]:.1f},{points[0][1]:.1f}"
+    for x, y in points[1:]:
+        d += f" L {x:.1f},{y:.1f}"
+    return d + " Z"
+
+
+def _sherlock_outlines(
+    geo: ConnectorGeometry, n_per_row: int
+) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    """Outer and wall-inset outlines of a Sherlock housing.
+
+    Every size carries two latch ears on the bottom edge.  Housings up to
+    ``flare_max_pins`` ways are too narrow to seat those ears at the pin
+    field's own width, so the mating half steps in behind a pair of chamfered
+    shoulders; wider ones are a plain box.  The inset outline is the moulding's
+    inner wall, so it follows whichever profile the outer one took.
+    """
+    W, H, p = geo.connector_width(n_per_row), geo.height, geo.pin_pitch
+    w = max(0.0, min(geo.wall, W / 4, H / 4))
+    ear_w = min(p * 0.90, W / 2)
+    ear_h = min(p * 0.40, H / 3)
+    ear_y = H - ear_h
+    flare = min(geo.flare_for(n_per_row), W / 4)
+
+    if flare <= 0:
+        return (
+            [(0.0, 0.0), (W, 0.0), (W, H), (W - ear_w, H), (W - ear_w, ear_y),
+             (ear_w, ear_y), (ear_w, H), (0.0, H)],
+            [(w, w), (W - w, w), (W - w, H - w), (W - ear_w + w, H - w),
+             (W - ear_w + w, ear_y - w), (ear_w - w, ear_y - w), (ear_w - w, H - w), (w, H - w)],
+        )
+
+    sh_hi = min(p * 1.20, ear_y)
+    sh_lo = min(p * 1.65, ear_y)
+    outer = [
+        (flare, 0.0), (W - flare, 0.0), (W - flare, sh_hi), (W, sh_lo), (W, H),
+        (W - ear_w, H), (W - ear_w, ear_y), (ear_w, ear_y), (ear_w, H),
+        (0.0, H), (0.0, sh_lo), (flare, sh_hi),
+    ]
+
+    # The inner wall runs parallel to the shoulder chamfer, so its corners land
+    # where that offset line crosses the inset side walls -- not at the outer
+    # corners pushed straight inwards.
+    rise = sh_lo - sh_hi
+    span = math.hypot(flare, rise)
+    ox, oy = flare + w * rise / span, sh_hi + w * flare / span
+    y_top = oy - rise * (flare + w - ox) / flare
+    y_bot = oy - rise * (w - ox) / flare
+    inner = [
+        (flare + w, w), (W - flare - w, w), (W - flare - w, y_top), (W - w, y_bot), (W - w, H - w),
+        (W - ear_w + w, H - w), (W - ear_w + w, ear_y - w), (ear_w - w, ear_y - w), (ear_w - w, H - w),
+        (w, H - w), (w, y_bot), (flare + w, y_top),
+    ]
+    return outer, inner
+
+
+def _body_path_sherlock(geo: ConnectorGeometry, n_per_row: int) -> str:
+    return _poly_d(_sherlock_outlines(geo, n_per_row)[0])
+
+
+def _sherlock_cavity(geo: ConnectorGeometry, n_per_row: int) -> str:
+    return (
+        f'<path d="{_poly_d(_sherlock_outlines(geo, n_per_row)[1])}" '
+        f'fill="var(--conn-cavity,#d0d0c8)" stroke="var(--conn-stroke,#555)" '
+        f'stroke-width="0.7" stroke-linejoin="round"/>'
+    )
+
+
 def _body_path_screw_terminal(geo: ConnectorGeometry, n_per_row: int) -> str:
     """Compact screw-terminal housing with subtly radiused corners."""
     W, H = geo.connector_width(n_per_row), geo.height
@@ -504,6 +573,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         path_d = _body_path_barrier(geo, n_per_row)
     elif style == "button":
         path_d = _body_path_button(geo, n_per_row)
+    elif style == "sherlock":
+        path_d = _body_path_sherlock(geo, n_per_row)
     else:
         path_d = _body_path_box(geo, n_per_row)
 
@@ -525,6 +596,8 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         parts.append(_barrier_details(geo, n_per_row))
     elif style == "button":
         parts.append(_button_cavities(geo, n_per_row))
+    elif style == "sherlock":
+        parts.append(_sherlock_cavity(geo, n_per_row))
     elif style == "grid" and geo.cavity_size > 0:
         half = geo.cavity_size / 2
         row_cys = [geo.pin_cy]

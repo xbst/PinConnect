@@ -59,7 +59,6 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 
 The project works and generates great looking pinouts already. Below are changes/features not implemented yet, planned to be implemented soon:
 
-- Add female Sherlock connectors
 - Add slide switch as a "connector" for highlighting its positions
 
 ## License

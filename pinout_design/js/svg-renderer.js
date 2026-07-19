@@ -124,6 +124,71 @@ function headerMaleCavities(geo, nPerRow) {
   ).join("\n");
 }
 
+function polyD(points) {
+  let d = `M ${f1(points[0][0])},${f1(points[0][1])}`;
+  for (let i = 1; i < points.length; i++) d += ` L ${f1(points[i][0])},${f1(points[i][1])}`;
+  return d + " Z";
+}
+
+// Outer and wall-inset outlines of a Sherlock housing. Every size carries two
+// latch ears on the bottom edge. Housings up to flare_max_pins ways are too
+// narrow to seat those ears at the pin field's own width, so the mating half
+// steps in behind a pair of chamfered shoulders; wider ones are a plain box.
+// The inset outline is the moulding's inner wall, so it follows whichever
+// profile the outer one took.
+function sherlockOutlines(geo, nPerRow) {
+  const W = geo.connectorWidth(nPerRow), H = geo.height, p = geo.pin_pitch;
+  const w = Math.max(0, Math.min(geo.wall, W / 4, H / 4));
+  const ear_w = Math.min(p * 0.90, W / 2);
+  const ear_h = Math.min(p * 0.40, H / 3);
+  const ear_y = H - ear_h;
+  const flare = Math.min(geo.flareFor(nPerRow), W / 4);
+
+  if (flare <= 0) {
+    return [
+      [[0, 0], [W, 0], [W, H], [W - ear_w, H], [W - ear_w, ear_y],
+       [ear_w, ear_y], [ear_w, H], [0, H]],
+      [[w, w], [W - w, w], [W - w, H - w], [W - ear_w + w, H - w],
+       [W - ear_w + w, ear_y - w], [ear_w - w, ear_y - w], [ear_w - w, H - w], [w, H - w]],
+    ];
+  }
+
+  const sh_hi = Math.min(p * 1.20, ear_y);
+  const sh_lo = Math.min(p * 1.65, ear_y);
+  const outer = [
+    [flare, 0], [W - flare, 0], [W - flare, sh_hi], [W, sh_lo], [W, H],
+    [W - ear_w, H], [W - ear_w, ear_y], [ear_w, ear_y], [ear_w, H],
+    [0, H], [0, sh_lo], [flare, sh_hi],
+  ];
+
+  // The inner wall runs parallel to the shoulder chamfer, so its corners land
+  // where that offset line crosses the inset side walls -- not at the outer
+  // corners pushed straight inwards.
+  const rise = sh_lo - sh_hi;
+  const span = Math.hypot(flare, rise);
+  const ox = flare + w * rise / span, oy = sh_hi + w * flare / span;
+  const yTop = oy - rise * (flare + w - ox) / flare;
+  const yBot = oy - rise * (w - ox) / flare;
+  const inner = [
+    [flare + w, w], [W - flare - w, w], [W - flare - w, yTop], [W - w, yBot], [W - w, H - w],
+    [W - ear_w + w, H - w], [W - ear_w + w, ear_y - w], [ear_w - w, ear_y - w], [ear_w - w, H - w],
+    [w, H - w], [w, yBot], [flare + w, yTop],
+  ];
+  return [outer, inner];
+}
+
+function bodyPathSherlock(geo, nPerRow) {
+  return polyD(sherlockOutlines(geo, nPerRow)[0]);
+}
+
+function sherlockCavity(geo, nPerRow) {
+  return (
+    `<path d="${polyD(sherlockOutlines(geo, nPerRow)[1])}" ` +
+    `fill="var(--conn-cavity,#d0d0c8)" stroke="var(--conn-stroke,#555)" ` +
+    `stroke-width="0.7" stroke-linejoin="round"/>`
+  );
+}
+
 function bodyPathScrewTerminal(geo, nPerRow) {
   const W = geo.connectorWidth(nPerRow), H = geo.height;
   const r = Math.min(geo.pin_pitch * 0.06, geo.wall, W / 4, H / 4);
@@ -494,6 +559,7 @@ export function renderConnectorSVG(connector, connType) {
   else if (style === "screw-terminal") pathD = bodyPathScrewTerminal(geo, nPerRow);
   else if (style === "barrier") pathD = bodyPathBarrier(geo, nPerRow);
   else if (style === "button") pathD = bodyPathButton(geo, nPerRow);
+  else if (style === "sherlock") pathD = bodyPathSherlock(geo, nPerRow);
   else                        pathD = bodyPathBox(geo, nPerRow);
 
   parts.push(
@@ -514,6 +580,8 @@ export function renderConnectorSVG(connector, connType) {
     parts.push(barrierDetails(geo, nPerRow));
   } else if (style === "button") {
     parts.push(buttonCavities(geo, nPerRow));
+  } else if (style === "sherlock") {
+    parts.push(sherlockCavity(geo, nPerRow));
   } else if (style === "grid" && geo.cavity_size > 0) {
     const half = geo.cavity_size / 2;
     const rowCys = [geo.pin_cy];

@@ -1,0 +1,16 @@
+[connector]
+name = "Sherlock-F"
+style = "sherlock"
+
+[geometry]
+pin_pitch = 8.0
+padding_left = 8.6
+padding_right = 8.6
+height = 20.4
+wall = 2.4
+pin_cy = 10.0
+pin_radius = 2.0
+pinout_side = "top"
+line_length = 10.0
+flare_max_pins = 3
+flare_width = 2.8
