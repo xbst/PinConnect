@@ -80,6 +80,10 @@ Controls how pin labels are spaced on horizontal (top/bottom) pinout sides. Has 
 | `"staircase"` | Each pin label gets its own level, stepping further from the connector body. Clearest separation, but tall with many pins. |
 | `"flat"` | All labels sit at the same level. Most compact, but labels may overlap on dense connectors. |
 
+The same 8-pin header under each style:
+
+![The same connector rendered with staggered, staircase, and flat label styles side by side](../../assets/label-styles.webp)
+
 ```toml
 [[connector]]
 id = "J1"

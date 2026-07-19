@@ -29,6 +29,10 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 
 `USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML. `slide-switch` also highlights a location rather than a pinout, but it uses pins. Pins mark slider positions, rendered without pin circles.
 
+Each type rendered, so you can pick one by its look:
+
+![The bundled connector types, each drawn with a few sample pins and labeled with its name and style](../../assets/connector-gallery.webp)
+
 ## Anatomy of a type file
 
 A type file has a `[connector]` table and a `[geometry]` table:
