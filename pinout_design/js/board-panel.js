@@ -142,8 +142,11 @@ export class BoardPanel {
     if (this.svg) {
       this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
       if (this.wrapper) {
-        const oldW = parseInt(this.wrapper.style.width);
-        const oldH = parseInt(this.wrapper.style.height);
+        // parseFloat, not parseInt: with a fractional board width/height,
+        // parseInt truncated the stored value so oldW never equalled w and
+        // fitToView reset the user's zoom/pan on every board-changed.
+        const oldW = parseFloat(this.wrapper.style.width);
+        const oldH = parseFloat(this.wrapper.style.height);
         this.wrapper.style.width = w + "px";
         this.wrapper.style.height = h + "px";
         if (oldW !== w || oldH !== h) this.fitToView();
@@ -204,11 +207,14 @@ export class BoardPanel {
     // so a drag can't be lost when the pointer leaves the SVG mid-drag.
     this.svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
     this.svg.addEventListener("click", (e) => {
-      if (!this._drag || !this._drag.moved) {
-        const g = e.target.closest("g[data-id]");
-        if (g) this.state.selectConnector(g.getAttribute("data-id"));
-        else if (!this.drawMode) this.state.selectConnector(null);
-      }
+      // A drag ends with a trailing click, but mouseup has already nulled
+      // _drag, so guard on a flag instead. Without it, a drag that ends over
+      // empty space would run the deselect branch below and wrongly clear the
+      // selection of the connector just dragged.
+      if (this._suppressNextClick) { this._suppressNextClick = false; return; }
+      const g = e.target.closest("g[data-id]");
+      if (g) this.state.selectConnector(g.getAttribute("data-id"));
+      else if (!this.drawMode) this.state.selectConnector(null);
     });
   }
 
@@ -223,6 +229,7 @@ export class BoardPanel {
 
   _onMouseDown(e) {
     if (e.button !== 0) return;
+    this._suppressNextClick = false;
     const pt = this._svgPoint(e);
 
     if (this.drawMode) {
@@ -316,6 +323,8 @@ export class BoardPanel {
     if (!this._drag) return;
     const drag = this._drag;
     this._drag = null;
+    // A drag that actually moved should swallow its trailing click.
+    this._suppressNextClick = drag.moved;
 
     if (drag.type === "draw" && drag.moved) {
       this._removePreviewRect();
