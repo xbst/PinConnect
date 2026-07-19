@@ -21,6 +21,7 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
 | `XT30-2+2` | xt30 | XT30 power + 2 signal pins |
+| `button` | button | Tactile push-button / switch footprint |
 
 `Male` and `Female` refer to the gender of the plastic housing of the connector, not the pins, as that's what the end user will see when using the board.
 
@@ -59,6 +60,7 @@ cavity_size = 10.5
   - `header-male` — a pitch-scaled male pin-header housing with square cavities and keyed joints.
   - `screw-terminal` — a screw-terminal with circular screw heads and side wire-entry slots.
   - `barrier` — a barrier screw-terminal with individual metal cages and cross-drive screws.
+  - `button` — a tactile push-button / switch footprint (a round actuator between two pads).
 
 ### `[geometry]`
 
