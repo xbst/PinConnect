@@ -61,7 +61,6 @@ The project works and generates great looking pinouts already. Below are changes
 
 - Add female Sherlock connectors
 - Add slide switch as a "connector" for highlighting its positions
-- Update font of `pinout-design` to match the default `pinout-gen` theme (switch to Roboto)
 
 ## License
 
