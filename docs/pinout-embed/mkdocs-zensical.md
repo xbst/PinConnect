@@ -65,7 +65,6 @@ By default the pinout HTML links its board image by relative path, so keep the t
 
 ```
 docs/
-├── boards.md
 └── pinouts/
     ├── board.pinout.html
     └── board.png
