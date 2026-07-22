@@ -112,7 +112,6 @@ The loop expects one folder per board, and writes `<board>.pinout.html` beside e
 
 ```
 docs/
-├── boards.md
 └── pinouts/
     └── board/
         ├── board.toml            ← committed
