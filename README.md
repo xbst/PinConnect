@@ -57,6 +57,19 @@ All guides live in the [`docs/`](docs/) folder — start with the [documentation
 
 Each package folder has its own README with a short overview.
 
+## Roadmap
+
+PinConnect already generates great interactive pinouts. All known bugs are already fixed and most planned features are already added. It's already being used for all recent and future [Isik's Tech](https://docs.isiks.tech/) pinouts.
+
+Below are some of the remaining planned features:
+
+- 2-row pin headers
+- "None" connector option
+- Zoom & drag for interactive pinouts
+- Smarter pinout auto-scaling
+- Smarter bottom pill text wrap logic
+- Stretch goal: More advanced [theming](./docs/pinout-gen/themes.md) features
+
 ## License
 
 This project is licensed under GPL-3.0. See [LICENSE](LICENSE).
