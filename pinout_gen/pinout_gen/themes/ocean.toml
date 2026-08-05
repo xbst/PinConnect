@@ -11,7 +11,7 @@ weights = "400;500;600"
 sidebar_default_open = true
 sidebar_max_width = 360
 sidebar_responsive_stack = true
-sidebar_stack_breakpoint = 6000
+sidebar_stack_breakpoint = 9001
 font_scale               = 1.5
 symbol_size              = 36
 
