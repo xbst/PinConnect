@@ -979,7 +979,11 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
 .tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
-.bb{{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+/* Centered with inset + auto margins rather than left:50%/translate: an
+   absolutely positioned box's shrink-to-fit width is capped by the room to the
+   right of its `left`, so the translate trick halved the pill and wrapped it
+   onto five lines on a phone. */
+.bb{{position:absolute;bottom:10px;left:0;right:0;margin:0 auto;width:fit-content;
   max-width:calc(100% - 20px);
   background:var(--tip-bg);color:var(--type-color);border:1px solid var(--tip-border);
   padding:7px 18px;border-radius:12px;font-size:calc(12px*var(--font-scale));font-family:var(--ui-font);
@@ -987,6 +991,9 @@ body{{display:flex;height:100%;overflow:hidden}}
   display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
 .bb a:hover{{text-decoration:underline}}
+.bb-c::before{{content:"·";margin-right:8px}}
+/* Narrow: hint and credit on their own lines, with no separator to dangle. */
+@media(max-width:480px){{.bb{{flex-direction:column;gap:2px}}.bb-c::before{{content:none}}}}
 .sb-btn{{position:absolute;right:10px;top:10px;z-index:600;width:36px;height:36px;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:8px;
   cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;
@@ -1073,9 +1080,8 @@ body{{display:flex;height:100%;overflow:hidden}}
     <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
   </div>
   <div class="bb">
-    <span>Click or tap a connector to see its pinout</span>
-    <span>&middot;</span>
-    <span>Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
+    <span class="bb-h">Click or tap a connector to see its pinout</span>
+    <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
   </div>
 </div>
 <div class="sb{sb_hidden}" id="sb">
