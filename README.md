@@ -63,13 +63,9 @@ PinConnect already generates great interactive pinouts. All known bugs are alrea
 
 Below are some of the remaining planned features:
 
-- Add a button to view in full screen
 - 2-row pin headers
 - "None" connector option
 - Zoom & drag for interactive pinouts
-- Smarter pinout auto-scaling
-- Bottom pill text wrap or visibility logic changes
-- Stretch goal: More advanced [theming](./docs/pinout-gen/themes.md) features
 
 ## License
 

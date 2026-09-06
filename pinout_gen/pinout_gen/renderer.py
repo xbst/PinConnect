@@ -813,15 +813,41 @@ def _render_theme_css(theme: Theme) -> str:
 
 
 def _render_behavior_css(theme: Theme) -> str:
-    """Behaviour-driven CSS: the sidebar-width variable, plus — when the theme
-    opts in — a narrow-screen media query that switches the layout to a column so
-    the connector list flows below the board image instead of beside it.  Emitted
-    at the end of the stylesheet so its rules override the base layout."""
+    """Behaviour-driven CSS: the sidebar-width variable, the hint pill's
+    placement, plus — when the theme opts in — a narrow-screen media query that
+    switches the layout to a column so the connector list flows below the board
+    image instead of beside it.  Emitted at the end of the stylesheet so its
+    rules override the base layout."""
     b = theme.behavior
     parts = [
         f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
-        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale}}}"
+        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale};"
+        f"--tt-max:{b.tooltip_max_width}px;--panel-min:{b.tooltip_panel_min_height}px}}"
     ]
+    if b.tooltip_placement == "panel":
+        # The panel is a column item under the board.  Side by side the image
+        # wrapper is the only thing allowed to shrink, so the image yields
+        # exactly the height the panel needs (a flexed item's box is definite,
+        # so the percentage max-height resolves), and its auto margins take
+        # any free space, which keeps the panel at the bottom of the column,
+        # level with the sidebar.  Stacked, the page just grows.
+        parts.append(
+            ".bd{flex-direction:column;padding-top:8px}"
+            ".pw{flex:0 1 auto;min-height:0;margin:auto 0}"
+            ".pw img{max-height:100%}"
+        )
+    elif b.hint_placement == "below":
+        # (Not in panel mode: there the pill lives inside the panel, and these
+        # rules would only fight the panel's image cap.)
+        # Take the hint pill out of the overlay and stack it under the board.
+        # Side by side, the image gives up one pill height plus margins so the
+        # pair still fits the viewport; the stacked block below lifts that cap
+        # again (there the page just grows).
+        parts.append(
+            ".bd{flex-direction:column}"
+            ".bb{position:static;flex:none;margin:8px auto}"
+            ".pw img{max-height:calc(100vh - 32px - 16px*var(--font-scale))}"
+        )
     if b.sidebar_responsive_stack:
         parts.append(
             f"@media(max-width:{b.sidebar_stack_breakpoint}px){{"
@@ -830,7 +856,7 @@ def _render_behavior_css(theme: Theme) -> str:
             # overflow:visible so a tooltip taller than the (now short) board
             # isn't clipped at the board's bottom edge, where the stacked list
             # begins -- clipped tooltips read as the list overlapping them.
-            ".bd{flex:none;height:auto;min-height:0;overflow:visible}"
+            ".bd{flex:none;height:auto;min-height:0;overflow:visible;padding-top:0}"
             ".pw img{max-height:none}"
             ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:hidden;flex:none;margin:0 8px}"
             ".sb.hid{display:none}"
@@ -856,7 +882,8 @@ def _render_height_script(theme: Theme) -> str:
         "  function report(){\n"
         "    /* Embedded + stacked: hide our own scrollbar. The parent iframe grows to\n"
         "       fit, so a scrollbar would only shrink the width and oscillate. */\n"
-        "    if(embedded)document.documentElement.style.overflow=(stacked()?'hidden':'');\n"
+        "    if(embedded)document.documentElement.style.overflow=\n"
+        "      (stacked()&&!document.fullscreenElement&&!document.webkitFullscreenElement?'hidden':'');\n"
         "    /* Report body.scrollHeight, not documentElement's (which is floored at the\n"
         "       viewport height, so it could never shrink when the list closes). */\n"
         "    var v=0,b=document.body;if(stacked()&&b)v=Math.ceil(b.scrollHeight);\n"
@@ -864,6 +891,9 @@ def _render_height_script(theme: Theme) -> str:
         "    try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}\n"
         "  }\n"
         "  addEventListener('load',report);addEventListener('resize',report);\n"
+        "  /* The page fires this when a tooltip parked under the board appears or\n"
+        "     goes away: that changes the scroll height without resizing the body. */\n"
+        "  addEventListener('pinconnect-relayout',report);\n"
         "  if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}\n"
         "  report();\n"
         "})();\n"
@@ -871,11 +901,31 @@ def _render_height_script(theme: Theme) -> str:
     )
 
 
+# The "Click or tap" hint + credit pill.  Normally an overlay at the bottom of
+# the board area; in panel mode it lives inside the panel as its idle content.
+_HINT_PILL = (
+    '<div class="bb" id="bb">\n'
+    '    <span class="bb-h">Click or tap a connector to see its pinout</span>\n'
+    '    <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" '
+    'target="_blank" rel="noopener">PinConnect</a></span>\n'
+    '  </div>'
+)
+
+
 def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
                    theme: Theme | None = None,
                    image_data_uri: str | None = None) -> str:
     if theme is None:
         theme = Theme()
+    # Where the tooltip element lives: floating inside the image wrapper, or --
+    # in panel mode -- as a permanent box in the board column, holding the pill.
+    tt_body = '<div class="tt-c" id="tt-c"></div>'
+    if theme.behavior.tooltip_placement == "panel":
+        tooltip_in_board = ""
+        tooltip_panel = f'  <div class="tt panel" id="tt">{tt_body}\n  {_HINT_PILL}\n  </div>'
+    else:
+        tooltip_in_board = f'    <div class="tt off" id="tt">{tt_body}</div>'
+        tooltip_panel = f"  {_HINT_PILL}"
     show_sym = theme.behavior.show_symbols
     style_fb = theme.behavior.symbol_style_fallback
     sym_html: dict[str, str] = {}
@@ -934,6 +984,12 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         sb_bp=theme.behavior.sidebar_stack_breakpoint,
         tt_box_scale=theme.behavior.tooltip_box_scale,
         tt_min_scale=theme.behavior.tooltip_min_scale,
+        hint_autohide=theme.behavior.hint_autohide,
+        tt_place=theme.behavior.tooltip_placement,
+        tt_bp=theme.behavior.tooltip_below_breakpoint,
+        tooltip_in_board=tooltip_in_board,
+        tooltip_panel=tooltip_panel,
+        fs_btn="true" if theme.behavior.fullscreen_button else "false",
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -966,20 +1022,32 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt{{position:absolute;background:var(--tip-bg);border:1px solid var(--tip-border);
   border-radius:10px;padding:14px 16px;box-shadow:0 6px 20px var(--tip-shadow);
   z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s ease;
-  max-width:min(420px,calc(100vw - 12px));max-height:calc(100vh - 16px);
-  overflow-y:auto;overscroll-behavior:contain;
+  max-width:min(var(--tt-max,420px),calc(100vw - 12px));max-height:calc(100vh - 16px);
+  overflow-y:auto;overscroll-behavior:auto;
   line-height:1.4;font-family:var(--ui-font)}}
 .tt.vis{{opacity:1}}
 .tt.pin{{pointer-events:auto}}
+.tt.off{{display:none}}
+/* Always laid out and merely invisible until pinned, so pinning a hovered
+   tooltip doesn't change its width. */
+.tt-x{{visibility:hidden;align-self:center;border:0;background:none;color:var(--type-color);
+  font:inherit;font-size:calc(18px*var(--font-scale));line-height:1;cursor:pointer;
+  padding:4px 6px;margin:-6px -8px -6px 0}}
+.tt.pin .tt-x{{visibility:visible}}
+.tt-x:hover{{color:var(--text)}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--divider)}}
-.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text)}}
+.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text);margin-right:auto}}
 .tt-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
 .tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
-.bb{{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+/* Centered with inset + auto margins rather than left:50%/translate: an
+   absolutely positioned box's shrink-to-fit width is capped by the room to the
+   right of its `left`, so the translate trick halved the pill and wrapped it
+   onto five lines on a phone. */
+.bb{{position:absolute;bottom:10px;left:0;right:0;margin:0 auto;width:fit-content;
   max-width:calc(100% - 20px);
   background:var(--tip-bg);color:var(--type-color);border:1px solid var(--tip-border);
   padding:7px 18px;border-radius:12px;font-size:calc(12px*var(--font-scale));font-family:var(--ui-font);
@@ -987,12 +1055,29 @@ body{{display:flex;height:100%;overflow:hidden}}
   display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
 .bb a:hover{{text-decoration:underline}}
-.sb-btn{{position:absolute;right:10px;top:10px;z-index:600;width:36px;height:36px;
+.bb-h{{transition:opacity .35s ease}}
+.bb-c::before{{content:"·";margin-right:8px}}
+/* Narrow: hint and credit on their own lines, with no separator to dangle. */
+@media(max-width:480px){{.bb{{flex-direction:column;gap:2px}}.bb-c::before{{content:none}}}}
+/* hint_autohide: fade the hint (.hf), then drop it from layout (.hh) so the
+   pill collapses to the credit. */
+.bb.hf .bb-h{{opacity:0}}
+.bb.hh .bb-h{{display:none}}
+.bb.hh .bb-c::before{{content:none}}
+/* Board-area buttons (fullscreen, list toggle), pinned to the top right of
+   the board column rather than the image, so they stay put when the image
+   sits lower in the column. */
+.bd-btns{{position:absolute;top:10px;right:10px;z-index:600;display:flex;gap:8px}}
+.bd-btns button{{width:36px;height:36px;padding:0;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:8px;
-  cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;
+  cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;font-family:inherit;
   color:var(--text);display:flex;align-items:center;justify-content:center;
   line-height:1;transition:background .15s;opacity:.85}}
-.sb-btn:hover{{opacity:1;background:var(--hs-hover)}}
+.bd-btns button:hover{{opacity:1;background:var(--hs-hover)}}
+.fs-btn svg{{width:18px;height:18px;display:block}}
+.fs-btn .i-min{{display:none}}
+:root.fs .fs-btn .i-max{{display:none}}
+:root.fs .fs-btn .i-min{{display:block}}
 .sb{{width:fit-content;max-width:var(--sb-max);height:calc(100% - 16px);flex-shrink:0;overflow:hidden;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:12px;
   margin:8px 8px 8px 0;box-shadow:0 2px 8px var(--tip-shadow);
@@ -1014,6 +1099,20 @@ body{{display:flex;height:100%;overflow:hidden}}
   vertical-align:middle;width:var(--sym-size);font-size:var(--sym-size);line-height:1;color:var(--label-color)}}
 .cl-sym svg,.tt-sym svg{{width:var(--sym-size);height:var(--sym-size);display:block}}
 .tt-sym{{margin-right:6px}}
+/* tooltip_placement="panel": the tooltip is a permanent box under the board
+   (between board and list when stacked).  It shows the hint pill until a
+   connector is hovered or tapped, then that connector's pinout. */
+.tt.panel{{position:static;flex:none;align-self:stretch;width:auto;max-width:none;
+  min-height:var(--panel-min,0px);max-height:none;margin:8px;opacity:1;pointer-events:auto;
+  overflow:visible;overscroll-behavior:auto;
+  border-radius:12px;display:grid;align-items:center;justify-items:center}}
+/* Every connector's block is pre-rendered into the same grid cell, so the box
+   is always as tall as the tallest of them: nothing ever scrolls or shifts. */
+.tt.panel .tt-c{{grid-area:1/1;align-self:stretch;display:grid;width:100%}}
+.tt.panel .tt-b{{grid-area:1/1;visibility:hidden}}
+.tt.panel .tt-b.on{{visibility:visible}}
+.tt.panel .bb{{grid-area:1/1;position:static;margin:0;border:0;background:none;box-shadow:none}}
+.tt.panel.has .bb{{visibility:hidden}}
 {behavior_css}
 </style>
 <script>
@@ -1069,14 +1168,16 @@ body{{display:flex;height:100%;overflow:hidden}}
     <svg class="po" viewBox="0 0 {img_w} {img_h}" preserveAspectRatio="xMidYMid meet">
 {hotspots}
     </svg>
-    <div class="tt" id="tt"></div>
-    <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
+{tooltip_in_board}
   </div>
-  <div class="bb">
-    <span>Click or tap a connector to see its pinout</span>
-    <span>&middot;</span>
-    <span>Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
+  <div class="bd-btns">
+    <button class="fs-btn" id="fs-btn" title="Fullscreen" aria-label="Fullscreen">
+      <svg class="i-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      <svg class="i-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+    </button>
+    <button class="sb-btn" id="sb-btn" title="Toggle connector list" aria-label="Toggle connector list">&#9776;</button>
   </div>
+{tooltip_panel}
 </div>
 <div class="sb{sb_hidden}" id="sb">
   <div class="sb-in">
@@ -1086,9 +1187,26 @@ body{{display:flex;height:100%;overflow:hidden}}
 </div>
 <script>
 const C={data};
-const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
+const pw=document.getElementById('pw'),tt=document.getElementById('tt'),ttc=document.getElementById('tt-c'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
 let aId=null,pinned=false;
+/* hint_autohide: after HINT_HIDE seconds on screen, or as soon as a connector
+   is hovered or tapped, fade the hint and collapse the pill to its credit.
+   0 = keep it. */
+const HINT_HIDE={hint_autohide},bb=document.getElementById('bb');
+let hintDone=false,hintTimer=null;
+function hideHint(){{if(hintDone||!(HINT_HIDE>0))return;hintDone=true;
+  bb.classList.add('hf');setTimeout(()=>{{bb.classList.add('hh');bb.classList.remove('hf')}},380)}}
+/* Count from when the board is actually visible, not from load: an embed below
+   the fold loads early (lazy iframes fetch well ahead of the viewport) and
+   would otherwise lose its hint before the reader scrolls to it. */
+function hintCountdown(){{if(hintTimer===null)hintTimer=setTimeout(hideHint,HINT_HIDE*1000)}}
+if(HINT_HIDE>0){{
+  if(window.IntersectionObserver){{try{{
+    const io=new IntersectionObserver(es=>{{if(es.some(e=>e.isIntersecting)){{hintCountdown();io.disconnect()}}}});
+    io.observe(pw);
+  }}catch(e){{hintCountdown()}}}}else hintCountdown();
+}}
 /* When the list is stacked below the board, animate its height (expand down /
    shrink up) instead of snapping.  Embedded, the iframe auto-height tracks the
    animating body height frame-by-frame. */
@@ -1112,6 +1230,28 @@ function toggleSb(){{
   }}
 }}
 sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();reflow();}});
+/* Fullscreen button: the Fullscreen API where available (an embed needs
+   allowfullscreen on its iframe); otherwise -- iPhone Safari, or an embed
+   without that permission -- open the standalone page in a new tab, which
+   gets the whole screen and pinch-zoom.  Removed when neither can work. */
+const FS_BTN={fs_btn},fsBtn=document.getElementById('fs-btn'),EMBEDDED=window.parent!==window;
+function fsEl(){{return document.fullscreenElement||document.webkitFullscreenElement||null}}
+function fsApi(){{return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled)}}
+function openFull(){{
+  const u=new URL(location.href);
+  u.searchParams.set('theme',document.documentElement.getAttribute('data-theme')||
+    (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+  window.open(u.href,'_blank','noopener');
+}}
+if(!FS_BTN||(!fsApi()&&!EMBEDDED))fsBtn.remove();
+else fsBtn.addEventListener('click',e=>{{e.stopPropagation();
+  if(fsEl()){{(document.exitFullscreen||document.webkitExitFullscreen).call(document);return}}
+  if(!fsApi()){{openFull();return}}
+  const de=document.documentElement,p=(de.requestFullscreen||de.webkitRequestFullscreen).call(de);
+  if(p&&p.catch)p.catch(openFull);
+}});
+function fsChange(){{document.documentElement.classList.toggle('fs',!!fsEl());reflow()}}
+document.addEventListener('fullscreenchange',fsChange);document.addEventListener('webkitfullscreenchange',fsChange);
 /* Match by data-id in JS rather than a `[data-id="..."]` selector, so an id
    containing a quote or backslash can't produce an invalid selector (which
    throws and kills hover/click for that connector). */
@@ -1121,15 +1261,39 @@ function mark(id){{const h=hs(id),l=li(id);if(h)h.classList.add('active');if(l)l
 function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(e=>e.classList.remove('active'))}}
 function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
-function show(id,el){{
-  const d=C[id]; if(!d) return;
+function block(d){{
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
-  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
-    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span></div>`+
+  return `<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
+    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span>`+
+    `<button class="tt-x" type="button" title="Close" aria-label="Close">&times;</button></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
-  pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
 }}
-function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false}}
+ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide()}}}});
+function blk(id){{return [...ttc.querySelectorAll('.tt-b')].find(b=>b.dataset.id===id)||null}}
+function show(id,el){{
+  const d=C[id]; if(!d) return; hideHint();
+  if(PANEL){{
+    /* Panel mode: every block is already in the box; showing one just makes
+       it visible in place of the hint pill (the .has class). */
+    ttc.querySelectorAll('.tt-b.on').forEach(b=>b.classList.remove('on'));
+    const b=blk(id);if(b)b.classList.add('on');
+    tt.classList.add('has');
+  }}else{{
+    clearTimeout(ttOff); tt.classList.remove('off');
+    ttc.innerHTML=block(d);
+    pos(el);
+  }}
+  tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
+  relayout();
+}}
+/* A hidden tooltip leaves the layout once its fade is over, so one parked under
+   the board can't hold an embed's height open; relayout() tells the embed's
+   height script to re-measure around both changes. */
+let ttOff=null;
+function hide(){{tt.classList.remove('vis','pin','has');unmark();aId=null;pinned=false;
+  if(PANEL){{ttc.querySelectorAll('.tt-b.on').forEach(b=>b.classList.remove('on'));return}}
+  clearTimeout(ttOff);ttOff=setTimeout(()=>{{if(!tt.classList.contains('vis')){{tt.classList.add('off');relayout()}}}},180)}}
+function relayout(){{try{{dispatchEvent(new Event('pinconnect-relayout'))}}catch(e){{}}}}
 /* Scale the tooltip's connector drawing off the connector's box on the board:
    the drawing's long side tracks TT_BOX x the box's on-screen long side, so it
    shrinks with the board instead of holding its generated pixel size and
@@ -1137,6 +1301,24 @@ function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false
    height:auto keeps the aspect ratio and its max-* caps still apply.  Clamped to
    the natural size (never upscale) and to TT_MIN of it (labels stay readable). */
 const TT_BOX={tt_box_scale},TT_MIN={tt_min_scale};
+const TT_PLACE='{tt_place}',TT_BP={tt_bp},PANEL=TT_PLACE==='panel';
+/* Panel mode: render every connector into the box up front, stacked in one
+   grid cell, so the box is as tall as the tallest and never has to scroll. */
+if(PANEL)ttc.innerHTML=Object.keys(C).map(id=>`<div class="tt-b" data-id="${{esc(id)}}">${{block(C[id])}}</div>`).join('');
+/* Viewport height that matters: the embedding page's when it can be read
+   (same origin), else our own. */
+function vpH(){{try{{if(window.frameElement&&!fsEl())return parent.innerHeight}}catch(e){{}}return innerHeight}}
+/* Park the tooltip under the board instead of beside its connector: always
+   for "below", never for "float", and for "auto" on screens up to TT_BP wide
+   whenever the board is short enough that a tooltip under it stays in view.
+   (Beside a board that fills the screen -- a phone held sideways -- "below"
+   would land off screen, so that keeps floating.) */
+function belowMode(){{
+  if(TT_PLACE==='below')return true;
+  if(TT_PLACE!=='auto')return false;
+  if(!matchMedia('(max-width:'+TT_BP+'px)').matches)return false;
+  return pw.getBoundingClientRect().height<=vpH()*0.6;
+}}
 function fit(el){{
   const g=tt.querySelector('.tt-s>svg');if(!g||!TT_BOX)return;
   const nw=+g.getAttribute('width'),nh=+g.getAttribute('height');
@@ -1157,10 +1339,24 @@ function pos(el){{
         hw=+el.getAttribute('width'),hh=+el.getAttribute('height');
   const pl=sr.left+hx*sx-wr.left,pt=sr.top+hy*sy-wr.top,
         pcx=pl+hw*sx/2,pb=pt+hh*sy;
-  let l=pcx-tr.width/2,t=pb+10;
-  if(t+tr.height>wr.height+20) t=pt-tr.height-10;
-  if(t<0) t=10;
+  let l=pcx-tr.width/2,t=0,below=false;
+  if(belowMode()){{
+    /* Under the board -- and under the hint pill too when that sits in flow
+       beneath the board, so the pill isn't left half covered. */
+    const bd=pw.parentElement,br=bd.getBoundingClientRect();
+    const base=getComputedStyle(bb).position==='static'?bb.getBoundingClientRect().bottom:wr.bottom;
+    t=base-wr.top+10;
+    /* Side by side the board area clips its overflow, so only go below when
+       the tooltip really fits there. */
+    below=getComputedStyle(bd).overflowY==='visible'||wr.top+t+tr.height<=br.bottom-6;
+  }}
+  if(!below){{
+    t=pb+10;
+    if(t+tr.height>wr.height+20) t=pt-tr.height-10;
+    if(t<0) t=10;
+  }}
   l=Math.max(6,Math.min(l,wr.width-tr.width-6));
+  tt.classList.toggle('below',below);
   tt.style.left=l+'px';tt.style.top=t+'px';tt.style.visibility='';
 }}
 document.querySelectorAll('.hs').forEach(el=>{{
@@ -1181,7 +1377,7 @@ document.addEventListener('click',e=>{{
   if(pinned&&!tt.contains(e.target)&&!e.target.closest('.cl-i')&&!e.target.closest('.hs'))hide();
 }});
 document.querySelectorAll('.hs').forEach(el=>{{el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),2000)}});
-function reflow(){{if(aId){{const el=hs(aId);if(el)pos(el)}}}}
+function reflow(){{if(aId&&!PANEL){{const el=hs(aId);if(el)pos(el)}}}}
 window.addEventListener('resize',reflow);
 /* Re-fit a pinned tooltip once the sidebar's show/hide transition settles the
    board layout -- the immediate reflow above runs before the .2s transition. */

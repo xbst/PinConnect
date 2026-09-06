@@ -10,7 +10,7 @@
     "pin_cy": 13.9,
     "pin_radius": 1.8,
     "pinout_side": "bottom",
-    "line_length": 15.0,
+    "line_length": 8.0,
     "rows": 1,
     "row2_pin_cy": 0.0,
     "row2_pinout_side": "top",

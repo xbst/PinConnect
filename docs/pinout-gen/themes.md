@@ -34,6 +34,7 @@ Precedence is **`--theme` → `[board] theme` → `default`**. A theme name is r
 | `ocean` | Teal and cyan, Lexend. Roomy: larger list text and symbols, and the list always sits below the board. |
 | `terminal` | Green and pixel-monospaced (Geist Pixel), connector list open by default, symbols off. |
 | `midnight` | Indigo/violet, Inter UI with a monospaced pin-label font. Stacks below 720px. |
+| `workbench` | Warm neutrals with an amber accent, Inter. The pinout shows in a permanent panel under the board instead of a tooltip; list open, stacks below 900px. |
 
 Every theme provides both a light and a dark palette. See [Light and dark mode](#light-and-dark-mode) for how the page chooses between them.
 
@@ -88,6 +89,14 @@ Ocean sets `sidebar_stack_breakpoint = 6000`, so the connector list is stacked *
 | Light | Dark |
 |:-----:|:----:|
 | ![midnight theme, light mode](../../assets/theme-midnight-light.webp) | ![midnight theme, dark mode](../../assets/theme-midnight-dark.webp) |
+
+### `workbench`
+
+Warm neutrals with an amber accent and Inter. This one demonstrates `tooltip_placement = "panel"`: instead of a floating tooltip, each connector's pinout appears in a permanent box under the board, which shows the hint and credit until a connector is chosen. The list is open by default and stacks below 900px.
+
+| Light | Dark |
+|:-----:|:----:|
+| ![workbench theme, light mode](../../assets/theme-workbench-light.webp) | ![workbench theme, dark mode](../../assets/theme-workbench-dark.webp) |
 
 ## Anatomy of a theme file
 
@@ -174,6 +183,13 @@ weights = "400;500"
 | `symbol_size` | `16` | Connector-symbol icon size in px |
 | `tooltip_box_scale` | `1.5` | Tooltip drawing's long side, as a multiple of the connector's box on the board. `0` pins it to its natural size |
 | `tooltip_min_scale` | `0.5` | Smallest fraction of natural size the drawing may shrink to |
+| `hint_autohide` | `0` | Seconds before the "Click or tap a connector" hint fades out, leaving the PinConnect credit (to make it smaller); the first hover or tap on a connector hides it too. `0` keeps it |
+| `hint_placement` | `"overlay"` | Where the hint pill sits: `"overlay"` floats it over the bottom edge of the board area to make the layout more compact, `"below"` puts it in flow under the board so it can never cover a connector |
+| `tooltip_placement` | `"auto"` | `"float"` keeps the tooltip beside its connector, `"below"` always parks it under the board, `"auto"` parks it below on narrow screens when the board is short enough to leave room and floats otherwise, `"panel"` replaces the tooltip with a permanent box under the board |
+| `tooltip_below_breakpoint` | `768` | Width in px at/under which `"auto"` may place tooltips below the board |
+| `tooltip_max_width` | `420` | Tooltip box max width in px; always capped by the viewport width |
+| `tooltip_panel_min_height` | `0` | Floor in px for the `"panel"` box; it is otherwise exactly as tall as the tallest connector's pinout, so it never scrolls |
+| `fullscreen_button` | `true` | Show a fullscreen button beside the list toggle (see below) |
 
 ```toml
 [behavior]
@@ -184,6 +200,10 @@ font_scale               = 1.1
 ```
 
 > **Tooltip sizing.** The connector drawing in a tooltip is sized from the connector's box on the board rather than a fixed pixel size, so it shrinks along with the board instead of covering it on a small screen. It tracks the board live — resizing the window or opening the list re-fits the open tooltip. Two bounds keep it sane: it never grows past the drawing's natural size (so wide screens look exactly as they did before), and never shrinks below `tooltip_min_scale` of it (so pin labels stay readable). Raise `tooltip_box_scale` for larger tooltips, or set it to `0` to opt out entirely.
+
+> **Panel mode.** With `tooltip_placement = "panel"` there is no floating tooltip: a permanent box sits under the board, beside a full-height connector list on wide screens and between the board and the list when stacked. `hint_placement` has no effect in this mode, since the hint lives in the panel.
+
+> **Fullscreen.** The button beside the list toggle puts the pinout into the browser's fullscreen mode, so an embedded pinout gets the whole screen and, on a wide one, the side-by-side layout. Where element fullscreen is not available (iPhone Safari, or an embedding page whose iframe does not allow it; [pinout-embed](../pinout-embed/mkdocs-zensical.md) does) it opens the pinout in a new tab instead, which also gives pinch-zoom on phones. The button is removed when neither can work, and `fullscreen_button = false` removes it always.
 
 > **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../pinout-embed/mkdocs-zensical.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
 

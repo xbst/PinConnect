@@ -18,5 +18,9 @@
   {
     "name": "terminal",
     "display": "Terminal"
+  },
+  {
+    "name": "workbench",
+    "display": "Workbench"
   }
 ]

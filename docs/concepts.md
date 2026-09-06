@@ -56,7 +56,7 @@ You only touch these files when adding support for a connector the library does 
 
 ### 3. Themes
 
-A theme describes how the generated page *looks* — its light and dark color palettes, its fonts, and how the chrome behaves (whether the connector list sits beside the board or stacks below it on narrow screens, whether symbols are shown, and so on) — independent of any board. Five themes ship with the package in `pinout_gen/pinout_gen/themes/`: `default`, `midnight`, `ocean`, `slate`, and `terminal`.
+A theme describes how the generated page *looks* — its light and dark color palettes, its fonts, and how the chrome behaves (whether the connector list sits beside the board or stacks below it on narrow screens, whether symbols are shown, and so on) — independent of any board. Six themes ship with the package in `pinout_gen/pinout_gen/themes/`: `default`, `midnight`, `ocean`, `slate`, `terminal`, and `workbench`.
 
 A board picks one through its `[board] theme` field, and `pinout-gen -t <name>` overrides that for a single run (you can also include a path). Resolution works exactly like connector types: `pinout-gen` checks the board's `theme_dir` (defaults to `./themes` next to the board config) first, then the themes bundled with the package.
 
