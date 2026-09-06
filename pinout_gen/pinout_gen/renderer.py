@@ -813,15 +813,26 @@ def _render_theme_css(theme: Theme) -> str:
 
 
 def _render_behavior_css(theme: Theme) -> str:
-    """Behaviour-driven CSS: the sidebar-width variable, plus — when the theme
-    opts in — a narrow-screen media query that switches the layout to a column so
-    the connector list flows below the board image instead of beside it.  Emitted
-    at the end of the stylesheet so its rules override the base layout."""
+    """Behaviour-driven CSS: the sidebar-width variable, the hint pill's
+    placement, plus — when the theme opts in — a narrow-screen media query that
+    switches the layout to a column so the connector list flows below the board
+    image instead of beside it.  Emitted at the end of the stylesheet so its
+    rules override the base layout."""
     b = theme.behavior
     parts = [
         f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
         f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale}}}"
     ]
+    if b.hint_placement == "below":
+        # Take the hint pill out of the overlay and stack it under the board.
+        # Side by side, the image gives up one pill height plus margins so the
+        # pair still fits the viewport; the stacked block below lifts that cap
+        # again (there the page just grows).
+        parts.append(
+            ".bd{flex-direction:column}"
+            ".bb{position:static;flex:none;margin:8px auto}"
+            ".pw img{max-height:calc(100vh - 32px - 16px*var(--font-scale))}"
+        )
     if b.sidebar_responsive_stack:
         parts.append(
             f"@media(max-width:{b.sidebar_stack_breakpoint}px){{"
@@ -934,6 +945,7 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         sb_bp=theme.behavior.sidebar_stack_breakpoint,
         tt_box_scale=theme.behavior.tooltip_box_scale,
         tt_min_scale=theme.behavior.tooltip_min_scale,
+        hint_autohide=theme.behavior.hint_autohide,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -991,9 +1003,15 @@ body{{display:flex;height:100%;overflow:hidden}}
   display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px}}
 .bb a{{color:var(--text);text-decoration:none;font-weight:500}}
 .bb a:hover{{text-decoration:underline}}
+.bb-h{{transition:opacity .35s ease}}
 .bb-c::before{{content:"·";margin-right:8px}}
 /* Narrow: hint and credit on their own lines, with no separator to dangle. */
 @media(max-width:480px){{.bb{{flex-direction:column;gap:2px}}.bb-c::before{{content:none}}}}
+/* hint_autohide: fade the hint (.hf), then drop it from layout (.hh) so the
+   pill collapses to the credit. */
+.bb.hf .bb-h{{opacity:0}}
+.bb.hh .bb-h{{display:none}}
+.bb.hh .bb-c::before{{content:none}}
 .sb-btn{{position:absolute;right:10px;top:10px;z-index:600;width:36px;height:36px;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:8px;
   cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;
@@ -1079,7 +1097,7 @@ body{{display:flex;height:100%;overflow:hidden}}
     <div class="tt" id="tt"></div>
     <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
   </div>
-  <div class="bb">
+  <div class="bb" id="bb">
     <span class="bb-h">Click or tap a connector to see its pinout</span>
     <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
   </div>
@@ -1095,6 +1113,23 @@ const C={data};
 const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
 let aId=null,pinned=false;
+/* hint_autohide: after HINT_HIDE seconds on screen, or as soon as a connector
+   is hovered or tapped, fade the hint and collapse the pill to its credit.
+   0 = keep it. */
+const HINT_HIDE={hint_autohide},bb=document.getElementById('bb');
+let hintDone=false,hintTimer=null;
+function hideHint(){{if(hintDone||!(HINT_HIDE>0))return;hintDone=true;
+  bb.classList.add('hf');setTimeout(()=>{{bb.classList.add('hh');bb.classList.remove('hf')}},380)}}
+/* Count from when the board is actually visible, not from load: an embed below
+   the fold loads early (lazy iframes fetch well ahead of the viewport) and
+   would otherwise lose its hint before the reader scrolls to it. */
+function hintCountdown(){{if(hintTimer===null)hintTimer=setTimeout(hideHint,HINT_HIDE*1000)}}
+if(HINT_HIDE>0){{
+  if(window.IntersectionObserver){{try{{
+    const io=new IntersectionObserver(es=>{{if(es.some(e=>e.isIntersecting)){{hintCountdown();io.disconnect()}}}});
+    io.observe(pw);
+  }}catch(e){{hintCountdown()}}}}else hintCountdown();
+}}
 /* When the list is stacked below the board, animate its height (expand down /
    shrink up) instead of snapping.  Embedded, the iframe auto-height tracks the
    animating body height frame-by-frame. */
@@ -1128,7 +1163,7 @@ function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(
 function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
 function show(id,el){{
-  const d=C[id]; if(!d) return;
+  const d=C[id]; if(!d) return; hideHint();
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
   tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
     `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span></div>`+

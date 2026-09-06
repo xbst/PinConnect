@@ -42,6 +42,8 @@ name = "Default"
 # symbol_size              = 16       # connector-symbol icon size in px
 # tooltip_box_scale        = 1.5     # tooltip drawing's long side vs the connector's box on the board; 0 = natural size
 # tooltip_min_scale        = 0.5     # smallest fraction of natural size the drawing may shrink to
+# hint_autohide            = 0       # seconds before the "Click or tap" hint fades out, leaving the credit; 0 = never
+# hint_placement           = "overlay" # "overlay" floats the hint over the board area; "below" puts it in flow under the board
 
 # Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both

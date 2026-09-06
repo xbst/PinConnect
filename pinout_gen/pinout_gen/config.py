@@ -342,6 +342,10 @@ class ThemeBehavior:
                                              # connector's on-screen box; 0 disables (natural size)
     tooltip_min_scale: float = 0.5           # never shrink the drawing below this fraction of its
                                              # natural size, so pin labels stay readable
+    hint_autohide: float = 0.0               # seconds until the "click or tap" hint fades out, leaving
+                                             # only the credit; 0 keeps it on screen
+    hint_placement: str = "overlay"          # "overlay": the pill floats over the board area's bottom
+                                             # edge; "below": it sits in flow under the board, never over it
 
 
 @dataclass
@@ -440,6 +444,11 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         beh.tooltip_box_scale = max(0.0, float(bdict.get("tooltip_box_scale", beh.tooltip_box_scale)))
         beh.tooltip_min_scale = min(1.0, max(0.0, float(
             bdict.get("tooltip_min_scale", beh.tooltip_min_scale))))
+        beh.hint_autohide = max(0.0, float(bdict.get("hint_autohide", beh.hint_autohide)))
+        placement = str(bdict.get("hint_placement", beh.hint_placement))
+        if placement not in ("overlay", "below"):
+            raise ValueError(f"hint_placement must be overlay|below, got '{placement}'")
+        beh.hint_placement = placement
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):
