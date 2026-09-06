@@ -34,6 +34,7 @@ Precedence is **`--theme` → `[board] theme` → `default`**. A theme name is r
 | `ocean` | Teal and cyan, Lexend. Roomy: larger list text and symbols, and the list always sits below the board. |
 | `terminal` | Green and pixel-monospaced (Geist Pixel), connector list open by default, symbols off. |
 | `midnight` | Indigo/violet, Inter UI with a monospaced pin-label font. Stacks below 720px. |
+| `workbench` | Warm neutrals with an amber accent, Inter. The pinout shows in a permanent panel under the board instead of a tooltip; list open, stacks below 900px. |
 
 Every theme provides both a light and a dark palette. See [Light and dark mode](#light-and-dark-mode) for how the page chooses between them.
 
@@ -88,6 +89,14 @@ Ocean sets `sidebar_stack_breakpoint = 6000`, so the connector list is stacked *
 | Light | Dark |
 |:-----:|:----:|
 | ![midnight theme, light mode](../../assets/theme-midnight-light.webp) | ![midnight theme, dark mode](../../assets/theme-midnight-dark.webp) |
+
+### `workbench`
+
+Warm neutrals with an amber accent and Inter. This one demonstrates `tooltip_placement = "panel"`: instead of a floating tooltip, each connector's pinout appears in a permanent box under the board, which shows the hint and credit until a connector is chosen. The list is open by default and stacks below 900px.
+
+| Light | Dark |
+|:-----:|:----:|
+| ![workbench theme, light mode](../../assets/theme-workbench-light.webp) | ![workbench theme, dark mode](../../assets/theme-workbench-dark.webp) |
 
 ## Anatomy of a theme file
 

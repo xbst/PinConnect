@@ -87,7 +87,7 @@ By default this writes `board.pinout.html` next to the config. Use `-o` to choos
 pinout-gen board.toml -o docs/my-board.html
 ```
 
-A theme sets the generated page's colors, fonts, and layout behavior. Five ship with the tool — `default`, `midnight`, `ocean`, `slate`, and `terminal` — and `-t` picks one for a single run, overriding whatever the board config says:
+A theme sets the generated page's colors, fonts, and layout behavior. Six ship with the tool — `default`, `midnight`, `ocean`, `slate`, `terminal`, and `workbench` — and `-t` picks one for a single run, overriding whatever the board config says:
 
 ```bash
 pinout-gen board.toml -t midnight

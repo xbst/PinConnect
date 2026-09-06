@@ -7,7 +7,7 @@ tooltip, connector housing, pin labels, active-item highlight — then save a
 trimmed WebP.
 
 Outputs ``assets/theme-<name>-{light,dark}.webp`` for default/slate/ocean/
-terminal/midnight.
+terminal/midnight/workbench.
 
 Run from the repository root:
 
@@ -32,7 +32,10 @@ from PIL import Image
 
 REPO = Path(__file__).resolve().parent.parent.parent
 ASSETS = REPO / "assets"
-THEMES = ["default", "slate", "ocean", "terminal", "midnight"]
+THEMES = ["default", "slate", "ocean", "terminal", "midnight", "workbench"]
+# Frame heights that differ from the 760px default: ocean stacks its list below
+# the board (captured full page), workbench parks the pinout in a panel under it.
+TALL = {"ocean": 1997, "workbench": 1000}
 PIN_ID = "FS1"          # a connector that exists on the sample board; pinned for its tooltip
 
 
@@ -73,7 +76,7 @@ def shoot(work: Path):
                 stacked = theme == "ocean"
                 for scheme in ("light", "dark"):
                     ctx = browser.new_context(
-                        viewport={"width": 1200, "height": 1997 if stacked else 760},
+                        viewport={"width": 1200, "height": TALL.get(theme, 760)},
                         device_scale_factor=2, color_scheme=scheme)
                     page = ctx.new_page()
                     page.goto(f"http://localhost:{port}/{theme}.html?theme={scheme}",
@@ -108,7 +111,7 @@ def main(toml_path: Path, png_path: Path):
         work = Path(td)
         generate_pinouts(toml_path, png_path, work)
         shoot(work)
-    print("OK - 10 theme gallery images written to assets/")
+    print("OK - 12 theme gallery images written to assets/")
 
 
 if __name__ == "__main__":

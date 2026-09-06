@@ -1,0 +1,57 @@
+# "Workbench" — a demo theme showing the panel tooltip placement.
+#
+# Warm neutrals with an amber accent and Inter for the UI.  Instead of a
+# floating tooltip, each connector's pinout appears in a permanent panel under
+# the board (beside the full-height list on wide screens, between the board
+# and the list when stacked), which shows the hint and credit until a
+# connector is chosen.  Copy and tweak to taste.
+
+[theme]
+name = "Workbench"
+
+[font]
+family = "Inter"
+source = "google"
+weights = "400;500;600"
+
+[behavior]
+sidebar_default_open = true
+sidebar_responsive_stack = true
+sidebar_stack_breakpoint = 900
+tooltip_placement = "panel"      # the pinout box under the board
+tooltip_panel_min_height = 200   # the box is sized to the tallest pinout, but never shorter than this
+fullscreen_button = true
+
+[colors.light]
+bg          = "#f5f2ec"
+text        = "#25231f"
+tip-bg      = "#fffdf9"
+tip-border  = "#dbd4c6"
+tip-shadow  = "rgba(70,55,30,.12)"
+hs-hover    = "rgba(214,133,26,.14)"
+hs-stroke   = "rgba(214,133,26,.6)"
+hs-active   = "rgba(214,133,26,.26)"
+divider     = "#e6dfd2"
+conn-body   = "#ece6da"
+conn-cavity = "#d8d0c0"
+conn-stroke = "#5c564b"
+label-color = "#332f28"
+desc-color  = "#5f584c"
+type-color  = "#8b8375"
+
+[colors.dark]
+bg          = "#1a1814"
+text        = "#ebe5d9"
+tip-bg      = "#23201b"
+tip-border  = "#3b362d"
+tip-shadow  = "rgba(0,0,0,.5)"
+hs-hover    = "rgba(240,168,60,.16)"
+hs-stroke   = "rgba(240,168,60,.6)"
+hs-active   = "rgba(240,168,60,.28)"
+divider     = "#37322a"
+conn-body   = "#3a3630"
+conn-cavity = "#2a2722"
+conn-stroke = "#b5ac9c"
+label-color = "#e6dfd2"
+desc-color  = "#b4ab9c"
+type-color  = "#8f8778"

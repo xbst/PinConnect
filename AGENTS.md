@@ -78,7 +78,7 @@ The images in `docs/` are generated, not hand-made, so they can be refreshed whe
 
 - `tools/symbol-icons/` — the symbol SVGs in `assets/symbols/` (after editing `symbols.py`).
 - `tools/connector-gallery/` — `connector-gallery.webp` and `label-styles.webp` (after adding/changing a connector type or body style).
-- `tools/theme-gallery/` — the 10 `theme-*.webp` (after a theme or renderer change that affects appearance).
+- `tools/theme-gallery/` — the 12 `theme-*.webp` (after a theme or renderer change that affects appearance).
 - `tools/designer-screenshots/` — the 7 `designer-overview`/`workflow-*` PNGs (after a change to the designer's chrome).
 
 `connector-gallery` and `symbol-icons` render straight from the package and need no board. `theme-gallery` and `designer-screenshots` need a sample board+image; they default to the maintainer's board (outside the repo), so pass your own as arguments. `tools/demo-gif/` is intentionally git-ignored (local-only).
