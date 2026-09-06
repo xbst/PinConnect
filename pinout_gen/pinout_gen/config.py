@@ -346,6 +346,10 @@ class ThemeBehavior:
                                              # only the credit; 0 keeps it on screen
     hint_placement: str = "overlay"          # "overlay": the pill floats over the board area's bottom
                                              # edge; "below": it sits in flow under the board, never over it
+    tooltip_placement: str = "auto"          # "float": beside its connector; "below": under the board;
+                                             # "auto": below on narrow screens when the board leaves room
+    tooltip_below_breakpoint: int = 768      # px width at/under which "auto" may go below the board
+    tooltip_max_width: int = 420             # tooltip box max width in px (always capped by the viewport)
 
 
 @dataclass
@@ -449,6 +453,12 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         if placement not in ("overlay", "below"):
             raise ValueError(f"hint_placement must be overlay|below, got '{placement}'")
         beh.hint_placement = placement
+        tt_place = str(bdict.get("tooltip_placement", beh.tooltip_placement))
+        if tt_place not in ("auto", "float", "below"):
+            raise ValueError(f"tooltip_placement must be auto|float|below, got '{tt_place}'")
+        beh.tooltip_placement = tt_place
+        beh.tooltip_below_breakpoint = int(bdict.get("tooltip_below_breakpoint", beh.tooltip_below_breakpoint))
+        beh.tooltip_max_width = int(bdict.get("tooltip_max_width", beh.tooltip_max_width))
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):

@@ -44,6 +44,9 @@ name = "Default"
 # tooltip_min_scale        = 0.5     # smallest fraction of natural size the drawing may shrink to
 # hint_autohide            = 0       # seconds before the "Click or tap" hint fades out, leaving the credit; 0 = never
 # hint_placement           = "overlay" # "overlay" floats the hint over the board area; "below" puts it in flow under the board
+# tooltip_placement        = "auto"  # "float": beside the connector; "below": under the board; "auto": below on narrow screens when the board leaves room
+# tooltip_below_breakpoint = 768     # px width at/under which "auto" may place tooltips below the board
+# tooltip_max_width        = 420     # tooltip box max width in px (always capped by the viewport width)
 
 # Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both

@@ -821,7 +821,8 @@ def _render_behavior_css(theme: Theme) -> str:
     b = theme.behavior
     parts = [
         f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
-        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale}}}"
+        f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale};"
+        f"--tt-max:{b.tooltip_max_width}px}}"
     ]
     if b.hint_placement == "below":
         # Take the hint pill out of the overlay and stack it under the board.
@@ -875,6 +876,9 @@ def _render_height_script(theme: Theme) -> str:
         "    try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}\n"
         "  }\n"
         "  addEventListener('load',report);addEventListener('resize',report);\n"
+        "  /* The page fires this when a tooltip parked under the board appears or\n"
+        "     goes away: that changes the scroll height without resizing the body. */\n"
+        "  addEventListener('pinconnect-relayout',report);\n"
         "  if(window.ResizeObserver){try{new ResizeObserver(report).observe(document.body);}catch(e){}}\n"
         "  report();\n"
         "})();\n"
@@ -946,6 +950,8 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         tt_box_scale=theme.behavior.tooltip_box_scale,
         tt_min_scale=theme.behavior.tooltip_min_scale,
         hint_autohide=theme.behavior.hint_autohide,
+        tt_place=theme.behavior.tooltip_placement,
+        tt_bp=theme.behavior.tooltip_below_breakpoint,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -978,15 +984,23 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt{{position:absolute;background:var(--tip-bg);border:1px solid var(--tip-border);
   border-radius:10px;padding:14px 16px;box-shadow:0 6px 20px var(--tip-shadow);
   z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s ease;
-  max-width:min(420px,calc(100vw - 12px));max-height:calc(100vh - 16px);
+  max-width:min(var(--tt-max,420px),calc(100vw - 12px));max-height:calc(100vh - 16px);
   overflow-y:auto;overscroll-behavior:contain;
   line-height:1.4;font-family:var(--ui-font)}}
 .tt.vis{{opacity:1}}
 .tt.pin{{pointer-events:auto}}
+.tt.off{{display:none}}
+/* Always laid out and merely invisible until pinned, so pinning a hovered
+   tooltip doesn't change its width. */
+.tt-x{{visibility:hidden;align-self:center;border:0;background:none;color:var(--type-color);
+  font:inherit;font-size:calc(18px*var(--font-scale));line-height:1;cursor:pointer;
+  padding:4px 6px;margin:-6px -8px -6px 0}}
+.tt.pin .tt-x{{visibility:visible}}
+.tt-x:hover{{color:var(--text)}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--divider)}}
-.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text)}}
+.tt-n{{font-weight:600;font-size:calc(14px*var(--font-scale));color:var(--text);margin-right:auto}}
 .tt-t{{font-size:calc(11px*var(--font-scale));color:var(--type-color);white-space:nowrap}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
 .tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
@@ -1094,7 +1108,7 @@ body{{display:flex;height:100%;overflow:hidden}}
     <svg class="po" viewBox="0 0 {img_w} {img_h}" preserveAspectRatio="xMidYMid meet">
 {hotspots}
     </svg>
-    <div class="tt" id="tt"></div>
+    <div class="tt off" id="tt"></div>
     <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
   </div>
   <div class="bb" id="bb">
@@ -1164,13 +1178,23 @@ function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
 function show(id,el){{
   const d=C[id]; if(!d) return; hideHint();
+  clearTimeout(ttOff); tt.classList.remove('off');
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
   tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
-    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span></div>`+
+    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span>`+
+    `<button class="tt-x" type="button" title="Close" aria-label="Close">&times;</button></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
+  tt.querySelector('.tt-x').addEventListener('click',e=>{{e.stopPropagation();hide()}});
   pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
+  relayout();
 }}
-function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false}}
+/* A hidden tooltip leaves the layout once its fade is over, so one parked under
+   the board can't hold an embed's height open; relayout() tells the embed's
+   height script to re-measure around both changes. */
+let ttOff=null;
+function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false;
+  clearTimeout(ttOff);ttOff=setTimeout(()=>{{if(!tt.classList.contains('vis')){{tt.classList.add('off');relayout()}}}},180)}}
+function relayout(){{try{{dispatchEvent(new Event('pinconnect-relayout'))}}catch(e){{}}}}
 /* Scale the tooltip's connector drawing off the connector's box on the board:
    the drawing's long side tracks TT_BOX x the box's on-screen long side, so it
    shrinks with the board instead of holding its generated pixel size and
@@ -1178,6 +1202,21 @@ function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false
    height:auto keeps the aspect ratio and its max-* caps still apply.  Clamped to
    the natural size (never upscale) and to TT_MIN of it (labels stay readable). */
 const TT_BOX={tt_box_scale},TT_MIN={tt_min_scale};
+const TT_PLACE='{tt_place}',TT_BP={tt_bp};
+/* Viewport height that matters: the embedding page's when it can be read
+   (same origin), else our own. */
+function vpH(){{try{{if(window.frameElement)return parent.innerHeight}}catch(e){{}}return innerHeight}}
+/* Park the tooltip under the board instead of beside its connector: always
+   for "below", never for "float", and for "auto" on screens up to TT_BP wide
+   whenever the board is short enough that a tooltip under it stays in view.
+   (Beside a board that fills the screen -- a phone held sideways -- "below"
+   would land off screen, so that keeps floating.) */
+function belowMode(){{
+  if(TT_PLACE==='below')return true;
+  if(TT_PLACE!=='auto')return false;
+  if(!matchMedia('(max-width:'+TT_BP+'px)').matches)return false;
+  return pw.getBoundingClientRect().height<=vpH()*0.6;
+}}
 function fit(el){{
   const g=tt.querySelector('.tt-s>svg');if(!g||!TT_BOX)return;
   const nw=+g.getAttribute('width'),nh=+g.getAttribute('height');
@@ -1198,10 +1237,24 @@ function pos(el){{
         hw=+el.getAttribute('width'),hh=+el.getAttribute('height');
   const pl=sr.left+hx*sx-wr.left,pt=sr.top+hy*sy-wr.top,
         pcx=pl+hw*sx/2,pb=pt+hh*sy;
-  let l=pcx-tr.width/2,t=pb+10;
-  if(t+tr.height>wr.height+20) t=pt-tr.height-10;
-  if(t<0) t=10;
+  let l=pcx-tr.width/2,t=0,below=false;
+  if(belowMode()){{
+    /* Under the board -- and under the hint pill too when that sits in flow
+       beneath the board, so the pill isn't left half covered. */
+    const bd=pw.parentElement,br=bd.getBoundingClientRect();
+    const base=getComputedStyle(bb).position==='static'?bb.getBoundingClientRect().bottom:wr.bottom;
+    t=base-wr.top+10;
+    /* Side by side the board area clips its overflow, so only go below when
+       the tooltip really fits there. */
+    below=getComputedStyle(bd).overflowY==='visible'||wr.top+t+tr.height<=br.bottom-6;
+  }}
+  if(!below){{
+    t=pb+10;
+    if(t+tr.height>wr.height+20) t=pt-tr.height-10;
+    if(t<0) t=10;
+  }}
   l=Math.max(6,Math.min(l,wr.width-tr.width-6));
+  tt.classList.toggle('below',below);
   tt.style.left=l+'px';tt.style.top=t+'px';tt.style.visibility='';
 }}
 document.querySelectorAll('.hs').forEach(el=>{{
