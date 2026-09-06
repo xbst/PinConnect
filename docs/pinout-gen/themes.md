@@ -180,6 +180,7 @@ weights = "400;500"
 | `tooltip_below_breakpoint` | `768` | Width in px at/under which `"auto"` may place tooltips below the board |
 | `tooltip_max_width` | `420` | Tooltip box max width in px; always capped by the viewport width |
 | `tooltip_panel_min_height` | `0` | Floor in px for the `"panel"` box; it is otherwise exactly as tall as the tallest connector's pinout, so it never scrolls |
+| `fullscreen_button` | `true` | Show a fullscreen button beside the list toggle (see below) |
 
 ```toml
 [behavior]
@@ -196,6 +197,8 @@ font_scale               = 1.1
 > **Tooltip placement.** A floating tooltip is fine beside a big board, but on a phone it can cover most of the image. With the default `"auto"`, screens up to `tooltip_below_breakpoint` wide park the tooltip under the board instead, as long as the board takes no more than about 60% of the screen height (a tooltip under a taller board would land off screen, so those keep floating). A pinned tooltip has a close button, and an embedded pinout grows to fit a tooltip parked below its board.
 
 > **Panel mode.** With `tooltip_placement = "panel"` there is no floating tooltip at all: a permanent box sits under the board, beside a full-height connector list on wide screens and between the board and the list when stacked. It shows the "Click or tap a connector" hint and the PinConnect credit until a connector is hovered or tapped, then that connector's pinout. Every connector is rendered into the box up front, so it is exactly as tall as the tallest pinout and its height never changes: nothing scrolls or shifts, and side by side the board image yields whatever height the box needs. `tooltip_panel_min_height` sets a floor on that height. `hint_placement` has no effect in this mode, since the hint lives in the panel.
+
+> **Fullscreen.** The button beside the list toggle puts the pinout into the browser's fullscreen mode, so an embedded pinout gets the whole screen and, on a wide one, the side-by-side layout. Where element fullscreen is not available (iPhone Safari, or an embedding page whose iframe does not allow it; [pinout-embed](../pinout-embed/mkdocs-zensical.md) does) it opens the pinout in a new tab instead, which also gives pinch-zoom on phones. The button is removed when neither can work, and `fullscreen_button = false` removes it always.
 
 > **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../pinout-embed/mkdocs-zensical.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
 

@@ -882,7 +882,8 @@ def _render_height_script(theme: Theme) -> str:
         "  function report(){\n"
         "    /* Embedded + stacked: hide our own scrollbar. The parent iframe grows to\n"
         "       fit, so a scrollbar would only shrink the width and oscillate. */\n"
-        "    if(embedded)document.documentElement.style.overflow=(stacked()?'hidden':'');\n"
+        "    if(embedded)document.documentElement.style.overflow=\n"
+        "      (stacked()&&!document.fullscreenElement&&!document.webkitFullscreenElement?'hidden':'');\n"
         "    /* Report body.scrollHeight, not documentElement's (which is floored at the\n"
         "       viewport height, so it could never shrink when the list closes). */\n"
         "    var v=0,b=document.body;if(stacked()&&b)v=Math.ceil(b.scrollHeight);\n"
@@ -988,6 +989,7 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         tt_bp=theme.behavior.tooltip_below_breakpoint,
         tooltip_in_board=tooltip_in_board,
         tooltip_panel=tooltip_panel,
+        fs_btn="true" if theme.behavior.fullscreen_button else "false",
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -1062,12 +1064,20 @@ body{{display:flex;height:100%;overflow:hidden}}
 .bb.hf .bb-h{{opacity:0}}
 .bb.hh .bb-h{{display:none}}
 .bb.hh .bb-c::before{{content:none}}
-.sb-btn{{position:absolute;right:10px;top:10px;z-index:600;width:36px;height:36px;
+/* Board-area buttons (fullscreen, list toggle), pinned to the top right of
+   the board column rather than the image, so they stay put when the image
+   sits lower in the column. */
+.bd-btns{{position:absolute;top:10px;right:10px;z-index:600;display:flex;gap:8px}}
+.bd-btns button{{width:36px;height:36px;padding:0;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:8px;
-  cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;
+  cursor:pointer;box-shadow:0 2px 8px var(--tip-shadow);font-size:18px;font-family:inherit;
   color:var(--text);display:flex;align-items:center;justify-content:center;
   line-height:1;transition:background .15s;opacity:.85}}
-.sb-btn:hover{{opacity:1;background:var(--hs-hover)}}
+.bd-btns button:hover{{opacity:1;background:var(--hs-hover)}}
+.fs-btn svg{{width:18px;height:18px;display:block}}
+.fs-btn .i-min{{display:none}}
+:root.fs .fs-btn .i-max{{display:none}}
+:root.fs .fs-btn .i-min{{display:block}}
 .sb{{width:fit-content;max-width:var(--sb-max);height:calc(100% - 16px);flex-shrink:0;overflow:hidden;
   background:var(--tip-bg);border:1px solid var(--tip-border);border-radius:12px;
   margin:8px 8px 8px 0;box-shadow:0 2px 8px var(--tip-shadow);
@@ -1159,7 +1169,13 @@ body{{display:flex;height:100%;overflow:hidden}}
 {hotspots}
     </svg>
 {tooltip_in_board}
-    <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
+  </div>
+  <div class="bd-btns">
+    <button class="fs-btn" id="fs-btn" title="Fullscreen" aria-label="Fullscreen">
+      <svg class="i-max" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      <svg class="i-min" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+    </button>
+    <button class="sb-btn" id="sb-btn" title="Toggle connector list" aria-label="Toggle connector list">&#9776;</button>
   </div>
 {tooltip_panel}
 </div>
@@ -1214,6 +1230,28 @@ function toggleSb(){{
   }}
 }}
 sbBtn.addEventListener('click',e=>{{e.stopPropagation();toggleSb();reflow();}});
+/* Fullscreen button: the Fullscreen API where available (an embed needs
+   allowfullscreen on its iframe); otherwise -- iPhone Safari, or an embed
+   without that permission -- open the standalone page in a new tab, which
+   gets the whole screen and pinch-zoom.  Removed when neither can work. */
+const FS_BTN={fs_btn},fsBtn=document.getElementById('fs-btn'),EMBEDDED=window.parent!==window;
+function fsEl(){{return document.fullscreenElement||document.webkitFullscreenElement||null}}
+function fsApi(){{return !!(document.fullscreenEnabled||document.webkitFullscreenEnabled)}}
+function openFull(){{
+  const u=new URL(location.href);
+  u.searchParams.set('theme',document.documentElement.getAttribute('data-theme')||
+    (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+  window.open(u.href,'_blank','noopener');
+}}
+if(!FS_BTN||(!fsApi()&&!EMBEDDED))fsBtn.remove();
+else fsBtn.addEventListener('click',e=>{{e.stopPropagation();
+  if(fsEl()){{(document.exitFullscreen||document.webkitExitFullscreen).call(document);return}}
+  if(!fsApi()){{openFull();return}}
+  const de=document.documentElement,p=(de.requestFullscreen||de.webkitRequestFullscreen).call(de);
+  if(p&&p.catch)p.catch(openFull);
+}});
+function fsChange(){{document.documentElement.classList.toggle('fs',!!fsEl());reflow()}}
+document.addEventListener('fullscreenchange',fsChange);document.addEventListener('webkitfullscreenchange',fsChange);
 /* Match by data-id in JS rather than a `[data-id="..."]` selector, so an id
    containing a quote or backslash can't produce an invalid selector (which
    throws and kills hover/click for that connector). */
@@ -1269,7 +1307,7 @@ const TT_PLACE='{tt_place}',TT_BP={tt_bp},PANEL=TT_PLACE==='panel';
 if(PANEL)ttc.innerHTML=Object.keys(C).map(id=>`<div class="tt-b" data-id="${{esc(id)}}">${{block(C[id])}}</div>`).join('');
 /* Viewport height that matters: the embedding page's when it can be read
    (same origin), else our own. */
-function vpH(){{try{{if(window.frameElement)return parent.innerHeight}}catch(e){{}}return innerHeight}}
+function vpH(){{try{{if(window.frameElement&&!fsEl())return parent.innerHeight}}catch(e){{}}return innerHeight}}
 /* Park the tooltip under the board instead of beside its connector: always
    for "below", never for "float", and for "auto" on screens up to TT_BP wide
    whenever the board is short enough that a tooltip under it stays in view.

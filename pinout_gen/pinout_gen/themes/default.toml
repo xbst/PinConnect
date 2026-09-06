@@ -48,6 +48,7 @@ name = "Default"
 # tooltip_below_breakpoint = 768     # px width at/under which "auto" may place tooltips below the board
 # tooltip_max_width        = 420     # tooltip box max width in px (always capped by the viewport width)
 # tooltip_panel_min_height = 0       # floor in px for the "panel" box; it is otherwise as tall as the tallest connector's pinout
+# fullscreen_button        = true    # fullscreen button beside the list toggle (opens the page in a new tab where fullscreen is unavailable)
 
 # Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both

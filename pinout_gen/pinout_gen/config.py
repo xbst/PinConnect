@@ -353,6 +353,8 @@ class ThemeBehavior:
     tooltip_max_width: int = 420             # tooltip box max width in px (always capped by the viewport)
     tooltip_panel_min_height: int = 0        # floor for the "panel" box height; it is otherwise as tall
                                              # as the tallest connector's pinout, so it never scrolls
+    fullscreen_button: bool = True           # fullscreen button beside the list toggle (falls back to
+                                             # opening the page in a new tab where fullscreen is unavailable)
 
 
 @dataclass
@@ -463,6 +465,7 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         beh.tooltip_below_breakpoint = int(bdict.get("tooltip_below_breakpoint", beh.tooltip_below_breakpoint))
         beh.tooltip_max_width = int(bdict.get("tooltip_max_width", beh.tooltip_max_width))
         beh.tooltip_panel_min_height = int(bdict.get("tooltip_panel_min_height", beh.tooltip_panel_min_height))
+        beh.fullscreen_button = bool(bdict.get("fullscreen_button", beh.fullscreen_button))
 
     extra = raw.get("extra_css", {})
     if isinstance(extra, dict):
