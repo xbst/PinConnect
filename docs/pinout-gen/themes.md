@@ -176,9 +176,10 @@ weights = "400;500"
 | `tooltip_min_scale` | `0.5` | Smallest fraction of natural size the drawing may shrink to |
 | `hint_autohide` | `0` | Seconds before the "Click or tap a connector" hint fades out, leaving the PinConnect credit; the first hover or tap on a connector hides it too. `0` keeps it |
 | `hint_placement` | `"overlay"` | Where the hint pill sits: `"overlay"` floats it over the bottom edge of the board area, `"below"` puts it in flow under the board so it can never cover a connector |
-| `tooltip_placement` | `"auto"` | `"float"` keeps the tooltip beside its connector, `"below"` always parks it under the board, `"auto"` parks it below on narrow screens when the board is short enough to leave room and floats otherwise |
+| `tooltip_placement` | `"auto"` | `"float"` keeps the tooltip beside its connector, `"below"` always parks it under the board, `"auto"` parks it below on narrow screens when the board is short enough to leave room and floats otherwise, `"panel"` replaces the tooltip with a permanent box under the board |
 | `tooltip_below_breakpoint` | `768` | Width in px at/under which `"auto"` may place tooltips below the board |
 | `tooltip_max_width` | `420` | Tooltip box max width in px; always capped by the viewport width |
+| `tooltip_panel_min_height` | `0` | Floor in px for the `"panel"` box; it is otherwise exactly as tall as the tallest connector's pinout, so it never scrolls |
 
 ```toml
 [behavior]
@@ -193,6 +194,8 @@ font_scale               = 1.1
 > **The hint pill.** The "Click or tap a connector" pill sizes to its text and only wraps onto two lines on narrow phones. With `hint_autohide` set, it fades after that many seconds, or as soon as the reader hovers or taps a connector, and collapses to the small PinConnect credit. `hint_placement = "below"` takes it out of the overlay: it sits in flow under the board (between the board and a stacked list), so it never covers a connector; side by side, the board gives up one line of height to make room for it.
 
 > **Tooltip placement.** A floating tooltip is fine beside a big board, but on a phone it can cover most of the image. With the default `"auto"`, screens up to `tooltip_below_breakpoint` wide park the tooltip under the board instead, as long as the board takes no more than about 60% of the screen height (a tooltip under a taller board would land off screen, so those keep floating). A pinned tooltip has a close button, and an embedded pinout grows to fit a tooltip parked below its board.
+
+> **Panel mode.** With `tooltip_placement = "panel"` there is no floating tooltip at all: a permanent box sits under the board, beside a full-height connector list on wide screens and between the board and the list when stacked. It shows the "Click or tap a connector" hint and the PinConnect credit until a connector is hovered or tapped, then that connector's pinout. Every connector is rendered into the box up front, so it is exactly as tall as the tallest pinout and its height never changes: nothing scrolls or shifts, and side by side the board image yields whatever height the box needs. `tooltip_panel_min_height` sets a floor on that height. `hint_placement` has no effect in this mode, since the hint lives in the panel.
 
 > **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../pinout-embed/mkdocs-zensical.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
 

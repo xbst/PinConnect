@@ -822,9 +822,23 @@ def _render_behavior_css(theme: Theme) -> str:
     parts = [
         f":root{{--sb-max:min({b.sidebar_max_width}px,40vw);"
         f"--sym-size:{b.symbol_size}px;--font-scale:{b.font_scale};"
-        f"--tt-max:{b.tooltip_max_width}px}}"
+        f"--tt-max:{b.tooltip_max_width}px;--panel-min:{b.tooltip_panel_min_height}px}}"
     ]
-    if b.hint_placement == "below":
+    if b.tooltip_placement == "panel":
+        # The panel is a column item under the board.  Side by side the image
+        # wrapper is the only thing allowed to shrink, so the image yields
+        # exactly the height the panel needs (a flexed item's box is definite,
+        # so the percentage max-height resolves), and its auto margins take
+        # any free space, which keeps the panel at the bottom of the column,
+        # level with the sidebar.  Stacked, the page just grows.
+        parts.append(
+            ".bd{flex-direction:column;padding-top:8px}"
+            ".pw{flex:0 1 auto;min-height:0;margin:auto 0}"
+            ".pw img{max-height:100%}"
+        )
+    elif b.hint_placement == "below":
+        # (Not in panel mode: there the pill lives inside the panel, and these
+        # rules would only fight the panel's image cap.)
         # Take the hint pill out of the overlay and stack it under the board.
         # Side by side, the image gives up one pill height plus margins so the
         # pair still fits the viewport; the stacked block below lifts that cap
@@ -842,7 +856,7 @@ def _render_behavior_css(theme: Theme) -> str:
             # overflow:visible so a tooltip taller than the (now short) board
             # isn't clipped at the board's bottom edge, where the stacked list
             # begins -- clipped tooltips read as the list overlapping them.
-            ".bd{flex:none;height:auto;min-height:0;overflow:visible}"
+            ".bd{flex:none;height:auto;min-height:0;overflow:visible;padding-top:0}"
             ".pw img{max-height:none}"
             ".sb{width:auto;max-width:none;height:auto;max-height:none;overflow:hidden;flex:none;margin:0 8px}"
             ".sb.hid{display:none}"
@@ -886,11 +900,31 @@ def _render_height_script(theme: Theme) -> str:
     )
 
 
+# The "Click or tap" hint + credit pill.  Normally an overlay at the bottom of
+# the board area; in panel mode it lives inside the panel as its idle content.
+_HINT_PILL = (
+    '<div class="bb" id="bb">\n'
+    '    <span class="bb-h">Click or tap a connector to see its pinout</span>\n'
+    '    <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" '
+    'target="_blank" rel="noopener">PinConnect</a></span>\n'
+    '  </div>'
+)
+
+
 def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
                    theme: Theme | None = None,
                    image_data_uri: str | None = None) -> str:
     if theme is None:
         theme = Theme()
+    # Where the tooltip element lives: floating inside the image wrapper, or --
+    # in panel mode -- as a permanent box in the board column, holding the pill.
+    tt_body = '<div class="tt-c" id="tt-c"></div>'
+    if theme.behavior.tooltip_placement == "panel":
+        tooltip_in_board = ""
+        tooltip_panel = f'  <div class="tt panel" id="tt">{tt_body}\n  {_HINT_PILL}\n  </div>'
+    else:
+        tooltip_in_board = f'    <div class="tt off" id="tt">{tt_body}</div>'
+        tooltip_panel = f"  {_HINT_PILL}"
     show_sym = theme.behavior.show_symbols
     style_fb = theme.behavior.symbol_style_fallback
     sym_html: dict[str, str] = {}
@@ -952,6 +986,8 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         hint_autohide=theme.behavior.hint_autohide,
         tt_place=theme.behavior.tooltip_placement,
         tt_bp=theme.behavior.tooltip_below_breakpoint,
+        tooltip_in_board=tooltip_in_board,
+        tooltip_panel=tooltip_panel,
         hotspots='\n'.join(hotspot_rects),
         connector_list='\n'.join(sidebar_items),
         data=data_json,
@@ -985,7 +1021,7 @@ body{{display:flex;height:100%;overflow:hidden}}
   border-radius:10px;padding:14px 16px;box-shadow:0 6px 20px var(--tip-shadow);
   z-index:1000;opacity:0;pointer-events:none;transition:opacity .15s ease;
   max-width:min(var(--tt-max,420px),calc(100vw - 12px));max-height:calc(100vh - 16px);
-  overflow-y:auto;overscroll-behavior:contain;
+  overflow-y:auto;overscroll-behavior:auto;
   line-height:1.4;font-family:var(--ui-font)}}
 .tt.vis{{opacity:1}}
 .tt.pin{{pointer-events:auto}}
@@ -1053,6 +1089,20 @@ body{{display:flex;height:100%;overflow:hidden}}
   vertical-align:middle;width:var(--sym-size);font-size:var(--sym-size);line-height:1;color:var(--label-color)}}
 .cl-sym svg,.tt-sym svg{{width:var(--sym-size);height:var(--sym-size);display:block}}
 .tt-sym{{margin-right:6px}}
+/* tooltip_placement="panel": the tooltip is a permanent box under the board
+   (between board and list when stacked).  It shows the hint pill until a
+   connector is hovered or tapped, then that connector's pinout. */
+.tt.panel{{position:static;flex:none;align-self:stretch;width:auto;max-width:none;
+  min-height:var(--panel-min,0px);max-height:none;margin:8px;opacity:1;pointer-events:auto;
+  overflow:visible;overscroll-behavior:auto;
+  border-radius:12px;display:grid;align-items:center;justify-items:center}}
+/* Every connector's block is pre-rendered into the same grid cell, so the box
+   is always as tall as the tallest of them: nothing ever scrolls or shifts. */
+.tt.panel .tt-c{{grid-area:1/1;align-self:stretch;display:grid;width:100%}}
+.tt.panel .tt-b{{grid-area:1/1;visibility:hidden}}
+.tt.panel .tt-b.on{{visibility:visible}}
+.tt.panel .bb{{grid-area:1/1;position:static;margin:0;border:0;background:none;box-shadow:none}}
+.tt.panel.has .bb{{visibility:hidden}}
 {behavior_css}
 </style>
 <script>
@@ -1108,13 +1158,10 @@ body{{display:flex;height:100%;overflow:hidden}}
     <svg class="po" viewBox="0 0 {img_w} {img_h}" preserveAspectRatio="xMidYMid meet">
 {hotspots}
     </svg>
-    <div class="tt off" id="tt"></div>
+{tooltip_in_board}
     <button class="sb-btn" id="sb-btn" title="Toggle connector list">&#9776;</button>
   </div>
-  <div class="bb" id="bb">
-    <span class="bb-h">Click or tap a connector to see its pinout</span>
-    <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" target="_blank" rel="noopener">PinConnect</a></span>
-  </div>
+{tooltip_panel}
 </div>
 <div class="sb{sb_hidden}" id="sb">
   <div class="sb-in">
@@ -1124,7 +1171,7 @@ body{{display:flex;height:100%;overflow:hidden}}
 </div>
 <script>
 const C={data};
-const pw=document.getElementById('pw'),tt=document.getElementById('tt'),
+const pw=document.getElementById('pw'),tt=document.getElementById('tt'),ttc=document.getElementById('tt-c'),
       sb=document.getElementById('sb'),sbBtn=document.getElementById('sb-btn');
 let aId=null,pinned=false;
 /* hint_autohide: after HINT_HIDE seconds on screen, or as soon as a connector
@@ -1176,23 +1223,37 @@ function mark(id){{const h=hs(id),l=li(id);if(h)h.classList.add('active');if(l)l
 function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(e=>e.classList.remove('active'))}}
 function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
-function show(id,el){{
-  const d=C[id]; if(!d) return; hideHint();
-  clearTimeout(ttOff); tt.classList.remove('off');
+function block(d){{
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
-  tt.innerHTML=`<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
+  return `<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
     `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span>`+
     `<button class="tt-x" type="button" title="Close" aria-label="Close">&times;</button></div>`+
     `<div class="tt-s">${{d.svg}}</div>`+dh;
-  tt.querySelector('.tt-x').addEventListener('click',e=>{{e.stopPropagation();hide()}});
-  pos(el); tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
+}}
+ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide()}}}});
+function blk(id){{return [...ttc.querySelectorAll('.tt-b')].find(b=>b.dataset.id===id)||null}}
+function show(id,el){{
+  const d=C[id]; if(!d) return; hideHint();
+  if(PANEL){{
+    /* Panel mode: every block is already in the box; showing one just makes
+       it visible in place of the hint pill (the .has class). */
+    ttc.querySelectorAll('.tt-b.on').forEach(b=>b.classList.remove('on'));
+    const b=blk(id);if(b)b.classList.add('on');
+    tt.classList.add('has');
+  }}else{{
+    clearTimeout(ttOff); tt.classList.remove('off');
+    ttc.innerHTML=block(d);
+    pos(el);
+  }}
+  tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
   relayout();
 }}
 /* A hidden tooltip leaves the layout once its fade is over, so one parked under
    the board can't hold an embed's height open; relayout() tells the embed's
    height script to re-measure around both changes. */
 let ttOff=null;
-function hide(){{tt.classList.remove('vis','pin');unmark();aId=null;pinned=false;
+function hide(){{tt.classList.remove('vis','pin','has');unmark();aId=null;pinned=false;
+  if(PANEL){{ttc.querySelectorAll('.tt-b.on').forEach(b=>b.classList.remove('on'));return}}
   clearTimeout(ttOff);ttOff=setTimeout(()=>{{if(!tt.classList.contains('vis')){{tt.classList.add('off');relayout()}}}},180)}}
 function relayout(){{try{{dispatchEvent(new Event('pinconnect-relayout'))}}catch(e){{}}}}
 /* Scale the tooltip's connector drawing off the connector's box on the board:
@@ -1202,7 +1263,10 @@ function relayout(){{try{{dispatchEvent(new Event('pinconnect-relayout'))}}catch
    height:auto keeps the aspect ratio and its max-* caps still apply.  Clamped to
    the natural size (never upscale) and to TT_MIN of it (labels stay readable). */
 const TT_BOX={tt_box_scale},TT_MIN={tt_min_scale};
-const TT_PLACE='{tt_place}',TT_BP={tt_bp};
+const TT_PLACE='{tt_place}',TT_BP={tt_bp},PANEL=TT_PLACE==='panel';
+/* Panel mode: render every connector into the box up front, stacked in one
+   grid cell, so the box is as tall as the tallest and never has to scroll. */
+if(PANEL)ttc.innerHTML=Object.keys(C).map(id=>`<div class="tt-b" data-id="${{esc(id)}}">${{block(C[id])}}</div>`).join('');
 /* Viewport height that matters: the embedding page's when it can be read
    (same origin), else our own. */
 function vpH(){{try{{if(window.frameElement)return parent.innerHeight}}catch(e){{}}return innerHeight}}
@@ -1275,7 +1339,7 @@ document.addEventListener('click',e=>{{
   if(pinned&&!tt.contains(e.target)&&!e.target.closest('.cl-i')&&!e.target.closest('.hs'))hide();
 }});
 document.querySelectorAll('.hs').forEach(el=>{{el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),2000)}});
-function reflow(){{if(aId){{const el=hs(aId);if(el)pos(el)}}}}
+function reflow(){{if(aId&&!PANEL){{const el=hs(aId);if(el)pos(el)}}}}
 window.addEventListener('resize',reflow);
 /* Re-fit a pinned tooltip once the sidebar's show/hide transition settles the
    board layout -- the immediate reflow above runs before the .2s transition. */
