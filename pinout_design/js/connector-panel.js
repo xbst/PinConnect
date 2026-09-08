@@ -60,9 +60,16 @@ export class ConnectorPanel {
     const ct = this.state.connectorTypes.get(conn.type);
     const previewEl = this.container.querySelector(".conn-svg-preview");
     if (previewEl && ct) {
-      try { previewEl.innerHTML = renderConnectorSVG(conn, ct); }
+      try { previewEl.innerHTML = this._previewHtml(conn, ct); }
       catch (e) { /* keep existing preview on error */ }
     }
+  }
+
+  // The drawing for a connector, or a note in its place for the "none" type,
+  // which renders nothing because it only marks a spot on the board.
+  _previewHtml(conn, ct) {
+    const svg = renderConnectorSVG(conn, ct);
+    return svg || '<span class="conn-svg-none">No drawing — marks a spot on the board</span>';
   }
 
   _render() {
@@ -79,7 +86,7 @@ export class ConnectorPanel {
 
     let svgHtml = "";
     if (ct) {
-      try { svgHtml = renderConnectorSVG(conn, ct); }
+      try { svgHtml = this._previewHtml(conn, ct); }
       catch (e) { svgHtml = `<div style="color:var(--danger);font-size:12px">Render error: ${e.message}</div>`; }
     } else {
       svgHtml = `<div style="color:var(--text-muted);font-size:12px">Unknown type: ${conn.type}</div>`;

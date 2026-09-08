@@ -1,0 +1,23 @@
+{
+  "name": "2.54mm Dual-Row Header",
+  "style": "header-male",
+  "geometry": {
+    "pin_pitch": 10.0,
+    "padding_left": 5.0,
+    "padding_right": 5.0,
+    "height": 20.0,
+    "wall": 1.5,
+    "pin_cy": 15.0,
+    "pin_radius": 1.3,
+    "pinout_side": "bottom",
+    "line_length": 12.0,
+    "rows": 2,
+    "row2_pin_cy": 5.0,
+    "row2_pinout_side": "top",
+    "row2_line_length": 12.0,
+    "row2_padding_left": -1.0,
+    "row2_pin_pitch_y": 0.0,
+    "row2_pin_radius": -1.0,
+    "cavity_size": 2.5
+  }
+}

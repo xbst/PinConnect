@@ -12,8 +12,11 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `PH-F` | latch | JST PH female, single row |
 | `SHERLOCK-F` | sherlock | Sherlock female, single row; body widens at 3 ways or fewer matching real Sherlock connectors |
 | `HDR-127` | header-male | 1.27 mm male pin header |
+| `HDR-127-2R` | header-male | 1.27 mm male pin header, two rows |
 | `HDR-200` | header-male | 2.00 mm male pin header |
+| `HDR-200-2R` | header-male | 2.00 mm male pin header, two rows |
 | `HDR-254` | header-male | 2.54 mm male pin header |
+| `HDR-254-2R` | header-male | 2.54 mm male pin header, two rows |
 | `ST-254` | screw-terminal | 2.54 mm pitch screw terminal |
 | `ST-508` | screw-terminal | 5.08 mm pitch screw terminal |
 | `ST-BR-508` | barrier | 5.08 mm barrier screw terminal strip |
@@ -24,14 +27,19 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `XT30-2+2` | xt30 | XT30 power + 2 signal pins |
 | `button` | button | Tactile push-button / switch footprint |
 | `slide-switch` | slide-switch | Slide switch; its pins are the slider's positions |
+| `none` | none | Nothing at all; marks a spot on the board that has no pinout to show |
 
 `Male` and `Female` refer to the gender of the plastic housing of the connector, not the pins, as that's what the end user will see when using the board.
 
 `USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML. `slide-switch` also highlights a location rather than a pinout, but it uses pins. Pins mark slider positions, rendered without pin circles.
 
+`none` goes further and draws nothing at all: a connector of that type is only a hotspot over the image, carrying a name and an optional description. Use it to point at anything with no pinout to show, such as a microcontroller, a mounting hole, a fuse holder, or a jumper you describe in words. It ignores any pins you give it, and both its list entry and its tooltip leave out the type name and pin count that other connectors carry, so nothing reads as "0-pin".
+
 Each type rendered, so you can pick one by its look:
 
 ![The bundled connector types, each drawn with a few sample pins and labeled with its name and style](../../assets/connector-gallery.webp)
+
+`none` is missing from that gallery on purpose, since it has nothing to draw.
 
 ## Anatomy of a type file
 
@@ -73,6 +81,7 @@ That is `MX-F-2R.toml` verbatim. Copying a bundled type that resembles what you 
   - `button` — a tactile push-button / switch footprint (a round actuator between two pads).
   - `slide-switch` — a slide switch: a recessed actuator track carrying a knurled slider block at each of its labeled positions; uses `cavity_size` for the slider.
   - `sherlock` — a Sherlock housing: two latch ears on the body edge, and a stepped, chamfered mating half on the narrow sizes; uses `flare_max_pins` / `flare_width`.
+  - `none` — nothing is drawn. The connector becomes a plain marker on the board; see the note above.
 
 ### `[geometry]`
 

@@ -156,10 +156,11 @@ Pins are listed in physical order. The first pin is pin 1.
 | `color` | no | `#888888` | Color of the pin's marker dot and its wire stub. Any CSS color works (`"#E74C3C"`, `"red"`), though the designer writes hex. Pin *label* text is colored by the [theme](themes.md), not by this. |
 | `row` | no | `1` | Which row the pin belongs to, for two-row connectors. Use `2` for the second row. |
 
-For single-row connectors, omit `row` (everything defaults to row 1). For two-row types like `MX-F-2R`, assign each pin to `row = 1` or `row = 2`; order within each row is the order the pins appear in the file.
+For single-row connectors, omit `row` (everything defaults to row 1). For two-row types like `MX-F-2R` or `HDR-254-2R`, assign each pin to `row = 1` or `row = 2`; order within each row is the order the pins appear in the file. Which side of the body each row sits on, and which way its labels run, comes from the connector type rather than from the board: on the two-row headers and `MX-F-2R`, row 1 labels below the body and row 2 above it.
 
 ## Tips
 
 - Connectors that are not physically on the image (for testing a new type, say) still render — just give them a bounding box in an empty area.
+- A connector of type `none` draws nothing, so it needs no `[[connector.pin]]` entries at all — give it a name, a bounding box, and usually a `description`, and it becomes a labeled marker over that part of the image. Use it for anything with no pinout to show.
 - Comments use `#` and are ignored, so you can annotate the file freely.
 - If a `type` has no matching file in `connector_dir` *or* the built-in types, `pinout-gen` stops with a clear error naming the missing type and both folders it searched.
