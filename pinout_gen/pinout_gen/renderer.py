@@ -1033,7 +1033,10 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-x{{visibility:hidden;align-self:center;border:0;background:none;color:var(--type-color);
   font:inherit;font-size:calc(18px*var(--font-scale));line-height:1;cursor:pointer;
   padding:4px 6px;margin:-6px -8px -6px 0}}
-.tt.pin .tt-x{{visibility:visible}}
+/* Only the shown block's button: in panel mode the other blocks are
+   visibility:hidden, and an unscoped rule would surface their buttons too
+   (visible as a second X wherever a long name wraps its header). */
+.tt.pin .tt-c>.tt-h .tt-x,.tt.pin .tt-b.on .tt-x{{visibility:visible}}
 .tt-x:hover{{color:var(--text)}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
