@@ -32,8 +32,10 @@ CONN_DIR = REPO / "pinout_gen" / "pinout_gen" / "connectors"
 ASSETS = REPO / "assets"
 
 # Grouped by family so the gallery reads sensibly rather than alphabetically.
+# "none" is deliberately absent: it draws nothing, so its card would be blank.
 GALLERY_ORDER = ["XH-F", "PH-F", "MX-F-1R", "MX-F-2R", "SHERLOCK-F",
-                 "HDR-127", "HDR-200", "HDR-254",
+                 "HDR-127", "HDR-127-2R", "HDR-200", "HDR-200-2R",
+                 "HDR-254", "HDR-254-2R",
                  "ST-254", "ST-508", "ST-BR-508", "ST-BR-950",
                  "XT30-2+2", "slide-switch", "button", "USB-C"]
 PALETTE = ["#E74C3C", "#F39C12", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C"]

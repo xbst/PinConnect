@@ -15,4 +15,4 @@ python tools/connector-gallery/generate.py
 
 Requires `playwright` and `pillow` (`pip install playwright pillow`). Playwright drives the system Chrome, so there is no browser download. Commit the regenerated `.webp` files alongside the connector change.
 
-A new type is picked up automatically once you add it to `GALLERY_ORDER` at the top of `generate.py`.
+A new type is picked up automatically once you add it to `GALLERY_ORDER` at the top of `generate.py`. `none` is left out on purpose, because it draws nothing and its card would be blank.

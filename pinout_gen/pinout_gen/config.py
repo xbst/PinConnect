@@ -127,6 +127,9 @@ _LABEL_STYLES = frozenset({"staggered", "staircase", "flat"})
 _BODY_STYLES = frozenset({
     "box", "latch", "grid", "header-male", "screw-terminal", "barrier", "button", "xt30",
     "sherlock", "slide-switch",
+    # "none" draws nothing at all: the connector is only a labeled hotspot on
+    # the board, for marking things that have no pinout to show.
+    "none",
 })
 _PINOUT_SIDES = frozenset({"bottom", "left", "top", "right"})
 

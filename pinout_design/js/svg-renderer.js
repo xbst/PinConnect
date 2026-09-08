@@ -113,15 +113,18 @@ function bodyPathHeaderMale(geo, nPerRow) {
   return d + " Z";
 }
 
+// One square post cross-section per position, on every row the type has.
 function headerMaleCavities(geo, nPerRow) {
   const cavity = geo.cavity_size > 0 ? geo.cavity_size : Math.min(geo.pin_pitch * 0.25, geo.height * 0.25);
   const half = cavity / 2;
   const fill = 'fill="var(--conn-cavity,#d0d0c8)"';
   const stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"';
-  return geo.pinCentersX(nPerRow).map((px) =>
-    `<rect x="${f1(px - half)}" y="${f1(geo.pin_cy - half)}" ` +
+  const rowCys = [geo.pin_cy];
+  if (geo.rows >= 2) rowCys.push(geo.row2_pin_cy);
+  return geo.pinCentersX(nPerRow).flatMap((px) => rowCys.map((rcy) =>
+    `<rect x="${f1(px - half)}" y="${f1(rcy - half)}" ` +
     `width="${f1(cavity)}" height="${f1(cavity)}" ${fill} ${stk}/>`
-  ).join("\n");
+  )).join("\n");
 }
 
 function polyD(points) {
@@ -473,6 +476,9 @@ function xt30Cavities(geo, nPerRow) {
 }
 
 export function renderConnectorSVG(connector, connType) {
+  // The "none" style has no body and no pinout: the connector is only a
+  // hotspot marking something on the board, so there is nothing to draw.
+  if (connType.style === "none") return "";
   const geo = connType.geometry;
   const pins = connector.pins;
   const n = pins.length;

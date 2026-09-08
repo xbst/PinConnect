@@ -1,6 +1,6 @@
 [project]
 name = "pinout-gen"
-version = "0.1.2"
+version = "0.1.3"
 description = "Interactive pinout diagram generator for documentation sites"
 requires-python = ">=3.9"
 dependencies = [

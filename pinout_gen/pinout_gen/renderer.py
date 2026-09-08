@@ -117,14 +117,19 @@ def _body_path_header_male(geo: ConnectorGeometry, n_per_row: int) -> str:
 
 
 def _header_male_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
+    """One square post cross-section per position, on every row the type has."""
     cavity = geo.cavity_size if geo.cavity_size > 0 else min(geo.pin_pitch * 0.25, geo.height * 0.25)
     half = cavity / 2
     fill = 'fill="var(--conn-cavity,#d0d0c8)"'
     stk = 'stroke="var(--conn-stroke,#555)" stroke-width="0.7"'
+    row_cys = [geo.pin_cy]
+    if geo.rows >= 2:
+        row_cys.append(geo.row2_pin_cy)
     return '\n'.join(
-        f'<rect x="{px - half:.1f}" y="{geo.pin_cy - half:.1f}" '
+        f'<rect x="{px - half:.1f}" y="{rcy - half:.1f}" '
         f'width="{cavity:.1f}" height="{cavity:.1f}" {fill} {stk}/>'
         for px in geo.pin_centers_x(n_per_row)
+        for rcy in row_cys
     )
 
 
@@ -494,6 +499,10 @@ def _xt30_cavities(geo: ConnectorGeometry, n_per_row: int) -> str:
 # ── Render one connector's pinout SVG ────────────────────────────────
 
 def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
+    # The "none" style has no body and no pinout: the connector is only a
+    # hotspot marking something on the board, so there is nothing to draw.
+    if conn_type.style == "none":
+        return ""
     geo = conn_type.geometry
     pins = connector.pins
     n = len(pins)
@@ -745,6 +754,21 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
 
 # ── Full HTML page ───────────────────────────────────────────────────
 
+def _meta_line(connector: Connector, conn_type: ConnectorType) -> str:
+    """The "<type> · <n>-pin" line under a connector's name.
+
+    Empty for the "none" style, which has neither a type worth naming nor pins
+    to count -- such a connector is a plain marker carrying only a name and a
+    description.
+    """
+    if conn_type.style == "none":
+        return ""
+    # A slide switch's "pins" are the places its actuator can sit, so it counts
+    # positions rather than calling them pins.
+    unit = "position" if conn_type.style == "slide-switch" else "pin"
+    return f"{conn_type.name} · {len(connector.pins)}-{unit}"
+
+
 def _theme_fonts(theme: Theme) -> list:
     """The theme's fonts (main first, then a distinct label font if any)."""
     fonts = [theme.font]
@@ -937,10 +961,7 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         sym_html[conn.id] = sym
         connector_data[conn.id] = {
             "name": conn.name, "svg": svg, "description": conn.description,
-            "typeName": ct.name, "pinCount": len(conn.pins),
-            # A slide switch's "pins" are the places its actuator can sit, so the
-            # tooltip counts positions rather than calling them pins.
-            "pinUnit": "position" if ct.style == "slide-switch" else "pin",
+            "meta": _meta_line(conn, ct),
             "symbol": f'<span class="tt-sym">{sym}</span>' if sym else "",
         }
     hotspot_rects: list[str] = []
@@ -959,11 +980,12 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
         # When any connector has a symbol, reserve the (possibly empty) slot on the
         # others too, so every connector name left-aligns.
         sym_span = f'<span class="cl-sym">{sym}</span>' if any_symbols else ""
+        meta = (f'<span class="cl-t">{html.escape(ct.name)} &middot; '
+                f'{len(conn.pins)}p</span>') if ct.style != "none" else ""
         sidebar_items.append(
             f'    <div class="cl-i" data-id="{html.escape(conn.id)}">'
             f'{sym_span}<span class="cl-n">{html.escape(conn.name)}</span>'
-            f'<span class="cl-t">{html.escape(ct.name)} &middot; '
-            f'{len(conn.pins)}p</span></div>'
+            f'{meta}</div>'
         )
     image_src = image_data_uri if image_data_uri is not None else board.image
     # Escape <, > and & inside the JSON so no string value (e.g. a description
@@ -1033,7 +1055,10 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-x{{visibility:hidden;align-self:center;border:0;background:none;color:var(--type-color);
   font:inherit;font-size:calc(18px*var(--font-scale));line-height:1;cursor:pointer;
   padding:4px 6px;margin:-6px -8px -6px 0}}
-.tt.pin .tt-x{{visibility:visible}}
+/* Only the shown block's button: in panel mode the other blocks are
+   visibility:hidden, and an unscoped rule would surface their buttons too
+   (visible as a second X wherever a long name wraps its header). */
+.tt.pin .tt-c>.tt-h .tt-x,.tt.pin .tt-b.on .tt-x{{visibility:visible}}
 .tt-x:hover{{color:var(--text)}}
 .tt-s svg{{max-width:100%;max-height:min(300px,55vh);width:auto;height:auto}}
 .tt-h{{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
@@ -1043,6 +1068,11 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-s{{display:flex;justify-content:center;padding:4px 0}}
 .tt-d{{font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);margin-top:10px;padding-top:8px;
   border-top:1px solid var(--divider);line-height:1.5}}
+/* A block with no drawing between them (the "none" style) would otherwise put
+   the header's rule and the description's rule back to back with nothing in
+   between, or trail the header's rule under nothing at all. */
+.tt-h:last-child{{margin-bottom:0;padding-bottom:0;border-bottom:0}}
+.tt-h+.tt-d{{border-top:0;padding-top:0}}
 /* Centered with inset + auto margins rather than left:50%/translate: an
    absolutely positioned box's shrink-to-fit width is capped by the room to the
    right of its `left`, so the translate trick halved the pill and wrapped it
@@ -1261,12 +1291,16 @@ function mark(id){{const h=hs(id),l=li(id);if(h)h.classList.add('active');if(l)l
 function unmark(){{document.querySelectorAll('.hs.active,.cl-i.active').forEach(e=>e.classList.remove('active'))}}
 function esc(s){{return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;')}}
+/* meta and svg are both empty for a connector whose type draws nothing (the
+   "none" style): such a block is just a name and a description, so the type
+   line and the drawing slot are left out rather than rendered blank. */
 function block(d){{
   let dh=d.description?`<div class="tt-d">${{esc(d.description)}}</div>`:'';
-  return `<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+
-    `<span class="tt-t">${{esc(d.typeName)}} · ${{d.pinCount}}-${{d.pinUnit||'pin'}}</span>`+
+  let mh=d.meta?`<span class="tt-t">${{esc(d.meta)}}</span>`:'';
+  let sh=d.svg?`<div class="tt-s">${{d.svg}}</div>`:'';
+  return `<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+mh+
     `<button class="tt-x" type="button" title="Close" aria-label="Close">&times;</button></div>`+
-    `<div class="tt-s">${{d.svg}}</div>`+dh;
+    sh+dh;
 }}
 ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide()}}}});
 function blk(id){{return [...ttc.querySelectorAll('.tt-b')].find(b=>b.dataset.id===id)||null}}
