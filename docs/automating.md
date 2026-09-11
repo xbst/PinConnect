@@ -22,7 +22,7 @@ A virtual environment is recommended but optional:
 
 ```powershell
 python -m venv venv
-./venv/Scripts/activate
+.\venv\Scripts\activate
 pip install .\pinout_gen
 ```
 
@@ -151,7 +151,3 @@ All of these print to stderr and exit with status 1.
 - **`Error: port must be between 0 and 65535`** — an out-of-range port passed to `--serve`.
 
 A malformed config reports the specific problem, such as a TOML syntax error, a missing required key, an unknown `[geometry]` key, or a duplicate connector `id`, rather than a traceback.
-
-## The extension extra
-
-The package defines an optional `extension` extra (`pip install ./pinout_gen[extension]`) that adds the `markdown` library. Embedding pinouts in a docs site is handled by the separate [pinout-embed](embedding.md) package, so the normal workflow does not need it.

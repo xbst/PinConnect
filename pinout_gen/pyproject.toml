@@ -16,9 +16,6 @@ build-backend = "setuptools.build_meta"
 [project.scripts]
 pinout-gen = "pinout_gen.cli:main"
 
-[project.optional-dependencies]
-extension = ["markdown>=3.4"]
-
 [tool.setuptools]
 packages = ["pinout_gen"]
 
