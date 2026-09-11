@@ -1,41 +1,58 @@
-import { ConnectorType, ConnectorGeometry, Board, Connector, Pin } from "./board-model.js";
+import { Board, Connector, Pin } from "./board-model.js";
 import { BoardState } from "./state.js";
 import { EditorPanel } from "./editor-panel.js";
 import { BoardPanel } from "./board-panel.js";
 import { ConnectorPanel } from "./connector-panel.js";
 import { serializeBoardToml } from "./toml-io.js";
+import * as runtime from "./runtime.js";
+import { openGenerate, openAbout, maybeShowAboutOnFirstVisit } from "./dialogs.js";
 
 const state = new BoardState();
 
-async function loadConnectorTypes() {
-  const fetchOptions = { cache: "no-store" };
-  const resp = await fetch("connectors/index.json", fetchOptions);
-  const names = await resp.json();
-  for (const name of names) {
-    const r = await fetch(`connectors/${name}.json`, fetchOptions);
-    const data = await r.json();
-    state.connectorTypes.set(name, new ConnectorType(
-      data.name, data.style, new ConnectorGeometry(data.geometry)
-    ));
+// Connector geometry, themes and the symbol list all come from pinout-gen
+// itself now, so there is nothing here to keep in step with the Python side.
+async function loadCatalogs() {
+  const [connectors, themes, symbols] = await Promise.all([
+    runtime.connectorCatalog(), runtime.themeCatalog(), runtime.symbolCatalog(),
+  ]);
+  state.connectorTypes.clear();
+  for (const ct of connectors) {
+    state.connectorTypes.set(ct.slug, { name: ct.name, style: ct.style, geometry: ct.geometry });
   }
+  state.themes = themes;
+  state.symbolNames = symbols;
 }
 
-async function loadThemes() {
-  try {
-    const resp = await fetch("themes/index.json", { cache: "no-store" });
-    state.themes = await resp.json();
-  } catch (e) {
-    state.themes = [{ name: "default", display: "Default" }];
-  }
-}
-
-async function loadSymbols() {
-  try {
-    const resp = await fetch("symbols.json", { cache: "no-store" });
-    state.symbolNames = await resp.json();
-  } catch (e) {
-    state.symbolNames = [];
-  }
+// Boot progress lives in the toolbar. Loading an image and drawing hotspots
+// works while this runs; only the connector drawing and Generate have to wait.
+function setupRuntimeStatus() {
+  const el = document.getElementById("runtime-status");
+  const genBtn = document.getElementById("generate-btn");
+  const drawBtn = document.getElementById("draw-mode-btn");
+  const labels = {
+    runtime: "Starting renderer…",
+    package: "Loading connectors…",
+    ready: "",
+  };
+  runtime.onProgress((phase, detail) => {
+    if (phase === "error") {
+      el.className = "runtime-status error";
+      el.textContent = "Renderer unavailable";
+      el.title = detail;
+      genBtn.disabled = true;
+      drawBtn.disabled = true;
+      drawBtn.title = "The renderer could not start, so connector types are unavailable.";
+      return;
+    }
+    el.className = "runtime-status" + (phase === "ready" ? " ready" : "");
+    el.textContent = labels[phase] ?? "";
+    el.title = "";
+    const ready = phase === "ready";
+    genBtn.disabled = !ready;
+    // Drawing a box creates a connector, which needs a type from the catalog.
+    drawBtn.disabled = !ready;
+    drawBtn.title = ready ? "" : "Waiting for the renderer to start…";
+  });
 }
 
 function setupThemeSelect() {
@@ -53,6 +70,7 @@ function setupThemeSelect() {
   refresh();
   sel.addEventListener("change", () => state.setTheme(sel.value, "visual"));
   state.on("board-changed", refresh);
+  state.on("catalogs-loaded", refresh);
 }
 
 function setupResizers() {
@@ -153,9 +171,7 @@ function setupFileIO(editorPanel) {
 }
 
 async function init() {
-  await loadConnectorTypes();
-  await loadThemes();
-  await loadSymbols();
+  setupRuntimeStatus();
 
   const editorPanel = new EditorPanel(
     document.getElementById("editor-container"), state
@@ -213,6 +229,20 @@ width = 800
 height = 600
 `;
   editorPanel.setValue(defaultToml);
+
+  document.getElementById("generate-btn").addEventListener("click", () => {
+    openGenerate(state, editorPanel.getValue());
+  });
+  document.getElementById("about-btn").addEventListener("click", openAbout);
+
+  // The renderer boots in the background. Refresh the pieces that depend on it
+  // with a dedicated event: board-changed would make the editor regenerate the
+  // TOML from the model and throw away the user's comments.
+  loadCatalogs()
+    .then(() => state.emit("catalogs-loaded", {}))
+    .catch(() => { /* the toolbar status already reports the failure */ });
+
+  maybeShowAboutOnFirstVisit();
 }
 
 init();

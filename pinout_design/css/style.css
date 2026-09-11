@@ -743,3 +743,188 @@ html, body {
   background: var(--border);
   margin: 0 2px;
 }
+
+/* ── Runtime status, About button, Generate ──────────────────────── */
+
+.toolbar button.primary {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.toolbar button.primary:disabled,
+.toolbar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: var(--border);
+  background: var(--bg-panel-alt);
+  color: var(--text-dim);
+}
+
+.toolbar button.icon-btn {
+  padding: 4px 9px;
+  font-weight: 600;
+}
+
+/* Boot progress. Reserves no space once ready, so the toolbar settles. */
+.runtime-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.runtime-status.ready { display: none; }
+.runtime-status.error { color: var(--danger); cursor: help; }
+
+/* ── Modals ──────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 460px;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-wide { width: 1000px; }
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  height: var(--panel-header-h);
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-close {
+  margin-left: auto;
+  padding: 0 6px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover { color: var(--text); }
+
+.modal-body {
+  overflow: auto;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.modal-body p { margin: 0 0 10px; }
+.modal-body code {
+  padding: 1px 4px;
+  background: var(--bg-panel-alt);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.about-links { display: flex; gap: 16px; margin-top: 14px; }
+.about-links a { color: var(--accent-hover); }
+
+/* ── Generate dialog ─────────────────────────────────────────────── */
+
+.gen-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.gen-bar button {
+  padding: 5px 11px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.gen-bar button:hover:not(:disabled) {
+  border-color: var(--border-focus);
+  background: var(--accent-bg);
+}
+
+.gen-bar button:disabled { opacity: 0.45; cursor: default; }
+.gen-spacer { flex: 1; }
+.gen-theme { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+.gen-theme select {
+  padding: 4px 6px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.gen-status { font-size: 11px; color: var(--text-dim); }
+
+/* The preview is the generated page itself, in an iframe, at a height that
+   leaves the toolbar and the note visible inside the modal. */
+.gen-preview {
+  height: min(60vh, 560px);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.gen-preview iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+.gen-error {
+  margin: 0;
+  padding: 12px;
+  color: var(--danger);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.gen-note { margin: 10px 0 0; font-size: 11px; color: var(--text-dim); }
+
+@media (max-width: 720px) {
+  .modal-backdrop { padding: 0; }
+  .modal { width: 100%; height: 100%; max-height: 100%; border: 0; border-radius: 0; }
+  .gen-bar { flex-wrap: wrap; }
+  .gen-spacer { display: none; }
+
+  /* The toolbar is one fixed-height row that does not fit a phone, so it
+     scrolled the whole page sideways. Let it wrap instead. The title's auto
+     margin has to go, or it would push every control onto its own line. */
+  .toolbar {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .toolbar-title { margin-right: 4px; }
+  .toolbar .separator { display: none; }
+}
