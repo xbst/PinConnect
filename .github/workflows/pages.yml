@@ -1,0 +1,72 @@
+name: Deploy designer to GitHub Pages
+
+# The designer is a static site that runs pinout-gen in the browser under
+# Pyodide, so publishing it needs no server: build the Python payload it
+# fetches at startup, then upload the folder.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "pinout_design/**"
+      - "pinout_gen/pinout_gen/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it; a half-published site
+# is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the Pyodide payload
+        run: python pinout_design/tools/build-payload.py
+
+      - name: Stage the site
+        run: |
+          mkdir -p _site
+          cp pinout_design/index.html _site/
+          cp pinout_design/pinout_gen.zip _site/
+          cp -r pinout_design/css _site/css
+          cp -r pinout_design/js _site/js
+          echo "pinconnect.isiks.tech" > _site/CNAME
+
+      - name: Check the payload landed
+        run: |
+          test -s _site/pinout_gen.zip
+          python - <<'PY'
+          import zipfile
+          names = zipfile.ZipFile("_site/pinout_gen.zip").namelist()
+          assert "bridge.py" in names, "payload is missing the bridge module"
+          assert any(n.endswith(".toml") for n in names), "payload has no connector or theme data"
+          print(f"payload ok: {len(names)} entries")
+          PY
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
