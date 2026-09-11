@@ -137,10 +137,40 @@ export function previewConnectorSvg(connector) {
 }
 
 /**
+ * Turn a Python exception into something worth showing someone.
+ *
+ * Pyodide puts the whole traceback in .message, so the sentence bridge.py
+ * raises on purpose ends up last, behind frames and virtual filesystem paths
+ * the reader has never seen. Keep the final line, which is the message.
+ */
+function pythonMessage(e) {
+  const raw = (e && e.message ? e.message : String(e)).trim();
+  if (!raw.includes("Traceback (most recent call last)")) return raw;
+  const lines = raw.split("\n").filter((l) => l.trim() && !/^\s+/.test(l));
+  const last = lines[lines.length - 1] || raw;
+  // Drop the exception class, keep what it says. Multi-line messages keep
+  // their tail, which is where bridge.py puts the actionable half.
+  const body = last.replace(/^\w[\w.]*(Error|Exception):\s*/, "");
+  const tail = raw.slice(raw.indexOf(last) + last.length).trim();
+  return tail ? `${body}\n${tail}` : body;
+}
+
+/**
  * Render a board TOML to a finished pinout page.
  * Passing an image data URI embeds the image; omitting it leaves the page
  * referencing the image by the relative path in the config.
+ *
+ * Resolves to {html, warnings}. A warning means the board asked for something
+ * the browser cannot do, such as reading connector types from a local folder,
+ * so the page rendered but would not match what the CLI produces.
  */
 export async function generate(boardToml, { imageDataUri = "", themeName = "" } = {}) {
-  return (await bridge()).generate(boardToml, imageDataUri, themeName);
+  let raw;
+  try {
+    raw = (await bridge()).generate(boardToml, imageDataUri, themeName);
+  } catch (e) {
+    throw new Error(pythonMessage(e));
+  }
+  const out = JSON.parse(raw);
+  return { html: out.html, warnings: out.warnings || [] };
 }

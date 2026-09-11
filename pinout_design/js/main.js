@@ -198,6 +198,13 @@ async function init() {
   redoBtn.addEventListener("click", () => { state.redo(); editorPanel._syncFromState(); });
 
   document.addEventListener("keydown", (e) => {
+    // A dialog is on top: its own keys (Escape, typing in its controls) are its
+    // business, and the board must not change behind it. Delete used to remove
+    // the selected connector while the Generate preview sat there showing the
+    // pinout that still contained it, and Ctrl+Z would rewrite the TOML the
+    // open dialog had already captured.
+    if (document.querySelector(".modal-backdrop")) return;
+
     if (e.key === "Delete" && state.selectedConnectorId) {
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
       state.removeConnector(state.selectedConnectorId, "visual");
@@ -240,7 +247,20 @@ height = 600
   // TOML from the model and throw away the user's comments.
   loadCatalogs()
     .then(() => state.emit("catalogs-loaded", {}))
-    .catch(() => { /* the toolbar status already reports the failure */ });
+    .catch((e) => {
+      // Only a boot failure reaches the toolbar on its own. If the runtime
+      // started and a catalog call then threw, nothing reported it: the status
+      // read "ready" while the designer had no connector types at all, so every
+      // connector drew as "Unknown type" and Generate produced errors.
+      const el = document.getElementById("runtime-status");
+      if (el && !el.classList.contains("error")) {
+        el.className = "runtime-status error";
+        el.textContent = "Connector types unavailable";
+        el.title = e && e.message ? e.message : String(e);
+        document.getElementById("generate-btn").disabled = true;
+        document.getElementById("draw-mode-btn").disabled = true;
+      }
+    });
 
   maybeShowAboutOnFirstVisit();
 }

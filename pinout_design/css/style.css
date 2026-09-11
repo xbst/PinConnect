@@ -915,7 +915,7 @@ html, body {
 
 .gen-note { margin: 10px 0 0; font-size: 11px; color: var(--text-dim); }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .modal-backdrop { padding: 0; }
   .modal { width: 100%; height: 100%; max-height: 100%; border: 0; border-radius: 0; }
   .gen-bar { flex-wrap: wrap; }
@@ -951,4 +951,18 @@ html, body {
   background: var(--accent-bg);
   border-color: var(--accent);
   color: var(--accent-hover);
+}
+
+/* A board asking for something the browser cannot do: it still rendered, but
+   not the way pinout-gen would. Sits above the preview so it is read before
+   the file is downloaded. */
+.gen-warn {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  background: var(--danger-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
 }

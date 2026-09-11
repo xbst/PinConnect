@@ -78,6 +78,7 @@ export async function openGenerate(state, tomlText) {
     `<span class="gen-spacer"></span>` +
     `<button id="gen-download" class="primary">Download</button>` +
     `</div>` +
+    `<p class="gen-warn" id="gen-warn" hidden></p>` +
     `<div class="gen-preview" id="gen-preview"></div>` +
     `<p class="gen-note">${hasImage
       ? "Embedding gives one self-contained file. Without it the page is smaller but loads the board image from beside it."
@@ -119,13 +120,35 @@ export async function openGenerate(state, tomlText) {
   // The preview is always embedded: a referenced image cannot resolve from a
   // blob URL, so the board would show as broken art. The size shown is the
   // size of what Download would give you, which is not the same thing.
+  //
+  // embeddedHtml is only ever read while `ok` is true. Without that flag a
+  // failed render left the previous page in the variable, and Download handed
+  // it over as though it were current: a file for the wrong theme, or — on the
+  // first render — a file containing the word "null".
   let embeddedHtml = null;
+  let ok = false;
+  const downloadBtn = body.querySelector("#gen-download");
+
+  const setOk = (value) => {
+    ok = value;
+    downloadBtn.disabled = !value;
+    downloadBtn.title = value ? "" : "Nothing to download until the pinout renders.";
+  };
+  setOk(false);
+
+  const showWarnings = (warnings) => {
+    const el = body.querySelector("#gen-warn");
+    if (!warnings.length) { el.hidden = true; el.textContent = ""; return; }
+    el.hidden = false;
+    el.textContent = warnings.join(" ");
+  };
 
   const showSize = async () => {
+    if (!ok) return;
     try {
       statusEl.textContent = embedEl.checked
         ? kb(embeddedHtml)
-        : kb(await render(false));
+        : kb((await render(false)).html);
     } catch (e) {
       statusEl.textContent = "Failed";
     }
@@ -134,12 +157,17 @@ export async function openGenerate(state, tomlText) {
   const refresh = async () => {
     statusEl.textContent = "Rendering…";
     try {
-      embeddedHtml = await render(true);
+      const out = await render(true);
+      embeddedHtml = out.html;
+      setOk(true);
+      showWarnings(out.warnings);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       previewUrl = URL.createObjectURL(new Blob([embeddedHtml], { type: "text/html" }));
       previewEl.innerHTML = `<iframe src="${previewUrl}" title="Pinout preview"></iframe>`;
       await showSize();
     } catch (e) {
+      setOk(false);
+      showWarnings([]);
       previewEl.innerHTML = `<pre class="gen-error">${esc(e && e.message ? e.message : e)}</pre>`;
       statusEl.textContent = "Failed";
     }
@@ -149,9 +177,10 @@ export async function openGenerate(state, tomlText) {
 
   themeEl.addEventListener("change", refresh);
   embedEl.addEventListener("change", showSize);
-  body.querySelector("#gen-download").addEventListener("click", async () => {
+  downloadBtn.addEventListener("click", async () => {
+    if (!ok) return;
     try {
-      const html = embedEl.checked ? embeddedHtml : await render(false);
+      const html = embedEl.checked ? embeddedHtml : (await render(false)).html;
       saveFile(html, `${stem}.pinout.html`, "text/html");
     } catch (e) {
       statusEl.textContent = "Failed";

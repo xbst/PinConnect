@@ -137,11 +137,43 @@ def preview_connector_svg(conn_json: str) -> str:
     return render_connector_svg(_connector_from_dict(data), conn_type)
 
 
+_DEFAULT_CONNECTOR_DIR = "./connectors"
+_DEFAULT_THEME_DIR = "./themes"
+
+
+def _local_dir_warnings(board: Board) -> list[str]:
+    """Warn when the board points at files the browser cannot read.
+
+    A board-local directory silently loses to the bundled set here, because
+    nothing was copied into the virtual filesystem alongside the config. When
+    the name it defines also exists in the bundled set, no loader ever fails:
+    the page just renders with the wrong definition. The CLI, which can read
+    the directory, would produce a different file. Say so rather than hand back
+    output that quietly disagrees with it.
+    """
+    out = []
+    if board.connector_dir and board.connector_dir != _DEFAULT_CONNECTOR_DIR:
+        out.append(
+            f"This board reads connector types from '{board.connector_dir}', which "
+            "the designer cannot open. Any type defined there was drawn with the "
+            "bundled definition of the same name instead, so pinout-gen would "
+            "produce a different file."
+        )
+    if board.theme_dir and board.theme_dir != _DEFAULT_THEME_DIR:
+        out.append(
+            f"This board reads themes from '{board.theme_dir}', which the designer "
+            "cannot open. A theme defined there was replaced by the bundled theme "
+            "of the same name, or by the default."
+        )
+    return out
+
+
 def generate(board_toml: str, image_data_uri: str = "", theme_name: str = "") -> str:
     """Render a board TOML to a finished pinout page.
 
-    This runs the same sequence the CLI runs, against the same loaders, so the
-    result matches ``pinout-gen`` byte for byte for the same input.
+    Runs the same sequence the CLI runs, against the same loaders, so the result
+    matches ``pinout-gen`` byte for byte for the same input.  Returns JSON
+    holding the page and any warnings about input the browser cannot honor.
     """
     WORK.mkdir(parents=True, exist_ok=True)
     BOARD_PATH.write_text(board_toml, encoding="utf-8")
@@ -156,8 +188,9 @@ def generate(board_toml: str, image_data_uri: str = "", theme_name: str = "") ->
     except FileNotFoundError as e:
         raise RuntimeError(f"{e}\n\n{_CUSTOM_DIR_HINT}") from None
 
-    return generate_html(
+    html = generate_html(
         board, connector_types,
         theme=theme,
         image_data_uri=image_data_uri or None,
     )
+    return json.dumps({"html": html, "warnings": _local_dir_warnings(board)})
