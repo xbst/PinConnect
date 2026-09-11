@@ -136,24 +136,18 @@ A type is one shape per family, not one per size. Where a family changes shape r
 
 There are two places a type can live, depending on whether it is just for your board or belongs in the shared library.
 
-**For one board (no changes to the package).** Create `<TYPE>.toml` in the board's `connector_dir` — `./connectors` next to the board config unless you set otherwise — and reference it with `type = "<TYPE>"`. That folder is searched first, so a file named after a bundled type also lets you override one locally. Note that the designer's type dropdown only mirrors the bundled library, so a board-local type renders in `pinout-gen` but will not be offered in the designer.
+**For one board (no changes to the package).** Create `<TYPE>.toml` in the board's `connector_dir` — `./connectors` next to the board config unless you set otherwise — and reference it with `type = "<TYPE>"`. That folder is searched first, so a file named after a bundled type also lets you override one locally.
 
-**For the shared library.** Create `pinout_gen/pinout_gen/connectors/<TYPE>.toml` instead, then regenerate the designer's JSON mirror (see below) so the type appears in the dropdown, and commit both.
+A board-local type is only visible to `pinout-gen`. The designer has your config text but not your folder, so it cannot offer the type, and if the name matches a bundled one it will quietly draw the bundled shape instead. It says so when that happens. Render those boards from the [command line](../automating.md).
+
+**For the shared library.** Create `pinout_gen/pinout_gen/connectors/<TYPE>.toml` instead. It is then available everywhere, the designer included, with nothing else to regenerate.
 
 Either way, copy an existing type with a similar body as a starting point, and iterate by generating a test board and eyeballing the result — a connector does not have to sit on a real board image while you tune geometry.
 
-A new `style` cannot be added from a config file, because each one is custom drawing code. You can open a feature request for new designs, or design your own and open a pull request — making sure both the generator (`renderer.py`) and the designer (`svg-renderer.js`) have the code, or the two will disagree.
+A new `style` cannot be added from a config file, because each one is custom drawing code. You can open a feature request for new designs, or write your own in `renderer.py` and open a pull request. There is one renderer, so a style is written once and the designer picks it up automatically.
 
-## Keeping the designer in sync
+## The designer and the generator cannot drift
 
-The [designer](../pinout-design.md) runs in the browser and cannot read these TOML files directly. It uses JSON mirrors in `pinout_design/connectors/`, generated from the TOML by `pinout_design/tools/convert-connectors.py`.
+Nothing needs regenerating after you add or edit a type. The designer loads the `pinout_gen` package into the browser and reads these TOML files through it, so the bundled library is the single source of truth for both.
 
-After adding or editing a type, regenerate the JSON:
-
-```bash
-python pinout_design/tools/convert-connectors.py
-```
-
-The same script also mirrors the bundled **theme** names (to `pinout_design/themes/index.json`) and the connector **symbol** names (to `pinout_design/symbols.json`), which populate the designer's Theme selector and Symbol field — so re-run it after adding a theme, too.
-
-The TOML files are the source of truth; the JSON is a build artifact. Editing one without the other leaves the designer and generator out of sync.
+This was not always so: the designer used to carry a hand-written copy of the drawing code and JSON copies of every type, which had to be kept in step by hand. Both are gone.

@@ -1,57 +1,52 @@
-# pinout-design
+# The designer
 
-The designer is a browser-based tool for building a [board TOML config](pinout-gen/board-toml.md) visually. You load a board image, draw a box over each connector, label the pins, and the tool writes the TOML for you. It is a static web app so there is nothing to install.
+The designer is where a board photo becomes a pinout. You load an image, draw a box over each connector, label the pins, and press Generate. It also writes a [board config](reference/board-toml.md) as you work, which you save so you can come back to the board later.
 
-## Running the designer
+It runs the real generator in your browser rather than an imitation of it, so the preview is the file you download, and that file is identical to what the `pinout-gen` command produces from the same config.
 
-The designer reads its connector, theme, and symbol data over `fetch()`, so it must be served over HTTP. Opening `index.html` directly with `file://` will not work.
+## Running it
 
-Start a local server from the `pinout_design` folder:
+Use the hosted designer at **<https://pinconnect.isiks.tech>**. Nothing is uploaded: your photo and your config stay in the browser.
 
-**PowerShell**
-
-```powershell
-cd pinout_design
-python -m http.server 8000
-```
-
-**Linux / macOS**
+To run it yourself, install the tool and start serve mode:
 
 ```bash
-cd pinout_design
-python3 -m http.server 8000
+pip install ./pinout_gen
+pinout-gen --serve
 ```
 
-Then open <http://localhost:8000> in your browser. Stop the server with `Ctrl+C` (on the terminal) when you are done.
+That picks a free port, opens a browser, and prints the address. Add `--serve 8000` to choose the port, or `--no-browser` to leave the browser alone.
+
+The designer must be served over HTTP. It fetches its runtime at startup, so opening `index.html` from disk does not work.
 
 ## The interface
 
 ![The PinConnect Designer with the sample board loaded: TOML source on the left, the board image top-right, and the connector editor bottom-right](../assets/designer-overview.png)
 
-The window has a toolbar across the top and three panels:
+A toolbar across the top, and three panels whose dividers you can drag:
 
-- **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, and a **Theme** selector.
-- **TOML Source** (left): a live, editable view of the config. Edits here update the diagram, and vice versa.
-- **Board Image** (top right): your board photo with connector boxes overlaid. Has an **+ Add Connector** button.
-- **Connector Editor** (bottom right): fields and pin list for the currently selected connector.
+- **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, **Generate**, a **Theme** selector, and **?** for the About box.
+- **TOML Source** (left): a live, editable view of the config. Edits here update the diagram, and every visual change updates the text.
+- **Board Image** (top right): your photo with connector boxes over it, and the **+ Add Connector** button.
+- **Connector Editor** (bottom right): fields and pin list for the selected connector.
 
-The panel dividers can be dragged to resize.
+While the runtime is still starting, the toolbar shows its progress and **Generate** and **+ Add Connector** are disabled. Loading a photo works straight away.
 
-The **Theme** selector sets the board's `theme` — the colors, fonts, and behaviors `pinout-gen` applies to the generated page, including the connector drawings' housing, cavity, outline, and pin-label colors (the connector *shapes* are unchanged). Note that the designer's own preview always uses its own fixed colors, so a theme's effect only shows in the generated pinout. The selector lists the bundled themes; a custom theme name you type into the TOML is preserved and shown too. See [themes](pinout-gen/themes.md) for what a theme controls and how to make your own.
+The **Theme** selector sets the board's `theme`, which controls the colors, fonts and layout of the generated page, including the housing, cavity, outline and label colors of the connector drawings. The connector *shapes* do not change. The designer's own chrome keeps its fixed dark colors whichever theme you pick; to see a theme, use Generate. See [Themes](reference/themes.md).
 
 ## Workflow
 
 ### 1. Load a board image
 
-Click **Open Image** and choose your board image (top-down; any image format your browser can display). The image sets the coordinate space for everything you place on it.
+Click **Open Image** and choose your photo, taken top-down. It sets the coordinate space for everything you place on it.
 
 ![A board photo loaded into the Board Image panel, before any connectors are added](../assets/workflow-1-image.png)
 
 ### 2. Add connectors
 
-Click **+ Add Connector** (the button switches to **Cancel Draw**), then drag a box over a connector on the image. Releasing the drag opens the **New Connector** dialog, where you set the **ID** (one is suggested — it must be unique and non-empty), an optional **Name** (defaults to the ID), and the **Type**. Click **Create** to place it, or **Cancel** to discard the box. Very small boxes are ignored, so drag a real rectangle rather than clicking.
+Click **+ Add Connector** (it becomes **Cancel Draw**), then drag a box over a connector. Releasing the drag opens the **New Connector** dialog, where you set the **ID** (one is suggested; it must be unique and non-empty), an optional **Name** (defaults to the ID), and the **Type**. Click **Create** to place it, or **Cancel** to discard the box. Very small boxes are ignored, so drag a real rectangle rather than clicking.
 
-Draw mode switches off after each connector is created, so click **+ Add Connector** again for the next one. Click **Cancel Draw** to leave draw mode without adding anything.
+Draw mode switches off after each connector, so click **+ Add Connector** again for the next.
 
 ![The board with a labeled box drawn over each connector](../assets/workflow-2-connectors.png)
 
@@ -60,7 +55,7 @@ In the board panel you can:
 - **Select** a connector by clicking its box.
 - **Move** it by dragging.
 - **Resize** it using the handles on a selected box.
-- **Delete** the selected connector with the `Delete` key (ignored while you are typing in a text field).
+- **Delete** the selected connector with the `Delete` key, which is ignored while you are typing in a text field.
 - **Zoom** with the mouse wheel, centered on the cursor, and **pan** by dragging with the middle or right mouse button, to line boxes up precisely.
 
 ### 3. Edit the connector
@@ -68,27 +63,27 @@ In the board panel you can:
 With a connector selected, the **Connector Editor** shows:
 
 - **ID**: unique identifier.
-- **Name**: label shown on the diagram.
-- **Type**: connector type, chosen from the built-in library (drives the rendered shape).
-- **Orient.**: rotation: 0°, 90°, 180°, or 270°.
-- **Labels**: flat, staircase or staggered layout of pin labels on horizontal connectors (avoids overlaps).
-- **Desc.**: optional longer description.
-- **Symbol**: optional icon shown beside the connector in the generated pinout's list and tooltip — a named icon (`power`, `fan`, …), a literal glyph, or `none`. The field suggests the built-in names as you type. See [`symbol`](pinout-gen/board-toml.md#symbol).
+- **Name**: the label shown on the diagram.
+- **Type**: the connector type, which drives the rendered shape.
+- **Orient.**: rotation, one of 0°, 90°, 180° or 270°.
+- **Labels**: flat, staircase or staggered pin labels on horizontal connectors, to avoid overlaps.
+- **Desc.**: an optional longer description.
+- **Symbol**: an optional icon beside the connector in the generated list and tooltip. A named icon such as `power` or `fan`, a literal glyph, or `none`. The field suggests the built-in names as you type. See [`symbol`](reference/board-toml.md#symbol).
 
-A small preview shows the selected connector type as it will render.
+The preview underneath is drawn by the generator, so it is exactly the shape the finished pinout will contain.
 
 ![The Connector Editor showing the fields for the CAN connector, with a live preview of the MX-F-2R type below them](../assets/workflow-3-connector.png)
 
 ### 4. Edit the pins
 
-The **Pins** section lists the connector's pins in order. You can:
+The **Pins** section lists the connector's pins in order:
 
-- Click **+ Add Pin** to append a pin.
+- **+ Add Pin** appends a pin.
 - Edit each pin's **name** inline.
-- Click the **color swatch** to pick a color — either a preset (Red, Black, Yellow, Blue, Green, Gray, White, Orange, Purple, Teal) or a custom hex value.
-- Set the **row** (R1 / R2) for two-row connector types.
-- **Reorder** pins by dragging the handle (≡).
-- **Delete** a pin with the × button.
+- Click the **color swatch** for a preset or a custom hex value.
+- Set the **row** (R1 / R2) on two-row connector types.
+- **Reorder** by dragging the handle.
+- **Delete** with the × button.
 
 Pin order in the list is the physical pin order in the output.
 
@@ -96,19 +91,33 @@ Pin order in the list is the physical pin order in the output.
 
 ### 5. Edit the TOML directly (optional)
 
-The **TOML Source** pane is fully editable. Anything you type there updates the diagram live, and any change you make in the visual panels updates the text. This is handy for bulk edits or pasting in an existing config.
+The **TOML Source** pane is fully editable, and the two directions stay in step: type there and the diagram updates, change something visually and the text updates. Useful for bulk edits or pasting in a config you already have.
+
+Your comments and formatting survive. The designer patches the specific lines it needs rather than rewriting the file.
 
 ![The TOML Source pane showing the generated, syntax-highlighted config](../assets/workflow-5-toml.png)
 
-### 6. Save
+### 6. Generate the pinout
 
-Click **Save TOML** to save the config. Put it next to your board image so `pinout-gen` can find the image later.
+Click **Generate**. The dialog renders the pinout and shows the real page, not an approximation.
 
-> **The designer does not auto-save.** There is no recovery of unsaved work: closing or reloading the tab discards everything without warning. Save your TOML before you leave.
+![The Generate dialog showing a rendered pinout, with a theme selector, an embed toggle and a Download button](../assets/workflow-7-generate.png)
 
-![The toolbar, with the Save TOML button at the right-hand end](../assets/workflow-6-save.png)
+- **Theme** re-renders with any of the built-in themes, so you can compare before committing.
+- **Embed image** writes the board photo into the HTML. On, you get one self-contained file. Off, the file is far smaller but needs the photo beside it. The size beside the toggle is the size of what you are about to download.
+- **Download** saves the page as `<image name>.pinout.html`.
 
-To resume work, use **Open TOML** to load a config back in, and **Open Image** to reload its board image.
+If the config cannot be rendered, the dialog shows why and Download is disabled until it can.
+
+### 7. Save the config
+
+Click **Save TOML**, and keep the file with your board photo.
+
+The pinout you downloaded is finished and standalone, so this is not for it. It is for the next revision of the board: **Open TOML** loads the config back in, **Open Image** brings back the photo, and you carry on from where you left off.
+
+> **The designer does not auto-save.** Closing or reloading the tab discards unsaved work without warning.
+
+![The toolbar, with the Save TOML button and the Generate button](../assets/workflow-6-save.png)
 
 ## Keyboard shortcuts
 
@@ -119,14 +128,28 @@ To resume work, use **Open TOML** to load a config back in, and **Open Image** t
 | `Ctrl+S` | Save TOML |
 | `Delete` | Delete the selected connector |
 
-Use `Cmd` in place of `Ctrl` on macOS. Undo and Redo are also toolbar buttons, and `Delete` is ignored while you are typing in a text field.
+Use `Cmd` in place of `Ctrl` on macOS. Undo and Redo are also toolbar buttons. `Delete` is ignored while you are typing in a text field, and all of these are ignored while a dialog is open.
 
-## After the designer
+## Troubleshooting
 
-The designer produces the TOML needed for `pinout-gen`, it doesn't generate the interactive pinout itself. Once you have saved the config, continue with [pinout-gen](pinout-gen/generating-html.md) to render the HTML.
+### "Renderer unavailable" in the toolbar
 
-## Adding new connector types
+The designer downloads its Python runtime from `cdn.jsdelivr.net` on first load. If that host is blocked by a network policy, an extension or an offline machine, nothing can render: **Generate** and **+ Add Connector** stay disabled and connectors show as "Unknown type" instead of drawings.
 
-The type dropdown is populated from JSON files in `pinout_design/connectors/`, which are generated from the canonical TOML type definitions (the Theme dropdown and Symbol suggestions come from generated JSON the same way). If a type you need is missing, see [connector types](pinout-gen/connector-types.md) for how to add one and regenerate the designer's JSON.
+Allow `cdn.jsdelivr.net`, or use the [command line tool](automating.md), which needs no network at all. Hover the message for the underlying error.
 
-Note that types are mirrored from the bundled library only, so a connector type you add to a board's own `connector_dir` will render in `pinout-gen` but will not appear in the designer's dropdown.
+### The connector types I need are missing
+
+The designer offers the connector types bundled with PinConnect. It cannot read a type you have written into a board's own `connector_dir`, because that folder is on your disk and the designer only has the config text.
+
+Such a board still renders, but **with the bundled definition of any type whose name it shares**, which is not what `pinout-gen` would produce. The Generate dialog says so when it happens. Render those boards with the command line tool, and see [connector types](reference/connector-types.md) for adding a type to the bundled library instead.
+
+The same applies to a theme in a board's own `theme_dir`.
+
+### The board image is missing from the downloaded page
+
+You turned **Embed image** off, which leaves the page loading the photo from beside it by the path in the config. Either keep the two files together, or download again with the toggle on.
+
+### Nothing recovered after I closed the tab
+
+There is no auto-save and no recovery. Save the TOML as you go.

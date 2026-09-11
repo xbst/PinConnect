@@ -1,6 +1,6 @@
 # Board TOML reference
 
-A board config describes one board: the image, its size, and every connector on it. The [designer](../pinout-design.md) produces this file, and `pinout-gen` reads it. You can also write or edit it by hand.
+A board config describes one board: the image, its size, and every connector on it. The [designer](../designer.md) produces this file, and `pinout-gen` reads it. You can also write or edit it by hand.
 
 A config has one `[board]` table followed by a `[[connector]]` array, and each connector holds a `[[connector.pin]]` array. Example:
 

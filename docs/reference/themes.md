@@ -203,9 +203,9 @@ font_scale               = 1.1
 
 > **Panel mode.** With `tooltip_placement = "panel"` there is no floating tooltip: a permanent box sits under the board, beside a full-height connector list on wide screens and between the board and the list when stacked. `hint_placement` has no effect in this mode, since the hint lives in the panel.
 
-> **Fullscreen.** The button beside the list toggle puts the pinout into the browser's fullscreen mode, so an embedded pinout gets the whole screen and, on a wide one, the side-by-side layout. Where element fullscreen is not available (iPhone Safari, or an embedding page whose iframe does not allow it; [pinout-embed](../pinout-embed/mkdocs-zensical.md) does) it opens the pinout in a new tab instead, which also gives pinch-zoom on phones. The button is removed when neither can work, and `fullscreen_button = false` removes it always.
+> **Fullscreen.** The button beside the list toggle puts the pinout into the browser's fullscreen mode, so an embedded pinout gets the whole screen and, on a wide one, the side-by-side layout. Where element fullscreen is not available (iPhone Safari, or an embedding page whose iframe does not allow it; [pinout-embed](../embedding.md) does) it opens the pinout in a new tab instead, which also gives pinch-zoom on phones. The button is removed when neither can work, and `fullscreen_button = false` removes it always.
 
-> **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../pinout-embed/mkdocs-zensical.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
+> **Responsive stacking and embedding.** When the list stacks below the board, the pinout resizes itself to fit. If you embed it with [pinout-embed](../embedding.md), the iframe grows and shrinks to match — no fixed-height scrollbars. Use a recent `pinout-embed` build for this.
 
 ### `[extra_css]`
 
@@ -223,11 +223,10 @@ css = """
 1. Copy [`default.toml`](../../pinout_gen/pinout_gen/themes/default.toml) (it documents every token) to `<name>.toml`, and uncomment/override what you want to change.
 2. Put it either in the **bundled themes** folder (`pinout_gen/pinout_gen/themes/`, shipped with the package) or in a **board-local** `theme_dir` next to your board config (handy for a project- or site-specific theme you don't want to bundle). A board-local theme of the same name overrides a bundled one.
 3. Reference it with `theme = "<name>"` (or `--theme <name>`).
-4. If you use the [visual designer](../pinout-design.md), regenerate its mirror so the theme appears in the Theme dropdown:
 
-   ```bash
-   python pinout_design/tools/convert-connectors.py
-   ```
+A theme in the bundled folder appears in the designer's Theme selector straight away, with nothing to regenerate: the designer reads the same files the generator does.
+
+A board-local theme is a different matter. The designer has your config text but not your `theme_dir`, so it cannot load the theme, and it will render with the bundled theme of the same name or fall back to the default. It says so when that happens. Use the [command line](../automating.md) for those boards, or bundle the theme.
 
 ## Tips
 

@@ -2,7 +2,7 @@
 
 `pinout-embed` is a Python-Markdown extension for MkDocs / Zensical sites. It lets you drop a generated pinout into a page with an image-style tag, which it replaces at build time with a responsive `<iframe>`.
 
-It only handles embedding. Produce the pinout HTML first with [pinout-gen](../pinout-gen/generating-html.md).
+It only handles embedding. Produce the pinout HTML first with [the generator](getting-started.md).
 
 ## Install
 
@@ -55,7 +55,7 @@ This is automatic and needs no configuration. It is also backward compatible in 
 
 An embedded pinout follows your site's color scheme on its own. When the pinout is served from the same origin as the page — the normal case for a docs site — it reads MkDocs Material's and Zensical's `data-md-color-scheme` (as well as a generic `data-theme` or a `dark` class) and keeps watching it, so a reader flipping your site's light/dark toggle re-colors the pinout live.
 
-Nothing to configure. If you ever embed a pinout from a *different* origin, that automatic detection cannot apply, and the parent page drives it with a `postMessage` instead — see [light and dark mode](../pinout-gen/themes.md#light-and-dark-mode).
+Nothing to configure. If you ever embed a pinout from a *different* origin, that automatic detection cannot apply, and the parent page drives it with a `postMessage` instead — see [light and dark mode](reference/themes.md#light-and-dark-mode).
 
 ## Place the files so the site serves them
 

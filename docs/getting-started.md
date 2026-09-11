@@ -1,126 +1,77 @@
 # Getting Started
 
-This guide takes you end to end: from a photo of your board to an interactive pinout you can drop into a documentation site. It should take about five minutes.
+This guide takes you from a photo of your board to a finished interactive pinout. It happens entirely in your browser and takes about five minutes.
 
-PinConnect has three tools, used in sequence:
+## What you need
 
-1. **pinout-design**: a browser-based designer that turns a board image into a TOML config.
-2. **pinout-gen**: a CLI that reads that TOML and generates a single interactive HTML pinout.
-3. **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
+- A **top-down photo** of your board, in any format a browser can display.
+- A browser. Nothing else: the designer downloads what it needs and runs the generator itself, so there is no install step.
 
-You only need the first two to get a working pinout. The third is for people publishing to a Markdown docs site.
+The first load fetches a Python runtime of roughly 10 MB, which takes a few seconds and is then cached. The toolbar tells you when it is ready.
 
-## Prerequisites
+## Step 1: Open the designer
 
-- **Python 3.9 or newer** (`python --version`)
-- A **top-down image** of your board (PNG, JPG, or any other format your browser can display)
-- A copy of this repository
+Go to **<https://pinconnect.isiks.tech>**.
 
----
-
-## Step 1: Design your pinout
-
-The designer is a static web app. It reads its connector, theme, and symbol data over `fetch()`, so it must be served over HTTP — opening `index.html` directly with `file://` will not work.
-
-Start a local server from the `pinout_design` folder:
-
-**PowerShell**
-
-```powershell
-cd pinout_design
-python -m http.server 8000
-```
-
-**Linux / macOS**
+If you have cloned the repository and would rather run it yourself, install the tool and use its serve mode instead:
 
 ```bash
-cd pinout_design
-python3 -m http.server 8000
-```
-
-Then open <http://localhost:8000> in your browser.
-
-In the designer:
-
-1. Click **Open Image** and select your board photo.
-2. Click **+ Add Connector**, drag a box over a connector on the image, then fill in the **New Connector** dialog (an ID is suggested for you, and the name defaults to the ID) and click **Create**. Draw mode switches off after each one, so click the button again for the next connector.
-3. Select a connector to refine it in the editor panel: its type, name, description, and per-pin labels and colors.
-4. Optionally pick a **Theme** from the toolbar to change how the generated pinout will look.
-5. Watch the **TOML Source** pane update live as you work.
-6. Click **Save TOML** to save your board config (for example `board.toml`).
-
-Put the saved `.toml` next to your board image — the next step expects them together.
-
-See [pinout-design](pinout-design.md) for a full tour of the designer.
-
----
-
-## Step 2: Generate the HTML
-
-Install the generator from the repository root. Using a virtual environment is recommended but optional.
-
-**PowerShell**
-
-```powershell
-python -m venv venv
-./venv/Scripts/activate
-pip install .\pinout_gen
-```
-
-**Linux / macOS**
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
 pip install ./pinout_gen
+pinout-gen --serve
 ```
 
-This installs the `pinout-gen` command. Run it on your config:
+That builds what the designer needs, starts a local server, and opens a browser. See [Automating](automating.md) for the details.
 
-```bash
-pinout-gen board.toml
-```
+## Step 2: Load your board photo
 
-By default this writes `board.pinout.html` next to the config. Use `-o` to choose a different path:
+Click **Open Image** and choose your photo. It sets the coordinate space for everything you place on top of it.
 
-```bash
-pinout-gen board.toml -o docs/my-board.html
-```
+![A board photo loaded into the Board Image panel, before any connectors are added](../assets/workflow-1-image.png)
 
-A theme sets the generated page's colors, fonts, and layout behavior. Six ship with the tool — `default`, `midnight`, `ocean`, `slate`, `terminal`, and `workbench` — and `-t` picks one for a single run, overriding whatever the board config says:
+## Step 3: Draw a box over each connector
 
-```bash
-pinout-gen board.toml -t midnight
-```
+Click **+ Add Connector**, then drag a box over a connector in the photo. Releasing the drag opens a dialog where you give the connector an ID, an optional name, and a type from the built-in library.
 
-> **Keep the image alongside the output.** By default the generated HTML links to your board image by the same relative path used in the TOML — it is not embedded. Make sure the image file sits next to the HTML (or serve both from the same folder) or the diagram will show a broken image. To embed the image into the file instead, add `-i`: `pinout-gen board.toml -i`. Note that `-i` covers the image only — the default theme still loads its font from Google Fonts, so see [themes](pinout-gen/themes.md) if you need output with no external references at all.
+Draw mode switches itself off after each connector, so click the button again for the next one.
 
-Open the resulting `.html` file in a browser to check your interactive pinout. You should get something like this:
+![The board with a labeled box drawn over each connector](../assets/workflow-2-connectors.png)
+
+## Step 4: Label the pins
+
+Select a connector to edit it. Set its type, orientation and description, then name each pin and give it the color of the wire that goes there.
+
+Pin order in the list is the physical pin order in the output, so drag the handles until they match the board.
+
+![The Pins list for a connector: a drag handle, color swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
+
+[The designer](designer.md) covers every field in detail.
+
+## Step 5: Generate
+
+Click **Generate**. The dialog renders your pinout and shows it exactly as it will look.
+
+![The Generate dialog showing a rendered pinout, with a theme selector, an embed toggle and a Download button](../assets/workflow-7-generate.png)
+
+Two controls are worth knowing:
+
+- **Theme** changes the colors, fonts and layout of the finished page. Six are built in. Switch between them to see the effect immediately, and read [Themes](reference/themes.md) to write your own.
+- **Embed image** decides whether the board photo is written into the HTML. Leave it on and you get one self-contained file that works anywhere. Turn it off and the file is much smaller, but the photo has to sit beside it.
+
+Click **Download** to save the page. Open it in a browser and you have this:
 
 ![A generated PinConnect pinout: hovering a connector on the board shows its pinout, and the connector list browses every connector at once](../assets/pinout-demo.gif)
 
-See [generating HTML](pinout-gen/generating-html.md) and [board TOML reference](pinout-gen/board-toml.md) for more, or [Installation](pinout-gen/install.md) for editable installs and optional extras.
+## Step 6: Save the config too
 
----
+Click **Save TOML** to keep the config the designer has been writing as you work.
 
-## Step 3: Embed it in a docs site (optional)
+You do not need it for the pinout you just downloaded, but you will want it the next time the board changes: load it back with **Open TOML**, adjust, and generate again. Rebuilding a board from scratch because the config was not saved is the one avoidable mistake here.
 
-If you publish with **MkDocs** or **Zensical**, `pinout-embed` lets you drop the generated pinout into a page with an image-style tag:
-
-```markdown
-![Board Pinout](my-board.pinout.html){ type=application/pinout style="min-height:60vh;width:100%" }
-```
-
-The extension replaces that tag with a responsive `<iframe>` at build time.
-
-See [pinout-embed](pinout-embed/mkdocs-zensical.md) for installation and configuration.
-
----
+The designer does not auto-save, and closing the tab discards unsaved work without warning.
 
 ## Where to go next
 
-- [Concepts](concepts.md): how the pieces fit together and the three kinds of TOML file — board, connector type, and theme.
-- [pinout-design](pinout-design.md): designing configs visually.
-- [pinout-gen](pinout-gen/generating-html.md): CLI usage, board TOML, and connector types.
-- [themes](pinout-gen/themes.md): restyle the pinout's colors, fonts, and behaviors, or write your own theme.
-- [pinout-embed](pinout-embed/mkdocs-zensical.md): embedding in a Markdown site.
+- [The designer](designer.md): every panel and field, plus what to do when something looks wrong.
+- [Concepts](concepts.md): what the config actually describes, and how connector types and themes are resolved.
+- [Automating](automating.md): regenerate pinouts from the command line, or from CI.
+- [Embedding](embedding.md): put the pinout into an MkDocs or Zensical page.
