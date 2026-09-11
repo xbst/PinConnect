@@ -31,7 +31,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "config",
+        nargs="?",
         type=Path,
+        default=None,
         help="Path to the board pinout TOML config file.",
     )
     parser.add_argument(
@@ -59,7 +61,38 @@ def main(argv: list[str] | None = None) -> None:
              "Resolved from the board's theme_dir, then the bundled themes.",
     )
 
+    parser.add_argument(
+        "--serve",
+        nargs="?",
+        const=0,
+        type=int,
+        default=None,
+        metavar="PORT",
+        help="Serve the visual designer and open it in a browser, instead of "
+             "rendering a config.  Without a port, one free port is chosen.",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="With --serve, do not open a browser window.",
+    )
+
     args = parser.parse_args(argv)
+
+    if args.serve is not None:
+        if args.config is not None:
+            parser.error("--serve renders nothing, so it takes no config file")
+        from .serve import serve
+        try:
+            serve(args.serve, open_browser=not args.no_browser)
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.config is None:
+        parser.error("a config file is required (use --serve to open the designer)")
+
     config_path: Path = args.config.resolve()
 
     if not config_path.exists():
