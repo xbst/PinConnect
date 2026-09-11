@@ -34,6 +34,14 @@ DEFAULT_PNG = REPO.parent / "docs-zensical" / "docs" / "pinouts" / "bnc" / "bnc.
 
 
 def main(toml_path: Path, png_path: Path):
+    # The designer fetches a Python payload at startup and refuses to run
+    # without it, so build it before serving. Skipping this captured seven
+    # screenshots of a designer reading "Renderer unavailable" with its
+    # connector drawings missing.
+    sys.path.insert(0, str(REPO / "pinout_gen"))
+    from pinout_gen.designer import build_payload
+    build_payload(REPO / "pinout_design" / "pinout_gen.zip")
+
     server = subprocess.Popen(
         [sys.executable, "-m", "http.server", str(PORT), "-d", str(REPO / "pinout_design")],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -45,6 +53,18 @@ def main(toml_path: Path, png_path: Path):
             page = browser.new_context(viewport={"width": 1440, "height": 900},
                                        device_scale_factor=2, color_scheme="dark").new_page()
             page.goto(f"http://localhost:{PORT}/", wait_until="networkidle")
+
+            # Wait for Pyodide, which draws every connector. Until it lands the
+            # toolbar shows a progress line and the buttons below are disabled,
+            # so shooting early captures a half-started app.
+            page.wait_for_function(
+                "document.getElementById('runtime-status')"
+                "?.classList.contains('ready') === true",
+                timeout=120_000,
+            )
+            # The About box opens itself on a first visit and would sit over
+            # every shot.
+            page.evaluate("document.querySelector('.modal-close')?.click()")
 
             # 1. Load the board image only -> board panel before any connectors.
             page.set_input_files("#open-image", str(png_path))
