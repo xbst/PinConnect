@@ -1,0 +1,9 @@
+# The designer is copied into the package by setup.py before a build runs;
+# graft it so source distributions stay self-contained.
+recursive-include pinout_gen/designer *
+recursive-include pinout_gen/connectors *.toml
+recursive-include pinout_gen/themes *.toml
+global-exclude __pycache__ *.py[cod]
+# Tests are never committed (see AGENTS.md); a working copy may still have
+# them, and they must not leak into a release.
+prune tests
