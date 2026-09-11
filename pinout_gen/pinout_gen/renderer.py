@@ -930,7 +930,7 @@ def _render_height_script(theme: Theme) -> str:
 _HINT_PILL = (
     '<div class="bb" id="bb">\n'
     '    <span class="bb-h">Click or tap a connector to see its pinout</span>\n'
-    '    <span class="bb-c">Created with <a href="https://github.com/xbst/PinConnect" '
+    '    <span class="bb-c">Created with <a href="https://pinconnect.isiks.tech" '
     'target="_blank" rel="noopener">PinConnect</a></span>\n'
     '  </div>'
 )
