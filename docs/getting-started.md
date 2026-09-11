@@ -4,16 +4,16 @@ This guide takes you from a photo of your board to a finished interactive pinout
 
 ## What you need
 
-- A **top-down photo** of your board, in any format a browser can display.
+- A **top-down image** of your board, in any format a browser can display.
 - A browser. Nothing else: the designer downloads what it needs and runs the generator itself, so there is no install step.
 
 The first load fetches a Python runtime of roughly 10 MB, which takes a few seconds and is then cached. The toolbar tells you when it is ready.
 
 ## Step 1: Open the designer
 
-Go to **<https://pinconnect.isiks.tech>**.
+Go to **<https://pinconnect.isiks.tech>**. The generator runs in your browser, so your photo and your config never leave it.
 
-If you have cloned the repository and would rather run it yourself, install the tool and use its serve mode instead:
+If you prefer to run it yourself, install the tool and use its serve mode instead:
 
 ```bash
 pip install ./pinout_gen
@@ -65,9 +65,7 @@ Click **Download** to save the page. Open it in a browser and you have this:
 
 Click **Save TOML** to keep the config the designer has been writing as you work.
 
-You do not need it for the pinout you just downloaded, but you will want it the next time the board changes: load it back with **Open TOML**, adjust, and generate again. Rebuilding a board from scratch because the config was not saved is the one avoidable mistake here.
-
-The designer does not auto-save, and closing the tab discards unsaved work without warning.
+You don't need it for the pinout you just downloaded, but it makes editing pinouts much easier: load it back with **Open TOML**, adjust, and generate again.
 
 ## Where to go next
 

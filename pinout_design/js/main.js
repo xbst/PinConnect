@@ -117,6 +117,30 @@ function setupResizers() {
   });
 }
 
+// The config as it was last saved or opened. Comparing the editor's text
+// against it is what "unsaved changes" means here, and it is the only measure
+// that behaves: state.dirty is set by loading a file as much as by editing one,
+// so both opening a config and the default config at startup would look unsaved.
+let savedText = null;
+
+function markSaved(text) {
+  savedText = text;
+}
+
+function hasUnsavedChanges(editorPanel) {
+  return savedText !== null && editorPanel.getValue() !== savedText;
+}
+
+// Ask before losing work. The browser writes the wording and ignores anything
+// we pass, so the only choice here is whether to ask at all.
+function setupUnloadGuard(editorPanel) {
+  addEventListener("beforeunload", (e) => {
+    if (!hasUnsavedChanges(editorPanel)) return;
+    e.preventDefault();
+    e.returnValue = "";   // older browsers need a value assigned, not just the default prevented
+  });
+}
+
 function setupFileIO(editorPanel) {
   document.getElementById("open-image").addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -142,6 +166,9 @@ function setupFileIO(editorPanel) {
     const reader = new FileReader();
     reader.onload = () => {
       editorPanel.setValue(reader.result);
+      // Just opened: there is nothing unsaved yet, whatever the editor's own
+      // parse did to the model on the way in.
+      markSaved(editorPanel.getValue());
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -158,8 +185,12 @@ function setupFileIO(editorPanel) {
         const writable = await handle.createWritable();
         await writable.write(text);
         await writable.close();
+        markSaved(text);
         return;
-      } catch (e) { if (e.name === "AbortError") return; }
+      } catch (e) {
+        // Cancelling the picker is not a save, so the document stays dirty.
+        if (e.name === "AbortError") return;
+      }
     }
     const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
@@ -167,6 +198,7 @@ function setupFileIO(editorPanel) {
     a.download = "board.toml";
     a.click();
     URL.revokeObjectURL(a.href);
+    markSaved(text);
   });
 }
 
@@ -236,6 +268,9 @@ width = 800
 height = 600
 `;
   editorPanel.setValue(defaultToml);
+  // An untouched board is not unsaved work, so this is the starting baseline.
+  markSaved(editorPanel.getValue());
+  setupUnloadGuard(editorPanel);
 
   document.getElementById("generate-btn").addEventListener("click", () => {
     openGenerate(state, editorPanel.getValue());

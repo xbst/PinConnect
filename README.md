@@ -8,9 +8,7 @@ An interactive pinout generator for PCBs. PinConnect turns a photo of a board in
 
 ## Quick start
 
-Open **<https://pinconnect.isiks.tech>**, load a photo of your board, draw a box over each connector, label the pins, and press **Generate**.
-
-That is the whole thing. Nothing to install, and nothing is uploaded: the generator runs in your browser, so your photo and your config never leave it.
+Open **<https://pinconnect.isiks.tech>**, load a photo of your board, draw a box over each connector, label the pins, and press **Generate**. The generator runs in your browser, so your photo and your config never leave it.
 
 Full walkthrough: **[Getting Started](docs/getting-started.md)**.
 

@@ -115,7 +115,7 @@ Click **Save TOML**, and keep the file with your board photo.
 
 The pinout you downloaded is finished and standalone, so this is not for it. It is for the next revision of the board: **Open TOML** loads the config back in, **Open Image** brings back the photo, and you carry on from where you left off.
 
-> **The designer does not auto-save.** Closing or reloading the tab discards unsaved work without warning.
+If you close or reload the tab with changes you have not saved, the browser asks you to confirm first. It compares against the last config you saved or opened, so opening one and closing again straight away does not ask.
 
 ![The toolbar, with the Save TOML button and the Generate button](../assets/workflow-6-save.png)
 
@@ -149,7 +149,3 @@ The same applies to a theme in a board's own `theme_dir`.
 ### The board image is missing from the downloaded page
 
 You turned **Embed image** off, which leaves the page loading the photo from beside it by the path in the config. Either keep the two files together, or download again with the toggle on.
-
-### Nothing recovered after I closed the tab
-
-There is no auto-save and no recovery. Save the TOML as you go.

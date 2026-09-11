@@ -66,9 +66,7 @@ Writing your own is easy, because a theme only has to state what differs; every 
 
 ## How the designer reaches the connector types and themes
 
-The designer used to work from JSON copies of the connector types, themes and symbol names, generated from the Python definitions. Those copies are gone. It now loads the `pinout_gen` package itself into the browser and asks it directly, so there is one definition of every connector shape rather than two that could disagree.
-
-One consequence is worth knowing: the designer only sees what is **bundled with the package**. A connector type or theme in a board's own `connector_dir` or `theme_dir` lives on your disk, and the designer has only the config text, so it cannot read it. Such a board renders with the bundled definition of any name it shares, which is not what `pinout-gen` would produce. The Generate dialog warns you when this happens, and those boards should be rendered from the [command line](automating.md).
+The designer loads the `pinout_gen` package itself into the browser and asks it directly. The designer only sees what is **bundled with the package**. If you created a connector type or theme linked in a board's own `connector_dir` or `theme_dir`, the designer cannot read it since it lives on your disk. Such a board renders with the bundled definition of any name it shares, which is not what `pinout-gen` would produce. The Generate dialog warns you when this happens, and those boards should be rendered from the [command line](automating.md).
 
 ## What "self-contained" means for the output
 
