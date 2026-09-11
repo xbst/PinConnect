@@ -1,4 +1,4 @@
-import { renderConnectorSVG } from "./svg-renderer.js";
+import { previewConnectorSvg } from "./runtime.js";
 import { Pin } from "./board-model.js";
 
 const COLOR_PRESETS = [
@@ -52,6 +52,8 @@ export class ConnectorPanel {
       if (connectorId === this.state.selectedConnectorId) this._render();
     });
     this.state.on("board-changed", () => this._render());
+    // The drawing needs pinout-gen, so redraw once it has booted.
+    this.state.on("catalogs-loaded", () => this._render());
   }
 
   _updateSvgPreview() {
@@ -60,15 +62,18 @@ export class ConnectorPanel {
     const ct = this.state.connectorTypes.get(conn.type);
     const previewEl = this.container.querySelector(".conn-svg-preview");
     if (previewEl && ct) {
-      try { previewEl.innerHTML = this._previewHtml(conn, ct); }
+      try { previewEl.innerHTML = this._previewHtml(conn); }
       catch (e) { /* keep existing preview on error */ }
     }
   }
 
   // The drawing for a connector, or a note in its place for the "none" type,
   // which renders nothing because it only marks a spot on the board.
-  _previewHtml(conn, ct) {
-    const svg = renderConnectorSVG(conn, ct);
+  _previewHtml(conn) {
+    const svg = previewConnectorSvg(conn);
+    if (svg === null) {
+      return '<span class="conn-svg-none">Starting the renderer…</span>';
+    }
     return svg || '<span class="conn-svg-none">No drawing — marks a spot on the board</span>';
   }
 
@@ -86,7 +91,7 @@ export class ConnectorPanel {
 
     let svgHtml = "";
     if (ct) {
-      try { svgHtml = this._previewHtml(conn, ct); }
+      try { svgHtml = this._previewHtml(conn); }
       catch (e) { svgHtml = `<div style="color:var(--danger);font-size:12px">Render error: ${e.message}</div>`; }
     } else {
       svgHtml = `<div style="color:var(--text-muted);font-size:12px">Unknown type: ${conn.type}</div>`;

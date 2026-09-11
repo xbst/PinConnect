@@ -31,7 +31,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "config",
+        nargs="?",
         type=Path,
+        default=None,
         help="Path to the board pinout TOML config file.",
     )
     parser.add_argument(
@@ -59,7 +61,40 @@ def main(argv: list[str] | None = None) -> None:
              "Resolved from the board's theme_dir, then the bundled themes.",
     )
 
+    parser.add_argument(
+        "--serve",
+        nargs="?",
+        const=0,
+        type=int,
+        default=None,
+        metavar="PORT",
+        help="Serve the visual designer and open it in a browser, instead of "
+             "rendering a config.  Without a port, one free port is chosen.",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="With --serve, do not open a browser window.",
+    )
+
     args = parser.parse_args(argv)
+
+    if args.serve is not None:
+        if args.config is not None:
+            parser.error("--serve renders nothing, so it takes no config file")
+        from .serve import serve
+        try:
+            serve(args.serve, open_browser=not args.no_browser)
+        except (FileNotFoundError, ValueError, OSError) as e:
+            # A bad port, an unwritable install and a missing designer all
+            # deserve a message rather than a traceback.
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    if args.config is None:
+        parser.error("a config file is required (use --serve to open the designer)")
+
     config_path: Path = args.config.resolve()
 
     if not config_path.exists():
@@ -92,7 +127,12 @@ def main(argv: list[str] | None = None) -> None:
                          image_data_uri=image_data_uri)
 
     out_path: Path = args.output or config_path.with_suffix(".pinout.html")
-    out_path.write_text(html, encoding="utf-8")
+    # Write LF explicitly. Text mode translates to CRLF on Windows, so the same
+    # config rendered on two machines produced two different files, and the
+    # designer (which always writes LF) disagreed with the CLI byte for byte.
+    # Path.write_text only grew a newline argument in 3.10, and this supports 3.9.
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(html)
     print(f"Generated: {out_path}  ({len(board.connectors)} connectors)")
 
 

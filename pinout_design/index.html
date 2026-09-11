@@ -27,11 +27,14 @@
       <input type="file" id="open-toml" accept=".toml">
     </label>
     <button id="save-toml">Save TOML</button>
+    <button id="generate-btn" class="primary" disabled>Generate</button>
     <span class="separator"></span>
     <label class="theme-field">
       Theme
       <select id="theme-select"></select>
     </label>
+    <span class="runtime-status" id="runtime-status"></span>
+    <button id="about-btn" class="icon-btn" title="About PinConnect">?</button>
   </div>
 
   <!-- Panels -->
@@ -52,7 +55,7 @@
       <div class="panel-board" id="panel-board">
         <div class="panel-board-header">
           Board Image
-          <button id="draw-mode-btn" style="margin-left:auto;padding:2px 8px;font-size:11px">+ Add Connector</button>
+          <button id="draw-mode-btn" style="margin-left:auto;padding:2px 8px;font-size:11px" disabled>+ Add Connector</button>
         </div>
         <div class="panel-board-body" id="board-body">
           <div class="board-placeholder" id="board-placeholder">

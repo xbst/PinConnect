@@ -18,6 +18,7 @@ loads Roboto from Google Fonts, so this needs network access.
 """
 import sys
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -33,18 +34,59 @@ DEFAULT_TOML = REPO.parent / "docs-zensical" / "docs" / "pinouts" / "bnc" / "bnc
 DEFAULT_PNG = REPO.parent / "docs-zensical" / "docs" / "pinouts" / "bnc" / "bnc.png"
 
 
+def _without_local_dirs(toml_path: Path, tmp: Path) -> Path:
+    """A copy of the board with its board-local theme and connector directories
+    removed.
+
+    The designer can only use the bundled connector types and themes, so a board
+    pointing at its own files renders with a warning banner instead of a clean
+    pinout. That is correct behavior and the docs describe it, but it makes a
+    poor illustration of the normal path, and it would make these images depend
+    on which board the contributor happened to pass.
+    """
+    kept = [
+        line for line in toml_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        if not line.strip().startswith(("theme_dir", "connector_dir", "theme "))
+    ]
+    out = tmp / toml_path.name
+    out.write_text("".join(kept), encoding="utf-8")
+    return out
+
+
 def main(toml_path: Path, png_path: Path):
+    # The designer fetches a Python payload at startup and refuses to run
+    # without it, so build it before serving. Skipping this captured seven
+    # screenshots of a designer reading "Renderer unavailable" with its
+    # connector drawings missing.
+    sys.path.insert(0, str(REPO / "pinout_gen"))
+    from pinout_gen.designer import build_payload
+    build_payload(REPO / "pinout_design" / "pinout_gen.zip")
+
     server = subprocess.Popen(
         [sys.executable, "-m", "http.server", str(PORT), "-d", str(REPO / "pinout_design")],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     time.sleep(1.5)
+    tmpdir = tempfile.TemporaryDirectory()
+    toml_path = _without_local_dirs(toml_path, Path(tmpdir.name))
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(channel="chrome", headless=True)
             page = browser.new_context(viewport={"width": 1440, "height": 900},
                                        device_scale_factor=2, color_scheme="dark").new_page()
             page.goto(f"http://localhost:{PORT}/", wait_until="networkidle")
+
+            # Wait for Pyodide, which draws every connector. Until it lands the
+            # toolbar shows a progress line and the buttons below are disabled,
+            # so shooting early captures a half-started app.
+            page.wait_for_function(
+                "document.getElementById('runtime-status')"
+                "?.classList.contains('ready') === true",
+                timeout=120_000,
+            )
+            # The About box opens itself on a first visit and would sit over
+            # every shot.
+            page.evaluate("document.querySelector('.modal-close')?.click()")
 
             # 1. Load the board image only -> board panel before any connectors.
             page.set_input_files("#open-image", str(png_path))
@@ -97,10 +139,42 @@ def main(toml_path: Path, png_path: Path):
             time.sleep(0.3)
             page.locator(".pin-list").screenshot(path=str(ASSETS / "workflow-4-pins.png"))
 
+            # Restore the panel heights the two shots above borrowed, so the
+            # dialogs below are captured over the normal layout.
+            page.evaluate("""() => {
+                const p = document.getElementById('panel-connector');
+                p.style.height = ''; p.style.flex = '';
+            }""")
+
+            # 7. The Generate preview, which is where the pinout is actually
+            # produced. Wait for the rendered page to appear in the frame.
+            page.click("#generate-btn")
+            # Pick a bundled theme rather than whatever the board names. A board
+            # using a theme from its own theme_dir cannot render in the browser
+            # at all, which is correct but makes a poor screenshot, and it would
+            # make the shot depend on which board the contributor passed.
+            page.wait_for_selector("#gen-theme")
+            page.select_option("#gen-theme", "default")
+            page.wait_for_selector("#gen-preview iframe")
+            page.wait_for_function(
+                "document.getElementById('gen-status')"
+                "?.textContent.includes('KB') === true", timeout=60_000)
+            time.sleep(0.8)
+            page.locator(".modal").screenshot(path=str(ASSETS / "workflow-7-generate.png"))
+            page.click(".modal-close")
+            time.sleep(0.3)
+
+            # 8. The About box, the first thing a visitor to the hosted site sees.
+            page.click("#about-btn")
+            page.wait_for_selector(".modal-body")
+            time.sleep(0.3)
+            page.locator(".modal").screenshot(path=str(ASSETS / "designer-about.png"))
+
             browser.close()
-        print("OK - 7 designer screenshots written to assets/")
+        print("OK - 9 designer screenshots written to assets/")
     finally:
         server.terminate()
+        tmpdir.cleanup()
 
 
 if __name__ == "__main__":

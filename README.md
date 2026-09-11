@@ -6,52 +6,43 @@ An interactive pinout generator for PCBs. PinConnect turns a photo of a board in
 
 *A generated pinout for the [Birds' Nest CAN](https://store.isiks.tech/products/birds-nest-CAN) board — hover a connector on the board for its pinout, or open the connector list to browse every connector at once.*
 
-It is made of three tools, used in sequence:
-
-- **pinout-design**: a browser-based designer that turns a board image into a TOML config.
-- **pinout-gen**: a CLI that reads that config and generates a single interactive HTML pinout.
-- **pinout-embed**: an optional Markdown extension that embeds the generated HTML into MkDocs / Zensical sites.
-
-You only need the first two for a working pinout; the third is for publishing to a Markdown docs site.
-
-If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/bnc/bnc.pinout.html
-
 ## Quick start
 
-1. Serve the designer and open it in your browser:
+Open **<https://pinconnect.isiks.tech>**, load a photo of your board, draw a box over each connector, label the pins, and press **Generate**. The generator runs in your browser, so your photo and your config never leave it.
 
-   ```bash
-   cd pinout_design
-   python -m http.server 8000   # then open http://localhost:8000
-   ```
+Full walkthrough: **[Getting Started](docs/getting-started.md)**.
 
-   Load a board image, draw a box over each connector, label the pins, and **Save TOML**.
+## Automating it
 
-2. Install the generator and render your config:
+For regenerating pinouts as a board changes, or publishing from CI, there is a command line tool that renders the same file from a saved config:
 
-   ```bash
-   pip install ./pinout_gen
-   pinout-gen board.toml         # writes board.pinout.html
-   ```
+```bash
+pip install ./pinout_gen
+pinout-gen board.toml         # writes board.pinout.html
+```
 
-3. (Optional) Embed the result in an MkDocs / Zensical page — see [pinout-embed](docs/pinout-embed/mkdocs-zensical.md).
+The output is identical either way, because the designer runs this same generator rather than a copy of it. `pinout-gen --serve` also opens the designer locally if you would rather not use the hosted one.
 
-Full walkthrough: **[docs/getting-started.md](docs/getting-started.md)**.
+See [Automating](docs/automating.md).
+
+If you'd like to see a live demo of the generated pinouts, you can find it on this documentation website: https://docs.isiks.tech/pinouts/bnc/bnc.pinout.html
 
 ## Documentation
 
 All guides live in the [`docs/`](docs/) folder — start with the [documentation index](docs/README.md):
 
-- [Getting Started](docs/getting-started.md)
-- [Concepts](docs/concepts.md)
-- [pinout-design](docs/pinout-design.md)
-- [pinout-gen](docs/pinout-gen/generating-html.md)
-- [pinout-embed](docs/pinout-embed/mkdocs-zensical.md)
+- [Getting Started](docs/getting-started.md): a board photo to a finished pinout.
+- [The designer](docs/designer.md): every panel and field, plus troubleshooting.
+- [Concepts](docs/concepts.md): how the pieces fit and the three kinds of TOML file.
+- [Automating](docs/automating.md): the command line tool, and publishing from CI.
+- [Embedding](docs/embedding.md): pinouts in an MkDocs or Zensical page.
+
+Reference: [board TOML](docs/reference/board-toml.md), [connector types](docs/reference/connector-types.md), [themes](docs/reference/themes.md).
 
 ## Repository layout
 
-- [`pinout_design/`](pinout_design/): the visual designer (static web app).
-- [`pinout_gen/`](pinout_gen/): the `pinout-gen` CLI, connector type library, and themes.
+- [`pinout_design/`](pinout_design/): the designer, a static web app.
+- [`pinout_gen/`](pinout_gen/): the `pinout-gen` CLI, connector type library, and themes. The designer loads this package to do its rendering.
 - [`pinout_embed/`](pinout_embed/): the Markdown embedding extension.
 - [`docs/`](docs/): documentation.
 

@@ -1,4 +1,4 @@
-import { Board, Connector, Pin, ConnectorType, ConnectorGeometry } from "./board-model.js";
+import { Board, Connector, Pin } from "./board-model.js";
 
 export class BoardState {
   constructor() {

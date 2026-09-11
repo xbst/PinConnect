@@ -6,15 +6,17 @@ The command-line generator for PinConnect. It reads a board TOML config and prod
 pip install ./pinout_gen      # from the repository root
 pinout-gen board.toml         # writes board.pinout.html
 pinout-gen board.toml -i -t midnight   # embed the image, apply a theme
+pinout-gen --serve            # open the visual designer in a browser
 ```
 
 By default the board image is referenced by relative path rather than embedded; `-i` inlines it so the file stands alone.
 
 Requires Python 3.9+. Connector shapes come from the type library in [`pinout_gen/connectors/`](pinout_gen/connectors), and the generated page's look from the themes in [`pinout_gen/themes/`](pinout_gen/themes) — both extensible without touching the code.
 
+This package is also what the [designer](../pinout_design) runs. It is loaded into the browser under Pyodide and called there, so a config rendered in the designer and on the command line produces the same bytes. The designer's static files ship inside this package, which is what makes `--serve` work from any install.
+
 **Usage:** see the docs:
-[installation](../docs/pinout-gen/install.md),
-[generating HTML](../docs/pinout-gen/generating-html.md),
-[board TOML reference](../docs/pinout-gen/board-toml.md),
-[connector types](../docs/pinout-gen/connector-types.md), and
-[themes](../docs/pinout-gen/themes.md).
+[automating](../docs/automating.md) for installing and running the CLI,
+[board TOML reference](../docs/reference/board-toml.md),
+[connector types](../docs/reference/connector-types.md), and
+[themes](../docs/reference/themes.md).

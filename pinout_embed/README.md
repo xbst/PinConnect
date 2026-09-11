@@ -20,4 +20,4 @@ Then embed a generated pinout:
 ![Board Pinout](board.pinout.html){ type=application/pinout style="min-height:60vh;width:100%" }
 ```
 
-**Usage:** see [docs/pinout-embed/mkdocs-zensical.md](../docs/pinout-embed/mkdocs-zensical.md).
+**Usage:** see [docs/embedding.md](../docs/embedding.md).

@@ -1,41 +1,58 @@
-import { ConnectorType, ConnectorGeometry, Board, Connector, Pin } from "./board-model.js";
+import { Board, Connector, Pin } from "./board-model.js";
 import { BoardState } from "./state.js";
 import { EditorPanel } from "./editor-panel.js";
 import { BoardPanel } from "./board-panel.js";
 import { ConnectorPanel } from "./connector-panel.js";
 import { serializeBoardToml } from "./toml-io.js";
+import * as runtime from "./runtime.js";
+import { openGenerate, openAbout, maybeShowAboutOnFirstVisit } from "./dialogs.js";
 
 const state = new BoardState();
 
-async function loadConnectorTypes() {
-  const fetchOptions = { cache: "no-store" };
-  const resp = await fetch("connectors/index.json", fetchOptions);
-  const names = await resp.json();
-  for (const name of names) {
-    const r = await fetch(`connectors/${name}.json`, fetchOptions);
-    const data = await r.json();
-    state.connectorTypes.set(name, new ConnectorType(
-      data.name, data.style, new ConnectorGeometry(data.geometry)
-    ));
+// Connector geometry, themes and the symbol list all come from pinout-gen
+// itself now, so there is nothing here to keep in step with the Python side.
+async function loadCatalogs() {
+  const [connectors, themes, symbols] = await Promise.all([
+    runtime.connectorCatalog(), runtime.themeCatalog(), runtime.symbolCatalog(),
+  ]);
+  state.connectorTypes.clear();
+  for (const ct of connectors) {
+    state.connectorTypes.set(ct.slug, { name: ct.name, style: ct.style, geometry: ct.geometry });
   }
+  state.themes = themes;
+  state.symbolNames = symbols;
 }
 
-async function loadThemes() {
-  try {
-    const resp = await fetch("themes/index.json", { cache: "no-store" });
-    state.themes = await resp.json();
-  } catch (e) {
-    state.themes = [{ name: "default", display: "Default" }];
-  }
-}
-
-async function loadSymbols() {
-  try {
-    const resp = await fetch("symbols.json", { cache: "no-store" });
-    state.symbolNames = await resp.json();
-  } catch (e) {
-    state.symbolNames = [];
-  }
+// Boot progress lives in the toolbar. Loading an image and drawing hotspots
+// works while this runs; only the connector drawing and Generate have to wait.
+function setupRuntimeStatus() {
+  const el = document.getElementById("runtime-status");
+  const genBtn = document.getElementById("generate-btn");
+  const drawBtn = document.getElementById("draw-mode-btn");
+  const labels = {
+    runtime: "Starting renderer…",
+    package: "Loading connectors…",
+    ready: "",
+  };
+  runtime.onProgress((phase, detail) => {
+    if (phase === "error") {
+      el.className = "runtime-status error";
+      el.textContent = "Renderer unavailable";
+      el.title = detail;
+      genBtn.disabled = true;
+      drawBtn.disabled = true;
+      drawBtn.title = "The renderer could not start, so connector types are unavailable.";
+      return;
+    }
+    el.className = "runtime-status" + (phase === "ready" ? " ready" : "");
+    el.textContent = labels[phase] ?? "";
+    el.title = "";
+    const ready = phase === "ready";
+    genBtn.disabled = !ready;
+    // Drawing a box creates a connector, which needs a type from the catalog.
+    drawBtn.disabled = !ready;
+    drawBtn.title = ready ? "" : "Waiting for the renderer to start…";
+  });
 }
 
 function setupThemeSelect() {
@@ -53,6 +70,7 @@ function setupThemeSelect() {
   refresh();
   sel.addEventListener("change", () => state.setTheme(sel.value, "visual"));
   state.on("board-changed", refresh);
+  state.on("catalogs-loaded", refresh);
 }
 
 function setupResizers() {
@@ -99,6 +117,30 @@ function setupResizers() {
   });
 }
 
+// The config as it was last saved or opened. Comparing the editor's text
+// against it is what "unsaved changes" means here, and it is the only measure
+// that behaves: state.dirty is set by loading a file as much as by editing one,
+// so both opening a config and the default config at startup would look unsaved.
+let savedText = null;
+
+function markSaved(text) {
+  savedText = text;
+}
+
+function hasUnsavedChanges(editorPanel) {
+  return savedText !== null && editorPanel.getValue() !== savedText;
+}
+
+// Ask before losing work. The browser writes the wording and ignores anything
+// we pass, so the only choice here is whether to ask at all.
+function setupUnloadGuard(editorPanel) {
+  addEventListener("beforeunload", (e) => {
+    if (!hasUnsavedChanges(editorPanel)) return;
+    e.preventDefault();
+    e.returnValue = "";   // older browsers need a value assigned, not just the default prevented
+  });
+}
+
 function setupFileIO(editorPanel) {
   document.getElementById("open-image").addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -124,6 +166,9 @@ function setupFileIO(editorPanel) {
     const reader = new FileReader();
     reader.onload = () => {
       editorPanel.setValue(reader.result);
+      // Just opened: there is nothing unsaved yet, whatever the editor's own
+      // parse did to the model on the way in.
+      markSaved(editorPanel.getValue());
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -140,8 +185,12 @@ function setupFileIO(editorPanel) {
         const writable = await handle.createWritable();
         await writable.write(text);
         await writable.close();
+        markSaved(text);
         return;
-      } catch (e) { if (e.name === "AbortError") return; }
+      } catch (e) {
+        // Cancelling the picker is not a save, so the document stays dirty.
+        if (e.name === "AbortError") return;
+      }
     }
     const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
@@ -149,13 +198,12 @@ function setupFileIO(editorPanel) {
     a.download = "board.toml";
     a.click();
     URL.revokeObjectURL(a.href);
+    markSaved(text);
   });
 }
 
 async function init() {
-  await loadConnectorTypes();
-  await loadThemes();
-  await loadSymbols();
+  setupRuntimeStatus();
 
   const editorPanel = new EditorPanel(
     document.getElementById("editor-container"), state
@@ -182,6 +230,13 @@ async function init() {
   redoBtn.addEventListener("click", () => { state.redo(); editorPanel._syncFromState(); });
 
   document.addEventListener("keydown", (e) => {
+    // A dialog is on top: its own keys (Escape, typing in its controls) are its
+    // business, and the board must not change behind it. Delete used to remove
+    // the selected connector while the Generate preview sat there showing the
+    // pinout that still contained it, and Ctrl+Z would rewrite the TOML the
+    // open dialog had already captured.
+    if (document.querySelector(".modal-backdrop")) return;
+
     if (e.key === "Delete" && state.selectedConnectorId) {
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
       state.removeConnector(state.selectedConnectorId, "visual");
@@ -213,6 +268,36 @@ width = 800
 height = 600
 `;
   editorPanel.setValue(defaultToml);
+  // An untouched board is not unsaved work, so this is the starting baseline.
+  markSaved(editorPanel.getValue());
+  setupUnloadGuard(editorPanel);
+
+  document.getElementById("generate-btn").addEventListener("click", () => {
+    openGenerate(state, editorPanel.getValue());
+  });
+  document.getElementById("about-btn").addEventListener("click", openAbout);
+
+  // The renderer boots in the background. Refresh the pieces that depend on it
+  // with a dedicated event: board-changed would make the editor regenerate the
+  // TOML from the model and throw away the user's comments.
+  loadCatalogs()
+    .then(() => state.emit("catalogs-loaded", {}))
+    .catch((e) => {
+      // Only a boot failure reaches the toolbar on its own. If the runtime
+      // started and a catalog call then threw, nothing reported it: the status
+      // read "ready" while the designer had no connector types at all, so every
+      // connector drew as "Unknown type" and Generate produced errors.
+      const el = document.getElementById("runtime-status");
+      if (el && !el.classList.contains("error")) {
+        el.className = "runtime-status error";
+        el.textContent = "Connector types unavailable";
+        el.title = e && e.message ? e.message : String(e);
+        document.getElementById("generate-btn").disabled = true;
+        document.getElementById("draw-mode-btn").disabled = true;
+      }
+    });
+
+  maybeShowAboutOnFirstVisit();
 }
 
 init();

@@ -1,61 +1,6 @@
-export class ConnectorGeometry {
-  constructor(data = {}) {
-    this.pin_pitch = data.pin_pitch ?? 10.0;
-    this.padding_left = data.padding_left ?? 10.0;
-    this.padding_right = data.padding_right ?? 10.0;
-    this.height = data.height ?? 23.0;
-    this.wall = data.wall ?? 2.6;
-    this.pin_cy = data.pin_cy ?? 13.5;
-    this.pin_radius = data.pin_radius ?? 3.0;
-    this.pinout_side = data.pinout_side ?? "bottom";
-    this.line_length = data.line_length ?? 20.0;
-    this.rows = data.rows ?? 1;
-    this.row2_pin_cy = data.row2_pin_cy ?? 0.0;
-    this.row2_pinout_side = data.row2_pinout_side ?? "top";
-    this.row2_line_length = data.row2_line_length ?? 20.0;
-    this.row2_padding_left = data.row2_padding_left ?? -1.0;
-    this.row2_pin_pitch_y = data.row2_pin_pitch_y ?? 0.0;
-    this.row2_pin_radius = data.row2_pin_radius ?? -1.0;
-    this.cavity_size = data.cavity_size ?? 0.0;
-    this.mating_pin_scale = data.mating_pin_scale ?? 1.0;
-    this.flare_max_pins = data.flare_max_pins ?? 0;
-    this.flare_width = data.flare_width ?? 0.0;
-  }
-
-  // Extra half-width a low-pin-count housing carries. Some families keep the
-  // same edge-to-first-pin distance at every size but widen the moulding below
-  // a few ways, because the latch needs more room than the pin field gives it.
-  // The widened body is the outer box, so the flare has to move the pin
-  // centres along with the width.
-  flareFor(nPins) {
-    return (this.flare_max_pins > 0 && nPins <= this.flare_max_pins) ? this.flare_width : 0.0;
-  }
-
-  connectorWidth(nPins) {
-    const flare = 2 * this.flareFor(nPins);
-    if (nPins < 1) return this.padding_left + this.padding_right + flare;
-    return this.padding_left + (nPins - 1) * this.pin_pitch + this.padding_right + flare;
-  }
-
-  pinCentersX(nPins) {
-    const left = this.padding_left + this.flareFor(nPins);
-    const centers = [];
-    for (let i = 0; i < nPins; i++) {
-      centers.push(left + i * this.pin_pitch);
-    }
-    return centers;
-  }
-}
-
-export class ConnectorType {
-  constructor(name, style, geometry) {
-    this.name = name;
-    this.style = style;
-    this.geometry = geometry instanceof ConnectorGeometry
-      ? geometry
-      : new ConnectorGeometry(geometry);
-  }
-}
+// The board model the designer edits. Connector type geometry is not modelled
+// here: it comes from pinout-gen through the Python bridge, so there is one
+// definition of a connector's shape rather than two that can disagree.
 
 export class Pin {
   constructor(name, color = "#888888", row = 1) {
