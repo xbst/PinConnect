@@ -34,6 +34,14 @@ def _bundle_designer() -> None:
             n for n in names if n in _SKIP_DIRS or n in _SKIP_FILES
         ],
     )
+    # setuptools stages into build/lib and never prunes it, so anything a
+    # previous build put there is copied into the next wheel: files since
+    # deleted from the designer, stale .pyc, and the generated payload zip that
+    # _SKIP_FILES exists to keep out. Clearing the staged tree makes each build
+    # reflect only what is in the source now.
+    staged = _HERE / "build" / "lib" / "pinout_gen"
+    if staged.exists():
+        shutil.rmtree(staged, ignore_errors=True)
 
 
 _bundle_designer()

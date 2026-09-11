@@ -85,7 +85,9 @@ def main(argv: list[str] | None = None) -> None:
         from .serve import serve
         try:
             serve(args.serve, open_browser=not args.no_browser)
-        except FileNotFoundError as e:
+        except (FileNotFoundError, ValueError, OSError) as e:
+            # A bad port, an unwritable install and a missing designer all
+            # deserve a message rather than a traceback.
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
         return
