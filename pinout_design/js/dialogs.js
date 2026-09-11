@@ -6,7 +6,7 @@
 import * as runtime from "./runtime.js";
 
 const REPO_URL = "https://github.com/xbst/PinConnect";
-const DOCS_URL = "https://docs.isiks.tech";
+const DOCS_URL = "https://github.com/xbst/PinConnect/blob/master/docs/README.md";
 const ABOUT_SEEN_KEY = "pinconnect.about.seen";
 
 function esc(s) {
@@ -72,21 +72,41 @@ export async function openGenerate(state, tomlText) {
       `<option value="${esc(t.name)}"${t.name === current ? " selected" : ""}>${esc(t.display)}</option>`
     ).join("") +
     `</select></label>` +
+    `<label class="gen-embed"><input type="checkbox" id="gen-embed"` +
+    `${hasImage ? " checked" : " disabled"}> Embed image</label>` +
     `<span class="gen-status" id="gen-status">Rendering…</span>` +
     `<span class="gen-spacer"></span>` +
-    `<button id="gen-dl-embed"${hasImage ? "" : " disabled"}>Download (image included)</button>` +
-    `<button id="gen-dl-plain">Download (image separate)</button>` +
+    `<button id="gen-download" class="primary">Download</button>` +
     `</div>` +
     `<div class="gen-preview" id="gen-preview"></div>` +
     `<p class="gen-note">${hasImage
-      ? "The included-image file is one self-contained HTML file. The separate version is smaller but needs the board image beside it."
+      ? "Embedding gives one self-contained file. Without it the page is smaller but loads the board image from beside it."
       : "No board image is loaded, so the page will reference the image named in the config."}</p>`;
 
   const statusEl = body.querySelector("#gen-status");
   const previewEl = body.querySelector("#gen-preview");
   const themeEl = body.querySelector("#gen-theme");
+  const embedEl = body.querySelector("#gen-embed");
   let previewUrl = null;
   onClose(() => { if (previewUrl) URL.revokeObjectURL(previewUrl); });
+
+  // Honour the height protocol the generated page speaks, the same one
+  // pinout-embed's listener implements. A theme that stacks the connector list
+  // below the board reports its content height and hides its own scrollbar,
+  // expecting whoever embeds it to grow the frame. A fixed-height frame just
+  // clipped it, with no way to scroll to the rest. Ocean stacks at every width,
+  // so it clipped every time; Midnight and Workbench do it on narrow screens.
+  const onMessage = (e) => {
+    const frame = previewEl.querySelector("iframe");
+    if (!frame || e.source !== frame.contentWindow) return;
+    const data = e.data;
+    if (!data || typeof data !== "object" || !("pinconnectHeight" in data)) return;
+    const h = Number(data.pinconnectHeight);
+    // Zero means "not stacked": drop back to filling the box.
+    frame.style.height = h > 0 ? `${h}px` : "";
+  };
+  addEventListener("message", onMessage);
+  onClose(() => removeEventListener("message", onMessage));
 
   const render = async (embed) =>
     runtime.generate(tomlText, {
@@ -94,16 +114,31 @@ export async function openGenerate(state, tomlText) {
       themeName: themeEl.value,
     });
 
+  const kb = (html) => `${(html.length / 1024).toFixed(0)} KB`;
+
+  // The preview is always embedded: a referenced image cannot resolve from a
+  // blob URL, so the board would show as broken art. The size shown is the
+  // size of what Download would give you, which is not the same thing.
+  let embeddedHtml = null;
+
+  const showSize = async () => {
+    try {
+      statusEl.textContent = embedEl.checked
+        ? kb(embeddedHtml)
+        : kb(await render(false));
+    } catch (e) {
+      statusEl.textContent = "Failed";
+    }
+  };
+
   const refresh = async () => {
     statusEl.textContent = "Rendering…";
     try {
-      // Always embed for the preview: a referenced image cannot resolve from a
-      // blob URL, so the board would show as broken art in the iframe.
-      const html = await render(true);
+      embeddedHtml = await render(true);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      previewUrl = URL.createObjectURL(new Blob([embeddedHtml], { type: "text/html" }));
       previewEl.innerHTML = `<iframe src="${previewUrl}" title="Pinout preview"></iframe>`;
-      statusEl.textContent = `${(html.length / 1024).toFixed(0)} KB`;
+      await showSize();
     } catch (e) {
       previewEl.innerHTML = `<pre class="gen-error">${esc(e && e.message ? e.message : e)}</pre>`;
       statusEl.textContent = "Failed";
@@ -111,17 +146,17 @@ export async function openGenerate(state, tomlText) {
   };
 
   const stem = (board && board.image ? board.image.replace(/\.[^.]+$/, "") : "") || "board";
-  const download = async (embed) => {
+
+  themeEl.addEventListener("change", refresh);
+  embedEl.addEventListener("change", showSize);
+  body.querySelector("#gen-download").addEventListener("click", async () => {
     try {
-      saveFile(await render(embed), `${stem}.pinout.html`, "text/html");
+      const html = embedEl.checked ? embeddedHtml : await render(false);
+      saveFile(html, `${stem}.pinout.html`, "text/html");
     } catch (e) {
       statusEl.textContent = "Failed";
     }
-  };
-
-  themeEl.addEventListener("change", refresh);
-  body.querySelector("#gen-dl-embed").addEventListener("click", () => download(true));
-  body.querySelector("#gen-dl-plain").addEventListener("click", () => download(false));
+  });
 
   await refresh();
   return close;
@@ -132,14 +167,13 @@ export async function openGenerate(state, tomlText) {
 export function openAbout() {
   const { body } = openModal("About PinConnect");
   body.innerHTML =
-    `<p>PinConnect turns a photo of a circuit board into an interactive pinout ` +
+    `<p>PinConnect turns an image of a circuit board into an interactive pinout ` +
     `diagram. Load a board image, draw a box over each connector, label the pins, ` +
     `then press <strong>Generate</strong> to get a single HTML file you can open ` +
     `in a browser or embed in a documentation site.</p>` +
     `<p>This designer runs the real generator in your browser, so nothing is ` +
-    `uploaded and the preview matches what the command line tool produces. There ` +
-    `is also a <code>pinout-gen</code> command for regenerating pinouts from a ` +
-    `saved config.</p>` +
+    `uploaded. There is also a <code>pinout-gen</code> command for regenerating ` +
+    `pinouts from a saved config.</p>` +
     `<p class="about-links">` +
     `<a href="${DOCS_URL}" target="_blank" rel="noopener">Documentation</a>` +
     `<a href="${REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a>` +

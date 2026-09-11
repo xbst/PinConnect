@@ -888,12 +888,18 @@ html, body {
 .gen-status { font-size: 11px; color: var(--text-dim); }
 
 /* The preview is the generated page itself, in an iframe, at a height that
-   leaves the toolbar and the note visible inside the modal. */
+   leaves the toolbar and the note visible inside the modal.
+
+   It scrolls because a stacking theme reports a content height taller than the
+   box and hides its own scrollbar, trusting the embedder to grow the frame.
+   The gutter is reserved so gaining that scrollbar cannot narrow the frame,
+   which would make the page report a new height and oscillate. */
 .gen-preview {
   height: min(60vh, 560px);
   border: 1px solid var(--border);
   border-radius: 4px;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-gutter: stable;
   background: var(--bg);
 }
 
@@ -927,4 +933,22 @@ html, body {
 
   .toolbar-title { margin-right: 4px; }
   .toolbar .separator { display: none; }
+}
+
+.gen-embed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.gen-embed input { margin: 0; cursor: pointer; accent-color: var(--accent); }
+.gen-embed:has(input:disabled) { opacity: 0.45; cursor: default; }
+
+.gen-bar button.primary {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-hover);
 }
