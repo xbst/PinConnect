@@ -125,7 +125,12 @@ def main(argv: list[str] | None = None) -> None:
                          image_data_uri=image_data_uri)
 
     out_path: Path = args.output or config_path.with_suffix(".pinout.html")
-    out_path.write_text(html, encoding="utf-8")
+    # Write LF explicitly. Text mode translates to CRLF on Windows, so the same
+    # config rendered on two machines produced two different files, and the
+    # designer (which always writes LF) disagreed with the CLI byte for byte.
+    # Path.write_text only grew a newline argument in 3.10, and this supports 3.9.
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(html)
     print(f"Generated: {out_path}  ({len(board.connectors)} connectors)")
 
 
