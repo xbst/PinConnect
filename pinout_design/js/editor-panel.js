@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, stripComment, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -10,10 +10,9 @@ function span(cls, text) {
 }
 
 function highlightTomlLine(line) {
-  // Comment line or trailing comment
-  const commentIdx = findUnquotedHash(line);
-  let code = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
-  const comment = commentIdx >= 0 ? line.slice(commentIdx) : "";
+  // Comment line or trailing comment, split exactly where the parser splits it
+  const code = stripComment(line);
+  const comment = line.slice(code.length);
 
   let result = "";
 
@@ -60,17 +59,6 @@ function highlightValue(val) {
     return lead + span("hl-number", esc(trimmed)) + trail;
   }
   return esc(val);
-}
-
-function findUnquotedHash(line) {
-  let inStr = false, quote = null;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inStr) { if (ch === quote && line[i - 1] !== "\\") inStr = false; }
-    else if (ch === '"' || ch === "'") { inStr = true; quote = ch; }
-    else if (ch === "#") return i;
-  }
-  return -1;
 }
 
 function highlightToml(text) {

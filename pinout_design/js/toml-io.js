@@ -65,33 +65,52 @@ export function parseToml(text) {
   return result;
 }
 
-function stripComment(line) {
-  let inStr = false, quote = null, escaped = false;
+// Everything before the line's comment, if it has one. Exported so the editor
+// highlights comments exactly where the parser finds them.
+export function stripComment(line) {
   for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inStr) {
-      if (escaped) { escaped = false; continue; }
-      // Escapes only exist in basic (double-quoted) strings, not literal ones.
-      if (ch === "\\" && quote === '"') { escaped = true; continue; }
-      if (ch === quote) inStr = false;
+    if (line[i] === "#") return line.slice(0, i);
+    if (line[i] === '"' || line[i] === "'") {
+      const string = scanString(line, i);
+      if (!string) return line; // an unterminated string runs to the end of the line
+      i = string.end - 1;
     }
-    else if (ch === '"' || ch === "'") { inStr = true; quote = ch; }
-    else if (ch === "#") return line.slice(0, i);
   }
   return line;
 }
 
+// The string opening at text[start], if it closes on the same line: its raw
+// content and the index just past its closing delimiter. A triple-quoted
+// string may hold one or two quote characters, including just inside its
+// closing delimiter. Escapes only exist in basic (double-quoted) strings.
+function scanString(text, start) {
+  const quote = text[start];
+  const open = text.startsWith(quote.repeat(3), start) ? start + 3 : start + 1;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === "\\" && quote === '"') { i++; continue; }
+    if (text[i] !== quote) continue;
+    if (open === start + 1) return { quote, content: text.slice(open, i), end: i + 1 };
+    let run = 1;
+    while (text[i + run] === quote) run++;
+    if (run >= 3) return { quote, content: text.slice(open, i + run - 3), end: i + run };
+    i += run - 1;
+  }
+  return null;
+}
+
 function parseTomlValue(val, lineNum) {
-  // Quoted string (double)
-  if (val.startsWith('"')) {
-    let end = -1;
-    for (let i = 1; i < val.length; i++) {
-      if (val[i] === "\\") { i++; continue; }
-      if (val[i] === '"') { end = i; break; }
+  // Quoted string: basic ("...") or literal ('...'), either of them possibly
+  // triple-quoted, as long as it closes on this line.
+  if (val.startsWith('"') || val.startsWith("'")) {
+    const string = scanString(val, 0);
+    if (!string) {
+      throw new TomlParseError(val.startsWith(val[0].repeat(3))
+        ? "Multi-line strings are not supported; put the whole string on one line"
+        : "Unterminated string", lineNum);
     }
-    if (end === -1) throw new TomlParseError("Unterminated string", lineNum);
+    if (string.quote === "'") return string.content;
     // Single left-to-right pass so "\\n" is a backslash + n, not a newline.
-    return val.slice(1, end).replace(/\\(u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)/g, (m, esc) => {
+    return string.content.replace(/\\(u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)/g, (m, esc) => {
       if (esc === "n") return "\n";
       if (esc === "t") return "\t";
       if (esc === "r") return "\r";
@@ -107,12 +126,6 @@ function parseTomlValue(val, lineNum) {
       }
       return m;
     });
-  }
-  // Quoted string (single)
-  if (val.startsWith("'")) {
-    const end = val.indexOf("'", 1);
-    if (end === -1) throw new TomlParseError("Unterminated string", lineNum);
-    return val.slice(1, end);
   }
   // Boolean
   if (val === "true") return true;
