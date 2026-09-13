@@ -136,6 +136,12 @@ export function previewConnectorSvg(connector) {
   return _bridge.preview_connector_svg(JSON.stringify(connector));
 }
 
+// Keep named icons and aliases in Python alongside the generator's symbols.
+// Null means startup is still pending; an empty string means no symbol.
+export function previewSymbol(symbol) {
+  return _bridge ? _bridge.preview_symbol(symbol) : null;
+}
+
 /**
  * Turn a Python exception into something worth showing someone.
  *

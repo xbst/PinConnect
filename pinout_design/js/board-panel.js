@@ -22,6 +22,10 @@ export class BoardPanel {
     this._bindDrawButton();
     this._bindViewportEvents();
     this._bindGlobalDragEvents();
+    // A breakpoint or panel resize changes the available board viewport even
+    // when the image dimensions stay the same.
+    this._resizeObserver = new ResizeObserver(() => this.fitToView());
+    this._resizeObserver.observe(this.container);
   }
 
   _bindGlobalDragEvents() {
@@ -34,15 +38,22 @@ export class BoardPanel {
   }
 
   _bindDrawButton() {
-    const btn = document.getElementById("draw-mode-btn");
-    if (btn) {
-      btn.addEventListener("click", () => {
-        this.drawMode = !this.drawMode;
-        btn.classList.toggle("active", this.drawMode);
-        btn.textContent = this.drawMode ? "Cancel Draw" : "+ Add Connector";
-        if (this.svg) this.svg.style.cursor = this.drawMode ? "crosshair" : "";
-      });
+    for (const btn of document.querySelectorAll("[data-draw-mode]")) {
+      btn.addEventListener("click", () => this.setDrawMode(!this.drawMode));
     }
+  }
+
+  // Both Add buttons operate the same board interaction and stay in step when
+  // creating a connector ends draw mode.
+  setDrawMode(active) {
+    this.drawMode = active;
+    for (const btn of document.querySelectorAll("[data-draw-mode]")) {
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
+      btn.textContent = active ? "Cancel Draw" : "+ Add Connector";
+    }
+    if (this.svg) this.svg.style.cursor = active ? "crosshair" : "";
+    this.state.emit("draw-mode-changed", { active });
   }
 
   _bindViewportEvents() {
@@ -124,9 +135,10 @@ export class BoardPanel {
     });
     this.state.on("connector-added", () => this._renderRects());
     this.state.on("connector-removed", () => this._renderRects());
+    this.state.on("connectors-reordered", () => this._renderRects());
     this.state.on("connector-renamed", ({ oldId, newId }) => {
       if (!this.svg) return;
-      const g = this.svg.querySelector(`g[data-id="${oldId}"]`);
+      const g = this._rectGroup(oldId);
       if (!g) return;
       g.setAttribute("data-id", newId);
       const label = g.querySelector(".board-rect-label");
@@ -425,10 +437,7 @@ export class BoardPanel {
         pins: [new Pin("PIN1", "#888888")],
       }), "visual");
       this.state.selectConnector(id);
-      this.drawMode = false;
-      const btn = document.getElementById("draw-mode-btn");
-      if (btn) { btn.classList.remove("active"); btn.textContent = "+ Add Connector"; }
-      if (this.svg) this.svg.style.cursor = "";
+      this.setDrawMode(false);
     });
 
     dialog.querySelector("#new-conn-id").focus();
@@ -436,6 +445,10 @@ export class BoardPanel {
   }
 
   // --- Rendering ---
+
+  _rectGroup(id) {
+    return this.svg && [...this.svg.querySelectorAll("g[data-id]")].find(g => g.dataset.id === id);
+  }
 
   _renderRects() {
     if (!this.svg || !this.state.board) return;
@@ -475,7 +488,7 @@ export class BoardPanel {
 
   _updateRect(connectorId) {
     if (!this.svg) return;
-    const g = this.svg.querySelector(`g[data-id="${connectorId}"]`);
+    const g = this._rectGroup(connectorId);
     if (!g) { this._renderRects(); return; }
 
     const conn = this.state.getConnector(connectorId);
@@ -509,7 +522,7 @@ export class BoardPanel {
     this.svg.querySelectorAll(".resize-handle").forEach(h => h.remove());
 
     if (selectedId) {
-      const g = this.svg.querySelector(`g[data-id="${selectedId}"]`);
+      const g = this._rectGroup(selectedId);
       if (g) {
         g.querySelector(".board-rect").classList.add("selected");
         const conn = this.state.getConnector(selectedId);

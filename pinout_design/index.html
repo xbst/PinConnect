@@ -40,10 +40,26 @@
   <!-- Panels -->
   <div class="panels">
 
-    <!-- Left: TOML editor -->
+    <!-- Left: connector list and TOML editor -->
     <div class="panel-editor" id="panel-editor">
-      <div class="panel-editor-header">TOML Source</div>
-      <div class="panel-editor-body" id="editor-container"></div>
+      <div class="panel-tabs" role="tablist" aria-label="Board editing views">
+        <button id="tab-connectors" class="panel-tab" role="tab" aria-selected="true" aria-controls="connectors-tab-panel">Connectors</button>
+        <button id="tab-toml" class="panel-tab" role="tab" aria-selected="false" aria-controls="toml-tab-panel" tabindex="-1">TOML</button>
+      </div>
+      <div id="connectors-tab-panel" class="panel-tab-content" role="tabpanel" aria-labelledby="tab-connectors">
+        <div class="connector-list-toolbar">
+          <span id="connector-list-count">0 connectors</span>
+          <button id="move-connector-up" class="toolbar-btn connector-move-btn" aria-label="Move selected connector up" title="Move selected connector up (Alt+↑)" disabled>↑</button>
+          <button id="move-connector-down" class="toolbar-btn connector-move-btn" aria-label="Move selected connector down" title="Move selected connector down (Alt+↓)" disabled>↓</button>
+          <button id="list-add-connector" class="toolbar-btn" data-draw-mode aria-pressed="false" disabled>+ Add Connector</button>
+        </div>
+        <p class="connector-list-hint" id="connector-list-hint">Drag to reorder · Alt+↑/↓ to move a connector</p>
+        <div id="connector-list-container" class="connector-list-container"></div>
+        <div id="connector-list-status" class="sr-only" role="status"></div>
+      </div>
+      <div id="toml-tab-panel" class="panel-tab-content" role="tabpanel" aria-labelledby="tab-toml" hidden>
+        <div class="panel-editor-body" id="editor-container"></div>
+      </div>
     </div>
 
     <div class="resizer-h" id="resizer-h"></div>
@@ -55,7 +71,7 @@
       <div class="panel-board" id="panel-board">
         <div class="panel-board-header">
           Board Image
-          <button id="draw-mode-btn" style="margin-left:auto;padding:2px 8px;font-size:11px" disabled>+ Add Connector</button>
+          <button id="draw-mode-btn" class="toolbar-btn" data-draw-mode aria-pressed="false" disabled>+ Add Connector</button>
         </div>
         <div class="panel-board-body" id="board-body">
           <div class="board-placeholder" id="board-placeholder">

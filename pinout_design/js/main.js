@@ -3,6 +3,7 @@ import { BoardState } from "./state.js";
 import { EditorPanel } from "./editor-panel.js";
 import { BoardPanel } from "./board-panel.js";
 import { ConnectorPanel } from "./connector-panel.js";
+import { ConnectorListPanel } from "./connector-list-panel.js";
 import { serializeBoardToml } from "./toml-io.js";
 import * as runtime from "./runtime.js";
 import { openGenerate, openAbout, maybeShowAboutOnFirstVisit } from "./dialogs.js";
@@ -28,7 +29,7 @@ async function loadCatalogs() {
 function setupRuntimeStatus() {
   const el = document.getElementById("runtime-status");
   const genBtn = document.getElementById("generate-btn");
-  const drawBtn = document.getElementById("draw-mode-btn");
+  const drawButtons = document.querySelectorAll("[data-draw-mode]");
   const labels = {
     runtime: "Starting renderer…",
     package: "Loading connectors…",
@@ -40,8 +41,10 @@ function setupRuntimeStatus() {
       el.textContent = "Renderer unavailable";
       el.title = detail;
       genBtn.disabled = true;
-      drawBtn.disabled = true;
-      drawBtn.title = "The renderer could not start, so connector types are unavailable.";
+      for (const btn of drawButtons) {
+        btn.disabled = true;
+        btn.title = "The renderer could not start, so connector types are unavailable.";
+      }
       return;
     }
     el.className = "runtime-status" + (phase === "ready" ? " ready" : "");
@@ -50,9 +53,52 @@ function setupRuntimeStatus() {
     const ready = phase === "ready";
     genBtn.disabled = !ready;
     // Drawing a box creates a connector, which needs a type from the catalog.
-    drawBtn.disabled = !ready;
-    drawBtn.title = ready ? "" : "Waiting for the renderer to start…";
+    for (const btn of drawButtons) {
+      btn.disabled = !ready;
+      btn.title = ready ? "Draw a hotspot on the board image" : "Waiting for the renderer to start…";
+    }
   });
+}
+
+function setupPanelTabs(editorPanel) {
+  const tabs = [...document.querySelectorAll(".panel-tab")];
+  const storageKey = "pinconnect-designer-tab";
+  const activate = (tab, remember = true) => {
+    // Finish a pending TOML keystroke before exposing controls that act on the
+    // model. Invalid source stays visible with the editor's parse error.
+    const leavingToml = document.getElementById("tab-toml").getAttribute("aria-selected") === "true";
+    if (tab.id === "tab-connectors" && leavingToml && !editorPanel.flushChanges()) {
+      editorPanel.textarea.focus();
+      return false;
+    }
+    for (const candidate of tabs) {
+      const active = candidate === tab;
+      candidate.setAttribute("aria-selected", String(active));
+      candidate.tabIndex = active ? 0 : -1;
+      document.getElementById(candidate.getAttribute("aria-controls")).hidden = !active;
+    }
+    if (remember) {
+      try { localStorage.setItem(storageKey, tab.id); } catch (_) { /* storage can be blocked */ }
+    }
+    return true;
+  };
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => activate(tab));
+    tab.addEventListener("keydown", (e) => {
+      const index = tabs.indexOf(tab);
+      let next;
+      if (e.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
+      else if (e.key === "ArrowLeft") next = tabs[(index + tabs.length - 1) % tabs.length];
+      else if (e.key === "Home") next = tabs[0];
+      else if (e.key === "End") next = tabs[tabs.length - 1];
+      else return;
+      e.preventDefault();
+      if (activate(next)) next.focus();
+    });
+  }
+  let initial = tabs[0];
+  try { initial = tabs.find(tab => tab.id === localStorage.getItem(storageKey)) || initial; } catch (_) { /* use default */ }
+  activate(initial, false);
 }
 
 function setupThemeSelect() {
@@ -166,6 +212,12 @@ function setupFileIO(editorPanel) {
     const reader = new FileReader();
     reader.onload = () => {
       editorPanel.setValue(reader.result);
+      // An invalid file must expose its error instead of leaving the old
+      // connector list available to mutate against the newly opened source.
+      if (!editorPanel.flushChanges()) {
+        document.getElementById("tab-toml").click();
+        editorPanel.textarea.focus();
+      }
       // Just opened: there is nothing unsaved yet, whatever the editor's own
       // parse did to the model on the way in.
       markSaved(editorPanel.getValue());
@@ -214,7 +266,15 @@ async function init() {
   const connectorPanel = new ConnectorPanel(
     document.getElementById("connector-body"), state
   );
+  const connectorListPanel = new ConnectorListPanel(
+    document.getElementById("connector-list-container"), state
+  );
 
+  setupPanelTabs(editorPanel);
+  state.on("source-error", () => {
+    document.getElementById("tab-toml").click();
+    editorPanel.textarea.focus();
+  });
   setupResizers();
   setupFileIO(editorPanel);
   setupThemeSelect();
@@ -226,8 +286,12 @@ async function init() {
     redoBtn.disabled = !state.canRedo;
   };
   state.on("undo-changed", updateUndoButtons);
-  undoBtn.addEventListener("click", () => { state.undo(); editorPanel._syncFromState(); });
-  redoBtn.addEventListener("click", () => { state.redo(); editorPanel._syncFromState(); });
+  // Flush valid pending typing before navigating history. A parse error must
+  // not disable Undo: returning to a saved snapshot is also a way to fix it.
+  const undo = () => { editorPanel.flushChanges(); state.undo(); };
+  const redo = () => { editorPanel.flushChanges(); state.redo(); };
+  undoBtn.addEventListener("click", undo);
+  redoBtn.addEventListener("click", redo);
 
   document.addEventListener("keydown", (e) => {
     // A dialog is on top: its own keys (Escape, typing in its controls) are its
@@ -235,29 +299,33 @@ async function init() {
     // the selected connector while the Generate preview sat there showing the
     // pinout that still contained it, and Ctrl+Z would rewrite the TOML the
     // open dialog had already captured.
-    if (document.querySelector(".modal-backdrop")) return;
+    if (e.defaultPrevented || document.querySelector(".modal-backdrop, .new-conn-dialog")) return;
 
-    if (e.key === "Delete" && state.selectedConnectorId) {
-      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
-      state.removeConnector(state.selectedConnectorId, "visual");
-    }
     // Normalize the letter: with Shift held (or Caps Lock), e.key for a letter
     // is uppercase, so `e.key === "z"` never matched for Ctrl+Shift+Z (redo).
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const typing = document.activeElement?.matches("input, textarea, select") || document.activeElement?.isContentEditable;
+    if (!typing && state.selectedConnectorId) {
+      if (key === "Delete") {
+        e.preventDefault();
+        if (editorPanel.flushChanges()) state.removeConnector(state.selectedConnectorId, "visual");
+      } else if (key === "d" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        if (editorPanel.flushChanges()) state.duplicateConnector(state.selectedConnectorId, "visual");
+      }
+    }
     if (key === "s" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       document.getElementById("save-toml").click();
     }
     if (key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();
-      state.undo();
-      editorPanel._syncFromState();
+      undo();
     }
     if ((key === "y" && (e.ctrlKey || e.metaKey)) ||
         (key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
       e.preventDefault();
-      state.redo();
-      editorPanel._syncFromState();
+      redo();
     }
   });
 
@@ -293,7 +361,7 @@ height = 600
         el.textContent = "Connector types unavailable";
         el.title = e && e.message ? e.message : String(e);
         document.getElementById("generate-btn").disabled = true;
-        document.getElementById("draw-mode-btn").disabled = true;
+        for (const btn of document.querySelectorAll("[data-draw-mode]")) btn.disabled = true;
       }
     });
 
