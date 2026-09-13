@@ -543,8 +543,27 @@ export function patchConnectorInSource(sourceText, range, newConn) {
 // missing key is added only when it is not at its default, so a minimal board
 // stays minimal.
 export function patchBoardInSource(sourceText, range, boardData) {
-  if (!range) return sourceText;
   const lines = sourceLines(sourceText);
-  patchKeyLines(lines, range.start, range.end, boardData, boardFields, sourceText.match(/\r?\n/)?.[0] || "\n");
+  const separator = sourceText.match(/\r?\n/)?.[0] || "\n";
+  if (range) {
+    patchKeyLines(lines, range.start, range.end, boardData, boardFields, separator);
+    return joinSourceLines(lines, sourceText);
+  }
+  // Without a [board] table, add one rather than rewriting the document: ahead
+  // of the first table and the comments introducing it (after any root keys),
+  // or at the end when there are no tables.
+  const table = [{ text: "[board]", ending: separator }];
+  patchKeyLines(table, 0, 0, boardData, boardFields, separator);
+  let at = lines.findIndex(line => stripComment(line.text).trim().startsWith("["));
+  if (at < 0) {
+    at = lines.length;
+  } else {
+    while (at > 0 && !stripComment(lines[at - 1].text).trim()) at--;
+    while (!lines[at].text.trim()) at++;
+  }
+  const blank = () => ({ text: "", ending: separator });
+  if (at > 0 && lines[at - 1].text.trim()) table.unshift(blank());
+  if (at < lines.length) table.push(blank());
+  lines.splice(at, 0, ...table);
   return joinSourceLines(lines, sourceText);
 }

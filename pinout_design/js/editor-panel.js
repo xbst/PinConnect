@@ -287,17 +287,11 @@ export class EditorPanel {
 
   // Update just the [board] table's keys, leaving comments and connector blocks
   // intact -- so picking a theme or loading an image doesn't wipe the document.
+  // A config without a [board] table gains one rather than being regenerated.
   _patchBoard() {
     const text = this.textarea.value;
-    const range = buildSourceMap(text).board;
-    if (!range) { // no [board] block to patch -- fall back to a full sync
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
-      return;
-    }
     this._suppressSync = true;
-    this._setSourceText(patchBoardInSource(text, range, this._boardData()));
+    this._setSourceText(patchBoardInSource(text, buildSourceMap(text).board, this._boardData()));
     this._suppressSync = false;
   }
 
