@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -161,14 +161,15 @@ export class EditorPanel {
       this._patchConnector(newId, oldId);
     });
 
-    this.state.on("pin-changed", ({ connectorId, origin }) => {
+    this.state.on("pin-changed", ({ connectorId, removedIndex, origin }) => {
       if (origin === "editor") return;
-      this._patchConnector(connectorId);
+      if (removedIndex === undefined) this._patchConnector(connectorId);
+      else this._editPins(connectorId, (text, range) => removePinBlock(text, range, removedIndex));
     });
 
-    this.state.on("pins-reordered", ({ connectorId, origin }) => {
+    this.state.on("pins-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {
       if (origin === "editor") return;
-      this._patchConnector(connectorId);
+      this._editPins(connectorId, (text, range) => movePinBlock(text, range, fromIndex, toIndex));
     });
   }
 
@@ -328,6 +329,15 @@ export class EditorPanel {
     this._suppressSync = true;
     this._setSourceText(patchConnectorInSource(text, range, this._connData(conn)));
     this._suppressSync = false;
+  }
+
+  // Reordering or deleting a pin moves or removes its own lines, with the
+  // comments above it, so no comment ends up describing a different pin.
+  _editPins(connectorId, edit) {
+    const text = this.textarea.value;
+    const range = buildSourceMap(text).connectors.find(c => c.id === connectorId);
+    if (range) this._setSourceText(edit(text, range));
+    this._patchConnector(connectorId);
   }
 
   // Append a newly-added connector's block rather than regenerating the whole

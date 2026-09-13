@@ -97,7 +97,7 @@ Open the **TOML** tab in the left panel for the fully editable **TOML Source** p
 
 Invalid or unfinished TOML keeps the source visible with an error and blocks visual edits until you correct it. Connector IDs must be non-empty and unique, including when you open a config or edit the source directly.
 
-Reordering and duplicating preserve each connector block's comments, formatting, and pin tables. Comments between connectors travel with the following connector; comments at the end of the document stay there. Put a comment inside a connector's block or inline with one of its fields if it must always travel with that connector. Duplicating copies the block and updates the copy's identity and position.
+Editing a connector or its pins rewrites only the values that change, so the rest of the block, comments included, stays as written. Reordering and duplicating preserve each connector block's comments, formatting, and pin tables. Comments between connectors travel with the following connector, and comments above a pin travel with that pin; comments at the end of the document stay there. Put a comment inside a connector's block or inline with one of its fields if it must always travel with that connector. Deleting a connector or a pin removes the comments above it too. Duplicating copies the block and updates the copy's identity and position.
 
 ![The TOML Source pane showing the generated, syntax-highlighted config](../assets/workflow-5-toml.png)
 

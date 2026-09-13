@@ -335,20 +335,25 @@ export class BoardState {
     this._origin = origin;
     conn.pins.splice(pinIndex, 1);
     this.dirty = true;
-    this.emit("pin-changed", { connectorId, pinIndex: -1, origin });
+    // removedIndex lets the editor delete that pin's own lines and comments.
+    this.emit("pin-changed", { connectorId, pinIndex: -1, removedIndex: pinIndex, origin });
     this._origin = null;
   }
 
+  // toIndex is the pin's final index, after removal from fromIndex.
   reorderPins(connectorId, fromIndex, toIndex, origin = "visual") {
-    if (!this._prepareMutation(origin)) return;
+    if (!this._prepareMutation(origin)) return false;
     const conn = this.getConnector(connectorId);
-    if (!conn) return;
+    if (!conn || !Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+    const count = conn.pins.length;
+    if (fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return false;
     this._pushUndo();
     this._origin = origin;
     const [pin] = conn.pins.splice(fromIndex, 1);
     conn.pins.splice(toIndex, 0, pin);
     this.dirty = true;
-    this.emit("pins-reordered", { connectorId, origin });
+    this.emit("pins-reordered", { connectorId, fromIndex, toIndex, origin });
     this._origin = null;
+    return true;
   }
 }
