@@ -42,17 +42,22 @@ function highlightTomlLine(line) {
   return result;
 }
 
+// Return every character of val, whitespace included: the highlight sits under
+// a transparent textarea, so a dropped space shifts the rest of the line away
+// from the caret.
 function highlightValue(val) {
   const trimmed = val.trim();
-  const lead = esc(val.slice(0, val.indexOf(trimmed)));
+  const start = val.indexOf(trimmed);
+  const lead = esc(val.slice(0, start));
+  const trail = esc(val.slice(start + trimmed.length));
   if (trimmed.startsWith('"') || trimmed.startsWith("'")) {
-    return lead + span("hl-string", esc(trimmed));
+    return lead + span("hl-string", esc(trimmed)) + trail;
   }
   if (trimmed === "true" || trimmed === "false") {
-    return lead + span("hl-bool", esc(trimmed));
+    return lead + span("hl-bool", esc(trimmed)) + trail;
   }
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    return lead + span("hl-number", esc(trimmed));
+    return lead + span("hl-number", esc(trimmed)) + trail;
   }
   return esc(val);
 }
