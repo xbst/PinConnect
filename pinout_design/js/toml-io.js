@@ -169,19 +169,7 @@ export function parseBoardToml(text) {
       throw new TomlParseError("Connector symbol must be a string", line);
     }
   }
-  // Use ?? (not ||) for fields with a non-empty default, so an explicit empty
-  // string the user typed (e.g. title = "") survives the round-trip instead of
-  // being silently replaced by the default.
-  const board = {
-    title: b.title ?? "Pinout",
-    image: b.image ?? "",
-    width: b.width || 0,
-    height: b.height || 0,
-    connector_dir: b.connector_dir ?? "./connectors",
-    theme: b.theme ?? "default",
-    theme_dir: b.theme_dir ?? "./themes",
-  };
-
+  const board = boardFields(b);
   const connectors = (raw.connector || []).map(c => ({
     ...connectorFields(c),
     pins: (c.pin || []).map(pinFields),
@@ -190,8 +178,24 @@ export function parseBoardToml(text) {
   return { board, connectors };
 }
 
-// The model's reading of a connector or pin table. Patches compare through
-// these too, so a line is only rewritten when the model sees a different value.
+// The model's reading of the board, a connector, or a pin table. Patches
+// compare through these too, so a line is only rewritten when the model sees a
+// different value.
+function boardFields(b) {
+  // Use ?? (not ||) for fields with a non-empty default, so an explicit empty
+  // string the user typed (e.g. title = "") survives the round-trip instead of
+  // being silently replaced by the default.
+  return {
+    title: b.title ?? "Pinout",
+    image: b.image ?? "",
+    width: b.width || 0,
+    height: b.height || 0,
+    connector_dir: b.connector_dir ?? "./connectors",
+    theme: b.theme ?? "default",
+    theme_dir: b.theme_dir ?? "./themes",
+  };
+}
+
 function connectorFields(c) {
   return {
     id: c.id || "",
@@ -354,11 +358,14 @@ export function moveConnectorBlock(sourceText, fromIndex, toIndex) {
   return joinSourceLines(lines, sourceText);
 }
 
-// Rewrite the managed key lines of one table in place, from its header line to
-// its last key line. A value is rewritten only when the model reads it
-// differently, so notation, quoting, spacing and inline comments survive. A
-// missing key is added after the last one, unless it holds the default.
-function patchKeyLines(lines, header, last, values, read, separator) {
+// Rewrite the key lines of one table in place, from its header line to its
+// last key line. The keys managed are those read() knows and data carries. A
+// value is rewritten only when the model reads it differently, so notation,
+// quoting, spacing and inline comments survive. A missing key is added after
+// the last one, unless it holds the default.
+function patchKeyLines(lines, header, last, data, read, separator) {
+  const defaults = read({});
+  const values = new Map(Object.keys(defaults).filter(key => key in data).map(key => [key, data[key]]));
   const seen = new Set();
   const valueText = value => typeof value === "string" ? quoteStr(value) : String(value);
   let indent = lines[header].text.match(/^\s*/)[0];
@@ -374,7 +381,6 @@ function patchKeyLines(lines, header, last, values, read, separator) {
       ? `'${value}'` : valueText(value);
     lines[i].text = match[1] + formatted + match[4] + lines[i].text.slice(code.length);
   }
-  const defaults = read({});
   const missing = [...values].filter(([key, value]) => !seen.has(key) && value !== defaults[key])
     .map(([key, value]) => ({ text: `${indent}${key} = ${valueText(value)}`, ending: separator }));
   lines.splice(last + 1, 0, ...missing);
@@ -385,8 +391,6 @@ function patchKeyLines(lines, header, last, values, read, separator) {
 // by position, so a reordered or deleted pin must be moved or removed as a
 // block first (movePinBlock, removePinBlock) for its comments to follow it.
 function patchConnectorLines(lines, range, conn, separator) {
-  const managed = (read, data) => new Map(Object.keys(read({}))
-    .filter(key => key in data).map(key => [key, data[key]]));
   if (Array.isArray(conn.pins)) {
     const pins = range.pins;
     if (conn.pins.length > pins.length) {
@@ -400,10 +404,10 @@ function patchConnectorLines(lines, range, conn, separator) {
       lines.splice(pins[i].blockStart, pins[i].blockEnd - pins[i].blockStart + 1);
     }
     for (let i = Math.min(pins.length, conn.pins.length) - 1; i >= 0; i--) {
-      patchKeyLines(lines, pins[i].start, pins[i].end, managed(pinFields, conn.pins[i]), pinFields, separator);
+      patchKeyLines(lines, pins[i].start, pins[i].end, conn.pins[i], pinFields, separator);
     }
   }
-  patchKeyLines(lines, range.start, range.fieldsEnd, managed(connectorFields, conn), connectorFields, separator);
+  patchKeyLines(lines, range.start, range.fieldsEnd, conn, connectorFields, separator);
 }
 
 // A copy keeps the original's indentation, spacing, inline comments, and every
@@ -534,45 +538,13 @@ export function patchConnectorInSource(sourceText, range, newConn) {
   return joinSourceLines(lines, sourceText);
 }
 
-// Optional [board] keys the serializer omits at their default; a patch only
-// *adds* one of these when it's non-default, so a minimal board stays minimal.
-const _BOARD_OPTIONAL = { connector_dir: "./connectors", theme: "default", theme_dir: "./themes" };
-
-function boardKeyLines(b) {
-  return new Map([
-    ["title", `title = ${quoteStr(b.title)}`],
-    ["image", `image = ${quoteStr(b.image)}`],
-    ["width", `width = ${b.width}`],
-    ["height", `height = ${b.height}`],
-    ["connector_dir", `connector_dir = ${quoteStr(b.connector_dir)}`],
-    ["theme", `theme = ${quoteStr(b.theme)}`],
-    ["theme_dir", `theme_dir = ${quoteStr(b.theme_dir)}`],
-  ]);
-}
-
-// Update only the [board] table's key lines in place, so hand-written comments,
-// blank lines, unknown keys, and every connector block survive (unlike a full
-// serializeBoardToml regen). Present keys have their value refreshed; a missing
-// key is appended only when it's non-default.
+// Update only the [board] table's key lines in place, as connector patches do,
+// so comments, formatting, unknown keys, and every connector block survive. A
+// missing key is added only when it is not at its default, so a minimal board
+// stays minimal.
 export function patchBoardInSource(sourceText, range, boardData) {
   if (!range) return sourceText;
-  const lines = sourceText.split("\n");
-  const desired = boardKeyLines(boardData);
-  const seen = new Set();
-  const block = [lines[range.start]]; // keep the [board] header line
-  for (let i = range.start + 1; i <= range.end; i++) {
-    const m = stripComment(lines[i]).trim().match(/^([A-Za-z0-9_.-]+)\s*=/);
-    if (m && desired.has(m[1])) {
-      block.push(desired.get(m[1]));
-      seen.add(m[1]);
-    } else {
-      block.push(lines[i]); // comment, blank line, or an unmanaged key
-    }
-  }
-  for (const [k, line] of desired) {
-    if (seen.has(k)) continue;
-    if (k in _BOARD_OPTIONAL && String(boardData[k]) === _BOARD_OPTIONAL[k]) continue;
-    block.push(line);
-  }
-  return [...lines.slice(0, range.start), ...block, ...lines.slice(range.end + 1)].join("\n");
+  const lines = sourceLines(sourceText);
+  patchKeyLines(lines, range.start, range.end, boardData, boardFields, sourceText.match(/\r?\n/)?.[0] || "\n");
+  return joinSourceLines(lines, sourceText);
 }
