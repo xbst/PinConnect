@@ -30,7 +30,7 @@ Click **Open Image** and choose your photo. It sets the coordinate space for eve
 
 ## Step 3: Draw a box over each connector
 
-Click **+ Add Connector**, then drag a box over a connector in the photo. Releasing the drag opens a dialog where you give the connector an ID, an optional name, and a type from the built-in library.
+The **Connectors** tab is open on your first visit. Click **+ Add Connector** in the list or above the board, then drag a box over a connector in the photo. Releasing the drag opens a dialog where you give the connector an ID, an optional name, and a type from the built-in library.
 
 Draw mode switches itself off after each connector, so click the button again for the next one.
 
@@ -38,9 +38,11 @@ Draw mode switches itself off after each connector, so click the button again fo
 
 ## Step 4: Label the pins
 
-Select a connector to edit it. Set its type, orientation and description, then name each pin and give it the color of the wire that goes there.
+Select a connector in the **Connectors** list or on the board to edit it. Set its type, orientation and description, then name each pin and give it the color of the wire that goes there.
 
 Pin order in the list is the physical pin order in the output, so drag the handles until they match the board.
+
+You can also drag the handles in the **Connectors** list to set the order of connectors in the finished pinout. Use a row's **Duplicate** button to copy a connector with its pins, then move its box to the next matching connector on the board.
 
 ![The Pins list for a connector: a drag handle, color swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
 
@@ -63,7 +65,7 @@ Click **Download** to save the page. Open it in a browser and you have this:
 
 ## Step 6: Save the config too
 
-Click **Save TOML** to keep the config the designer has been writing as you work.
+Click **Save TOML** to keep the config the designer has been writing as you work. You can inspect or edit it in the **TOML** tab; saving works from either tab.
 
 You don't need it for the pinout you just downloaded, but it makes editing pinouts much easier: load it back with **Open TOML**, adjust, and generate again.
 
