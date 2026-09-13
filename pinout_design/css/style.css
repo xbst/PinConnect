@@ -337,6 +337,11 @@ html, body {
   left: 0;
   transform-origin: 0 0;
   line-height: 0;
+  /* Pressing and dragging on the board draws or moves connectors, so it must
+     not select the hotspot labels or open the image callout on a phone. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .board-canvas img {

@@ -60,6 +60,8 @@ In the board panel you can:
 - **Delete** the selected connector with the `Delete` key, which is ignored while you are typing in a text field.
 - **Zoom** with the mouse wheel, centered on the cursor, and **pan** by dragging with the middle or right mouse button, to line boxes up precisely.
 
+On a phone or tablet, use a finger the same way: tap a box to select it, drag it to move it, and drag a handle to resize it. In draw mode, dragging anywhere on the board draws a new box; outside draw mode, swiping across empty board scrolls the page as usual. Zooming and panning the board still need a mouse or trackpad.
+
 ### 3. Edit the connector
 
 With a connector selected, the **Connector Editor** shows:

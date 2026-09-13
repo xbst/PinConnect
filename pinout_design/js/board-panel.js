@@ -30,11 +30,14 @@ export class BoardPanel {
 
   _bindGlobalDragEvents() {
     // Continue and finish drags at the document level so a drag is never
-    // stranded when the button is released outside the SVG (past the board
-    // edge, over a panel, over the toolbar, or outside the window). Bound
-    // once; both handlers no-op unless a drag started on the board.
-    document.addEventListener("mousemove", (e) => { if (this._drag) this._onMouseMove(e); });
-    document.addEventListener("mouseup", (e) => { if (this._drag) this._onMouseUp(e); });
+    // stranded when the pointer is released outside the SVG (past the board
+    // edge, over a panel, over the toolbar, or outside the window). Pointer
+    // events cover mouse, pen and touch alike. Bound once; the handlers only
+    // act on the pointer that started the drag, so a second finger is ignored.
+    const ownPointer = (e) => this._drag && e.pointerId === this._drag.pointerId;
+    document.addEventListener("pointermove", (e) => { if (ownPointer(e)) this._onPointerMove(e); });
+    document.addEventListener("pointerup", (e) => { if (ownPointer(e)) this._onPointerUp(e); });
+    document.addEventListener("pointercancel", (e) => { if (ownPointer(e)) this._cancelDrag(); });
   }
 
   _bindDrawButton() {
@@ -217,9 +220,17 @@ export class BoardPanel {
     // Only the drag START and click (selection) are bound to the SVG; movement
     // and release are handled at the document level (see _bindGlobalDragEvents)
     // so a drag can't be lost when the pointer leaves the SVG mid-drag.
-    this.svg.addEventListener("mousedown", (e) => this._onMouseDown(e));
+    this.svg.addEventListener("pointerdown", (e) => this._onPointerDown(e));
+    // A touch that starts a drag must not also scroll the page or begin a long
+    // press that selects text. Decide from what was touched, matching the
+    // branches in _onPointerDown, so this does not depend on whether the
+    // browser delivers pointerdown or touchstart first. A touch on empty board
+    // outside draw mode keeps its default and still scrolls the page.
+    this.svg.addEventListener("touchstart", (e) => {
+      if (this.drawMode || e.target.closest(".resize-handle, .board-rect")) e.preventDefault();
+    }, { passive: false });
     this.svg.addEventListener("click", (e) => {
-      // A drag ends with a trailing click, but mouseup has already nulled
+      // A drag ends with a trailing click, but pointerup has already nulled
       // _drag, so guard on a flag instead. Without it, a drag that ends over
       // empty space would run the deselect branch below and wrongly clear the
       // selection of the connector just dragged.
@@ -239,13 +250,19 @@ export class BoardPanel {
     return { x: Math.round(svgPt.x), y: Math.round(svgPt.y) };
   }
 
-  _onMouseDown(e) {
-    if (e.button !== 0) return;
+  _onPointerDown(e) {
+    // The primary mouse button, or a pen or finger touching down; a second
+    // finger is not a new drag.
+    if (e.button !== 0 || !e.isPrimary) return;
+    // A press can only follow an unfinished drag if its release never arrived;
+    // drop that drag rather than leave its connector half-moved.
+    if (this._drag) this._cancelDrag();
     this._suppressNextClick = false;
     const pt = this._svgPoint(e);
+    const pointerId = e.pointerId;
 
     if (this.drawMode) {
-      this._drag = { type: "draw", startX: pt.x, startY: pt.y, moved: false };
+      this._drag = { type: "draw", pointerId, startX: pt.x, startY: pt.y, moved: false };
       this._ensurePreviewRect();
       this._updatePreviewRect(pt.x, pt.y, pt.x, pt.y);
       e.preventDefault();
@@ -259,7 +276,7 @@ export class BoardPanel {
       const conn = this.state.getConnector(id);
       if (conn) {
         this._drag = {
-          type: "resize", id, handle: handle.dataset.handle,
+          type: "resize", pointerId, id, handle: handle.dataset.handle,
           origX1: conn.x1, origY1: conn.y1, origX2: conn.x2, origY2: conn.y2,
           startX: pt.x, startY: pt.y, moved: false,
         };
@@ -275,7 +292,7 @@ export class BoardPanel {
       if (conn) {
         this.state.selectConnector(id);
         this._drag = {
-          type: "move", id,
+          type: "move", pointerId, id,
           origX1: conn.x1, origY1: conn.y1, origX2: conn.x2, origY2: conn.y2,
           startX: pt.x, startY: pt.y, moved: false,
         };
@@ -284,12 +301,12 @@ export class BoardPanel {
     }
   }
 
-  _onMouseMove(e) {
+  _onPointerMove(e) {
     if (!this._drag) return;
-    // If the button was released where we never saw the mouseup (outside the
+    // If the button was released where we never saw the pointerup (outside the
     // window), the next move arrives with no buttons held. Finalize the drag
     // instead of letting the connector follow the loose cursor.
-    if (e.buttons === 0) { this._onMouseUp(e); return; }
+    if (e.buttons === 0) { this._onPointerUp(e); return; }
     const pt = this._svgPoint(e);
     this._drag.moved = true;
 
@@ -331,7 +348,7 @@ export class BoardPanel {
     }
   }
 
-  _onMouseUp(e) {
+  _onPointerUp(e) {
     if (!this._drag) return;
     const drag = this._drag;
     this._drag = null;
@@ -366,6 +383,24 @@ export class BoardPanel {
           conn.x2 = drag.origX2; conn.y2 = drag.origY2;
           this.state.updateConnector(drag.id, { x1, y1, x2, y2 }, "visual");
         }
+      }
+    }
+  }
+
+  // End a drag without committing it: the browser took the pointer away (an
+  // interrupted touch, say) or its release never arrived. A moved or resized
+  // connector returns to where the drag started.
+  _cancelDrag() {
+    const drag = this._drag;
+    if (!drag) return;
+    this._drag = null;
+    this._removePreviewRect();
+    if (drag.type === "move" || drag.type === "resize") {
+      const conn = this.state.getConnector(drag.id);
+      if (conn) {
+        conn.x1 = drag.origX1; conn.y1 = drag.origY1;
+        conn.x2 = drag.origX2; conn.y2 = drag.origY2;
+        this._updateRect(drag.id);
       }
     }
   }
