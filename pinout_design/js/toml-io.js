@@ -91,12 +91,20 @@ function parseTomlValue(val, lineNum) {
     }
     if (end === -1) throw new TomlParseError("Unterminated string", lineNum);
     // Single left-to-right pass so "\\n" is a backslash + n, not a newline.
-    return val.slice(1, end).replace(/\\(u[0-9A-Fa-f]{4}|.)/g, (m, esc) => {
+    return val.slice(1, end).replace(/\\(u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|.)/g, (m, esc) => {
       if (esc === "n") return "\n";
       if (esc === "t") return "\t";
       if (esc === "r") return "\r";
+      if (esc === "b") return "\b";
+      if (esc === "f") return "\f";
       if (esc === '"' || esc === "\\") return esc;
-      if (esc[0] === "u") return String.fromCharCode(parseInt(esc.slice(1), 16));
+      if (esc[0] === "u" || esc[0] === "U") {
+        const point = parseInt(esc.slice(1), 16);
+        if (!Number.isFinite(point) || point > 0x10ffff || (point >= 0xd800 && point <= 0xdfff)) {
+          throw new TomlParseError("Invalid Unicode escape", lineNum);
+        }
+        return String.fromCodePoint(point);
+      }
       return m;
     });
   }
@@ -148,6 +156,19 @@ function parseInlineArray(val, lineNum) {
 export function parseBoardToml(text) {
   const raw = parseToml(text);
   const b = raw.board || {};
+  const ranges = buildSourceMap(text).connectors;
+  const seenIds = new Set();
+  for (const [index, conn] of (raw.connector || []).entries()) {
+    const line = (ranges[index]?.start ?? 0) + 1;
+    if (typeof conn.id !== "string" || conn.id.length === 0) {
+      throw new TomlParseError("Each connector needs a nonempty string id", line);
+    }
+    if (seenIds.has(conn.id)) throw new TomlParseError(`Duplicate connector id: ${conn.id}`, line);
+    seenIds.add(conn.id);
+    if (conn.symbol !== undefined && typeof conn.symbol !== "string") {
+      throw new TomlParseError("Connector symbol must be a string", line);
+    }
+  }
   // Use ?? (not ||) for fields with a non-empty default, so an explicit empty
   // string the user typed (e.g. title = "") survives the round-trip instead of
   // being silently replaced by the default.
@@ -199,26 +220,40 @@ export function buildSourceMap(text) {
     const trimmed = stripComment(lines[i]).trim();
     if (!trimmed) continue;
 
-    if (trimmed === "[board]") {
+    if (/^\[\s*board\s*\]$/.test(trimmed)) {
       map.board = { start: i, end: i };
       scope = "board"; currentConn = null; currentPin = null;
       continue;
     }
-    if (trimmed === "[[connector]]") {
-      currentConn = { start: i, end: i, id: null, pins: [] };
+    if (/^\[\[\s*connector\s*\]\]$/.test(trimmed)) {
+      // Keep the managed edit range separate from the complete structural
+      // range, so existing field patches don't consume opaque custom tables.
+      currentConn = { start: i, end: i, blockEnd: i, fieldsEnd: i, id: null, pins: [], hasDescendants: false };
       currentPin = null; scope = "connector";
       map.connectors.push(currentConn);
       continue;
     }
-    if (trimmed === "[[connector.pin]]") {
+    if (/^\[\[\s*connector\s*\.\s*pin\s*\]\]$/.test(trimmed)) {
       currentPin = { start: i, end: i };
       scope = "pin";
-      if (currentConn) { currentConn.pins.push(currentPin); currentConn.end = i; }
+      if (currentConn) {
+        currentConn.pins.push(currentPin);
+        currentConn.blockEnd = i;
+        if (!currentConn.hasDescendants) currentConn.end = i;
+      }
       continue;
     }
     if (trimmed.startsWith("[")) {
-      // Any other table header closes the current block, so its lines aren't
-      // swallowed into the previous connector's (or board's) range.
+      // Unknown descendant tables still belong to their connector. The
+      // designer does not edit them, but moving/copying/removing only their
+      // parent would orphan them or attach them to a different connector.
+      if (currentConn && /^\[\[?\s*connector\s*\./.test(trimmed)) {
+        currentConn.blockEnd = i;
+        currentConn.hasDescendants = true;
+        scope = "descendant"; currentPin = null;
+        continue;
+      }
+      // An unrelated table closes the current connector or board block.
       scope = null; currentConn = null; currentPin = null;
       continue;
     }
@@ -226,21 +261,127 @@ export function buildSourceMap(text) {
     // A key = value content line extends only the innermost open block.
     if (scope === "pin" && currentPin) {
       currentPin.end = i;
-      if (currentConn) currentConn.end = i;
+      if (currentConn) {
+        currentConn.blockEnd = i;
+        if (!currentConn.hasDescendants) currentConn.end = i;
+      }
     } else if (scope === "connector" && currentConn) {
       currentConn.end = i;
+      currentConn.blockEnd = i;
+      currentConn.fieldsEnd = i;
       if (currentConn.id === null) {
         const m = trimmed.match(/^id\s*=\s*(.+)$/);
         if (m) {
           try { currentConn.id = parseTomlValue(m[1].trim(), i + 1); } catch { /* leave null */ }
         }
       }
+    } else if (scope === "descendant" && currentConn) {
+      currentConn.blockEnd = i;
     } else if (scope === "board" && map.board) {
       map.board.end = i;
     }
   }
 
+  // A comment separator introduces the following connector. Include that
+  // leading whitespace/comment run when moving or copying, while keeping
+  // start at the actual header for existing field patches. Footer comments
+  // stay at the end of the document instead of being assigned to the last pin.
+  for (const conn of map.connectors) {
+    conn.blockStart = conn.start;
+    while (conn.blockStart > 0 && !stripComment(lines[conn.blockStart - 1]).trim()) {
+      conn.blockStart--;
+    }
+  }
   return map;
+}
+
+// Keep line terminators separate from content. A last block without a final
+// newline gains a normal separator when moved into the middle, while the new
+// final line retains the document's original end-of-file convention.
+function sourceLines(text) {
+  const parts = text.split(/(\r?\n)/);
+  const lines = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    if (i === parts.length - 1 && parts[i] === "") break;
+    lines.push({ text: parts[i], ending: parts[i + 1] || "" });
+  }
+  return lines;
+}
+
+function joinSourceLines(lines, original) {
+  const separator = original.match(/\r?\n/)?.[0] || "\n";
+  const finalEnding = original.match(/\r?\n$/)?.[0] || "";
+  return lines.map((line, i) => line.text + (i === lines.length - 1
+    ? finalEnding : line.ending || separator)).join("");
+}
+
+function lineContents(lines) { return lines.map(line => line.text).join("\n"); }
+
+// Move complete line ranges, including nested pin tables and leading comments.
+// Rebuild after removal: the destination's line numbers have now changed.
+export function moveConnectorBlock(sourceText, fromIndex, toIndex) {
+  const map = buildSourceMap(sourceText);
+  const count = map.connectors.length;
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) ||
+      fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return sourceText;
+  const lines = sourceLines(sourceText);
+  const range = map.connectors[fromIndex];
+  const block = lines.splice(range.blockStart, range.blockEnd - range.blockStart + 1);
+  const remaining = buildSourceMap(lineContents(lines)).connectors;
+  const insertion = toIndex < remaining.length
+    ? remaining[toIndex].blockStart
+    : remaining[remaining.length - 1].blockEnd + 1;
+  lines.splice(insertion, 0, ...block);
+  return joinSourceLines(lines, sourceText);
+}
+
+// Refresh only the identity and displaced bounds in a copied block. Keep the
+// original indentation, spacing, inline comments, and every per-pin line.
+function patchCopiedConnector(block, conn, separator) {
+  const fields = new Map([
+    ["id", conn.id], ["name", conn.name],
+    ["x1", conn.x1], ["y1", conn.y1], ["x2", conn.x2], ["y2", conn.y2],
+  ]);
+  const lines = block.map(line => ({ ...line }));
+  const range = buildSourceMap(lineContents(lines)).connectors[0];
+  const stop = range.fieldsEnd + 1;
+  const seen = new Set();
+  const valueText = value => typeof value === "string" ? quoteStr(value) : String(value);
+  for (let i = range.start + 1; i < stop; i++) {
+    const code = stripComment(lines[i].text);
+    const match = code.match(/^(\s*([A-Za-z0-9_.-]+)\s*=\s*)(.*?)(\s*)$/);
+    if (!match || !fields.has(match[2])) continue;
+    const value = fields.get(match[2]);
+    seen.add(match[2]);
+    // Unchanged coordinates keep their original numeric notation too.
+    try { if (parseTomlValue(match[3], i + 1) === value) continue; } catch { /* replace below */ }
+    const formatted = typeof value === "string" && match[3].startsWith("'") && !/['\u0000-\u001f]/.test(value)
+      ? `'${value}'` : valueText(value);
+    lines[i].text = match[1] + formatted + match[4] + lines[i].text.slice(code.length);
+  }
+  const missing = [...fields].filter(([key]) => !seen.has(key))
+    .map(([key, value]) => ({ text: `${key} = ${valueText(value)}`, ending: separator }));
+  lines.splice(range.start + 1, 0, ...missing);
+  return lines;
+}
+
+export function duplicateConnectorBlock(sourceText, sourceIndex, newConn) {
+  const map = buildSourceMap(sourceText);
+  if (!Number.isInteger(sourceIndex) || sourceIndex < 0 || sourceIndex >= map.connectors.length) return sourceText;
+  const range = map.connectors[sourceIndex];
+  const lines = sourceLines(sourceText);
+  const original = lines.slice(range.blockStart, range.blockEnd + 1);
+  const separator = sourceText.match(/\r?\n/)?.[0] || "\n";
+  const copy = patchCopiedConnector(original, newConn, separator);
+  lines.splice(range.blockEnd + 1, 0, ...copy);
+  return joinSourceLines(lines, sourceText);
+}
+
+export function removeConnectorBlock(sourceText, range) {
+  if (!range) return sourceText;
+  const lines = sourceLines(sourceText);
+  lines.splice(range.blockStart, range.blockEnd - range.blockStart + 1);
+  return joinSourceLines(lines, sourceText);
 }
 
 // --- Serialization ---

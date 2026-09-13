@@ -8,6 +8,9 @@ export class BoardState {
     this.symbolNames = [];     // named-icon list for the connector symbol field
     this.selectedConnectorId = null;
     this.imageDataUrl = null;
+    // The editor keeps the last successfully synchronized source here so
+    // structural undo/redo can restore comments and formatting as well.
+    this.sourceText = null;
     this.dirty = false;
     this._listeners = new Map();
     this._origin = null;
@@ -38,6 +41,16 @@ export class BoardState {
   get canUndo() { return this._undoStack.length > 0; }
   get canRedo() { return this._redoStack.length > 0; }
 
+  _prepareMutation(origin) {
+    if (origin === "editor" || origin === "init" || this._isRestoring) return true;
+    // The source editor may still have a pending keystroke. Flush it before
+    // looking up objects or taking an undo snapshot; invalid source cancels
+    // the visual action rather than allowing the two representations to drift.
+    const request = { origin, cancel: false };
+    this.emit("before-mutation", request);
+    return !request.cancel;
+  }
+
   _snapshot() {
     if (!this.board) return null;
     return {
@@ -56,6 +69,7 @@ export class BoardState {
         pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
       })),
       selectedConnectorId: this.selectedConnectorId,
+      sourceText: this.sourceText,
     };
   }
 
@@ -79,6 +93,7 @@ export class BoardState {
       })),
     });
     this.selectedConnectorId = snap.selectedConnectorId;
+    this.sourceText = snap.sourceText ?? null;
     this._origin = "undo";
     this.dirty = true;
     this.emit("board-changed", { board: this.board, origin: "undo" });
@@ -103,6 +118,7 @@ export class BoardState {
   }
 
   setBoard(board, origin = "init") {
+    if (!this._prepareMutation(origin)) return;
     if (origin !== "init") this._pushUndo();
     this._origin = origin;
     this.board = board instanceof Board ? board : new Board(board);
@@ -112,6 +128,7 @@ export class BoardState {
   }
 
   setImage(dataUrl, imageName, width, height) {
+    if (!this._prepareMutation("image")) return;
     this.imageDataUrl = dataUrl;
     if (this.board) {
       this.board.image = imageName;
@@ -130,6 +147,7 @@ export class BoardState {
   }
 
   setTheme(theme, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     if (!this.board || this.board.theme === theme) return;
     this._pushUndo();
     this._origin = origin;
@@ -159,6 +177,7 @@ export class BoardState {
   }
 
   updateConnector(id, changes, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     const conn = this.getConnector(id);
     if (!conn) return;
     this._pushUndo();
@@ -172,6 +191,7 @@ export class BoardState {
   // ID changes must go through renameConnector, not updateConnector: the id is
   // the key used by events, the canvas DOM, and the selection pointer.
   renameConnector(oldId, newId, origin = "visual") {
+    if (!this._prepareMutation(origin)) return false;
     const conn = this.getConnector(oldId);
     if (!conn) return false;
     if (newId === oldId) return true;
@@ -190,6 +210,7 @@ export class BoardState {
   }
 
   addConnector(data, origin = "visual") {
+    if (!this._prepareMutation(origin)) return null;
     if (!this.board) return;
     const conn = data instanceof Connector ? data : new Connector(data);
     if (!conn.id || this.getConnector(conn.id)) return null;
@@ -202,20 +223,84 @@ export class BoardState {
     return conn;
   }
 
+  duplicateConnector(id, origin = "visual") {
+    if (!this._prepareMutation(origin)) return null;
+    const source = this.getConnector(id);
+    if (!source) return null;
+    const ids = new Set(this.board.connectors.map(c => c.id));
+    const names = new Set(this.board.connectors.map(c => c.name));
+    const baseId = source.id || "connector";
+    const baseName = source.name || source.id || "Connector";
+    let copyId = `${baseId}_copy`, copyName = `${baseName} (copy)`;
+    for (let n = 2; ids.has(copyId); n++) copyId = `${baseId}_copy_${n}`;
+    for (let n = 2; names.has(copyName); n++) copyName = `${baseName} (copy ${n})`;
+
+    // Move inward when the source touches an edge, keeping its size. With
+    // unknown board dimensions there is no upper bound yet; move positively.
+    const offset = (a, b, limit) => {
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+      if (!Number.isFinite(limit) || limit <= 0) return 10;
+      const low = -Math.min(a, b), high = limit - Math.max(a, b);
+      if (low > high) return 0; // an already oversized imported hotspot
+      if (high >= 10) return Math.max(low, 10);
+      if (low <= -10) return Math.min(high, -10);
+      return Math.abs(high) >= Math.abs(low) ? high : low;
+    };
+    const dx = offset(source.x1, source.x2, this.board.width);
+    const dy = offset(source.y1, source.y2, this.board.height);
+    const conn = new Connector({
+      ...source, id: copyId, name: copyName,
+      x1: source.x1 + dx, x2: source.x2 + dx,
+      y1: source.y1 + dy, y2: source.y2 + dy,
+      pins: source.pins.map(p => new Pin(p.name, p.color, p.row)),
+    });
+    this._pushUndo();
+    this._origin = origin;
+    const index = this.getConnectorIndex(id) + 1;
+    this.board.connectors.splice(index, 0, conn);
+    this.dirty = true;
+    this.emit("connector-added", {
+      connectorId: conn.id, connector: conn, sourceConnectorId: id, index, origin,
+    });
+    this.selectConnector(conn.id);
+    this._origin = null;
+    return conn;
+  }
+
+  // toIndex is the connector's final index, after removal from fromIndex.
+  moveConnector(fromIndex, toIndex, origin = "visual") {
+    if (!this._prepareMutation(origin)) return false;
+    if (!this.board || !Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+    const count = this.board.connectors.length;
+    if (fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return false;
+    this._pushUndo();
+    this._origin = origin;
+    const [conn] = this.board.connectors.splice(fromIndex, 1);
+    this.board.connectors.splice(toIndex, 0, conn);
+    this.dirty = true;
+    this.emit("connectors-reordered", { connectorId: conn.id, fromIndex, toIndex, origin });
+    this._origin = null;
+    return true;
+  }
+
   removeConnector(id, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     if (!this.board) return;
     const idx = this.getConnectorIndex(id);
     if (idx < 0) return;
     this._pushUndo();
     this._origin = origin;
     this.board.connectors.splice(idx, 1);
-    if (this.selectedConnectorId === id) this.selectedConnectorId = null;
+    const removedSelection = this.selectedConnectorId === id;
+    if (removedSelection) this.selectedConnectorId = null;
     this.dirty = true;
     this.emit("connector-removed", { connectorId: id, origin });
+    if (removedSelection) this.emit("selection-changed", { connectorId: null });
     this._origin = null;
   }
 
   updatePin(connectorId, pinIndex, changes, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     const conn = this.getConnector(connectorId);
     if (!conn || !conn.pins[pinIndex]) return;
     this._pushUndo();
@@ -229,6 +314,7 @@ export class BoardState {
   }
 
   addPin(connectorId, pin, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     const conn = this.getConnector(connectorId);
     if (!conn) return;
     this._pushUndo();
@@ -242,6 +328,7 @@ export class BoardState {
   }
 
   removePin(connectorId, pinIndex, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     const conn = this.getConnector(connectorId);
     if (!conn || !conn.pins[pinIndex]) return;
     this._pushUndo();
@@ -253,6 +340,7 @@ export class BoardState {
   }
 
   reorderPins(connectorId, fromIndex, toIndex, origin = "visual") {
+    if (!this._prepareMutation(origin)) return;
     const conn = this.getConnector(connectorId);
     if (!conn) return;
     this._pushUndo();
