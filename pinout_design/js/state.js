@@ -70,6 +70,9 @@ export class BoardState {
       })),
       selectedConnectorId: this.selectedConnectorId,
       sourceText: this.sourceText,
+      // The photo is history too: undoing an image load must not leave the new
+      // photo on screen, and in Generate, under the old image's dimensions.
+      imageDataUrl: this.imageDataUrl,
     };
   }
 
@@ -94,8 +97,14 @@ export class BoardState {
     });
     this.selectedConnectorId = snap.selectedConnectorId;
     this.sourceText = snap.sourceText ?? null;
+    const imageChanged = (snap.imageDataUrl ?? null) !== this.imageDataUrl;
+    this.imageDataUrl = snap.imageDataUrl ?? null;
     this._origin = "undo";
     this.dirty = true;
+    // Swap the photo before the board redraws, in the order an image load uses.
+    if (imageChanged) {
+      this.emit("image-changed", { dataUrl: this.imageDataUrl, width: this.board.width, height: this.board.height });
+    }
     this.emit("board-changed", { board: this.board, origin: "undo" });
     this.emit("selection-changed", { connectorId: this.selectedConnectorId });
     this._origin = null;
@@ -129,6 +138,11 @@ export class BoardState {
 
   setImage(dataUrl, imageName, width, height) {
     if (!this._prepareMutation("image")) return;
+    const b = this.board;
+    // An image load is its own undo step; reopening the identical image is not.
+    if (b && (dataUrl !== this.imageDataUrl || b.image !== imageName || b.width !== width || b.height !== height)) {
+      this._pushUndo();
+    }
     this.imageDataUrl = dataUrl;
     if (this.board) {
       this.board.image = imageName;
