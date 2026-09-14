@@ -191,6 +191,7 @@ html, body {
   padding: 10px 10px 0;
 }
 
+.board-title-row { flex-shrink: 0; padding: 10px 10px 0; }
 #connector-list-count { margin-right: auto; color: var(--text-dim); font-size: 12px; }
 .connector-list-toolbar .connector-move-btn { min-width: 28px; padding: 4px 7px; }
 .connector-list-hint { color: var(--text-dim); font-size: 11px; line-height: 1.5; padding: 8px 10px; }

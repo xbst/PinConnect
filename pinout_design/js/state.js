@@ -171,6 +171,20 @@ export class BoardState {
     this._origin = null;
   }
 
+  // Returns false when the title could not be set (no board yet, or pending
+  // TOML that does not parse), so the field that asked can show the old one.
+  setTitle(title, origin = "visual") {
+    if (!this._prepareMutation(origin) || !this.board) return false;
+    if (this.board.title === title) return true;
+    this._pushUndo();
+    this._origin = origin;
+    this.board.title = title;
+    this.dirty = true;
+    this.emit("board-changed", { board: this.board, origin });
+    this._origin = null;
+    return true;
+  }
+
   selectConnector(id) {
     this.selectedConnectorId = id;
     this.emit("selection-changed", { connectorId: id });

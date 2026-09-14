@@ -26,7 +26,7 @@ The designer must be served over HTTP. It fetches its runtime at startup, so ope
 A toolbar across the top, and three panels whose dividers you can drag:
 
 - **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, **Generate**, a **Theme** selector, and **?** for the About box.
-- **Connectors / TOML** (left): the **Connectors** tab lists the board's connectors and is selected on your first visit. The **TOML** tab holds the live, editable config. The designer remembers which tab you last used.
+- **Connectors / TOML** (left): the **Connectors** tab has a **Board title** field, which sets the generated page's title in the browser tab, above the list of the board's connectors. It is selected on your first visit. The **TOML** tab holds the live, editable config. The designer remembers which tab you last used.
 - **Board Image** (top right): your photo with connector boxes over it, and the **+ Add Connector** button.
 - **Connector Editor** (bottom right): fields and pin list for the selected connector.
 

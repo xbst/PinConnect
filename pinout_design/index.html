@@ -47,6 +47,10 @@
         <button id="tab-toml" class="panel-tab" role="tab" aria-selected="false" aria-controls="toml-tab-panel" tabindex="-1">TOML</button>
       </div>
       <div id="connectors-tab-panel" class="panel-tab-content" role="tabpanel" aria-labelledby="tab-connectors">
+        <div class="conn-form-row board-title-row">
+          <label for="board-title">Board title</label>
+          <input type="text" id="board-title" autocomplete="off" spellcheck="false" title="The generated page's title, shown in the browser tab">
+        </div>
         <div class="connector-list-toolbar">
           <span id="connector-list-count">0 connectors</span>
           <button id="move-connector-up" class="toolbar-btn connector-move-btn" aria-label="Move selected connector up" title="Move selected connector up (Alt+↑)" disabled>↑</button>

@@ -119,6 +119,22 @@ function setupThemeSelect() {
   state.on("catalogs-loaded", refresh);
 }
 
+// The board's title: the one [board] field with no other visual control, since
+// the image sets the dimensions and the toolbar has the theme. Like the
+// connector fields it commits on change (Enter, or leaving the field), so a
+// retyped title is a single undo step.
+function setupBoardTitle() {
+  const input = document.getElementById("board-title");
+  const refresh = () => {
+    const title = state.board ? state.board.title : "";
+    if (input.value !== title) input.value = title;
+  };
+  // Pending TOML that does not parse cancels the change; show the title that stands.
+  input.addEventListener("change", () => { if (!state.setTitle(input.value, "visual")) refresh(); });
+  state.on("board-changed", refresh);
+  refresh();
+}
+
 function setupResizers() {
   const resizerH = document.getElementById("resizer-h");
   const panelEditor = document.getElementById("panel-editor");
@@ -278,6 +294,7 @@ async function init() {
   setupResizers();
   setupFileIO(editorPanel);
   setupThemeSelect();
+  setupBoardTitle();
 
   const undoBtn = document.getElementById("undo-btn");
   const redoBtn = document.getElementById("redo-btn");
