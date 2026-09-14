@@ -193,10 +193,29 @@ function hasUnsavedChanges(editorPanel) {
   return savedText !== null && editorPanel.getValue() !== savedText;
 }
 
+// Text fields commit on change, which the browser fires when a field loses
+// focus. Ctrl+S and closing the page act without moving focus, so a value still
+// being typed would be missing from what they read. Blurring and refocusing the
+// field commits it exactly as leaving it would, once, so leaving it later adds
+// no second undo step. Then the caret goes back where it was.
+function commitActiveField() {
+  const field = document.activeElement;
+  if (!(field instanceof HTMLInputElement) || field.type !== "text") return;
+  const { id, selectionStart, selectionEnd, selectionDirection } = field;
+  field.blur();
+  // A commit can re-render its form (renaming a connector does), so find the
+  // field again by id when the original element is gone.
+  const target = field.isConnected ? field : id && document.getElementById(id);
+  if (!target) return;
+  target.focus();
+  target.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+}
+
 // Ask before losing work. The browser writes the wording and ignores anything
 // we pass, so the only choice here is whether to ask at all.
 function setupUnloadGuard(editorPanel) {
   addEventListener("beforeunload", (e) => {
+    commitActiveField();
     if (!hasUnsavedChanges(editorPanel)) return;
     e.preventDefault();
     e.returnValue = "";   // older browsers need a value assigned, not just the default prevented
@@ -333,6 +352,7 @@ async function init() {
     }
     if (key === "s" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
+      commitActiveField();
       document.getElementById("save-toml").click();
     }
     if (key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
