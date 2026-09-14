@@ -194,17 +194,20 @@ function hasUnsavedChanges(editorPanel) {
 }
 
 // Text fields commit on change, which the browser fires when a field loses
-// focus. Ctrl+S and closing the page act without moving focus, so a value still
-// being typed would be missing from what they read. Blurring and refocusing the
-// field commits it exactly as leaving it would, once, so leaving it later adds
-// no second undo step. Then the caret goes back where it was.
-function commitActiveField() {
+// focus. Keyboard shortcuts and closing the page act without moving focus, so a
+// value still being typed would be missing from a save, and undo would discard
+// it and take back the step before. Run such an action the way its toolbar
+// button does: commit the focused field first, exactly as leaving it would and
+// only once, so leaving it later adds no second undo step. Then return focus
+// and the caret to the field.
+function withActiveField(action = () => {}) {
   const field = document.activeElement;
-  if (!(field instanceof HTMLInputElement) || field.type !== "text") return;
+  if (!(field instanceof HTMLInputElement) || field.type !== "text") return action();
   const { id, selectionStart, selectionEnd, selectionDirection } = field;
   field.blur();
-  // A commit can re-render its form (renaming a connector does), so find the
-  // field again by id when the original element is gone.
+  action();
+  // The commit or the action can re-render the field's form (a rename or an
+  // undo does), so find the field again by id when the original has gone.
   const target = field.isConnected ? field : id && document.getElementById(id);
   if (!target) return;
   target.focus();
@@ -215,7 +218,7 @@ function commitActiveField() {
 // we pass, so the only choice here is whether to ask at all.
 function setupUnloadGuard(editorPanel) {
   addEventListener("beforeunload", (e) => {
-    commitActiveField();
+    withActiveField();
     if (!hasUnsavedChanges(editorPanel)) return;
     e.preventDefault();
     e.returnValue = "";   // older browsers need a value assigned, not just the default prevented
@@ -322,10 +325,12 @@ async function init() {
     redoBtn.disabled = !state.canRedo;
   };
   state.on("undo-changed", updateUndoButtons);
-  // Flush valid pending typing before navigating history. A parse error must
-  // not disable Undo: returning to a saved snapshot is also a way to fix it.
-  const undo = () => { editorPanel.flushChanges(); state.undo(); };
-  const redo = () => { editorPanel.flushChanges(); state.redo(); };
+  // Commit pending typing before navigating history, in a field as in the TOML
+  // editor, so Ctrl+Z takes back just that typing, as the Undo button (which
+  // takes focus from a field first) already did. A parse error must not
+  // disable Undo: returning to a saved snapshot is also a way to fix it.
+  const undo = () => withActiveField(() => { editorPanel.flushChanges(); state.undo(); });
+  const redo = () => withActiveField(() => { editorPanel.flushChanges(); state.redo(); });
   undoBtn.addEventListener("click", undo);
   redoBtn.addEventListener("click", redo);
 
@@ -352,8 +357,7 @@ async function init() {
     }
     if (key === "s" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      commitActiveField();
-      document.getElementById("save-toml").click();
+      withActiveField(() => document.getElementById("save-toml").click());
     }
     if (key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
       e.preventDefault();

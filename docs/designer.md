@@ -138,7 +138,7 @@ If you close or reload the tab with changes you have not saved, the browser asks
 | `Alt+↑` / `Alt+↓` | Move the selected connector up / down while the list has focus |
 | `Delete` | Delete the selected connector |
 
-Use `Cmd` in place of `Ctrl` and `Option` in place of `Alt` on macOS. Undo and Redo are also toolbar buttons. Duplicate and Delete are ignored while you are typing in a text field or using a select menu, and all of these are ignored while a dialog is open.
+Use `Cmd` in place of `Ctrl` and `Option` in place of `Alt` on macOS. Undo and Redo are also toolbar buttons. While you are typing in a text field, Undo takes back that typing first, and Redo puts it back. Duplicate and Delete are ignored while you are typing in a text field or using a select menu, and all of these are ignored while a dialog is open.
 
 ## Troubleshooting
 
