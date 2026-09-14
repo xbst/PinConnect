@@ -1,4 +1,4 @@
-"""Regenerate the 7 pinout-design.md screenshots of the visual designer.
+"""Regenerate the 9 designer.md screenshots of the visual designer.
 
 Playwright drives the system Chrome against the designer served on a local
 port, loads a sample board (image first, then TOML), and captures each panel.
@@ -17,16 +17,17 @@ Chrome (``channel="chrome"``), so there is no browser download. The designer
 loads Roboto from Google Fonts, so this needs network access.
 """
 import sys
-import subprocess
 import tempfile
 import time
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 
 from playwright.sync_api import sync_playwright
 
 REPO = Path(__file__).resolve().parent.parent.parent
 ASSETS = REPO / "assets"
-PORT = 8090
 
 # Maintainer's sample board (Birds-Nest-CAN), outside the repo. Override by
 # passing a board TOML + image on the command line.
@@ -55,26 +56,26 @@ def _without_local_dirs(toml_path: Path, tmp: Path) -> Path:
 
 def main(toml_path: Path, png_path: Path):
     # The designer fetches a Python payload at startup and refuses to run
-    # without it, so build it before serving. Skipping this captured seven
+    # without it, so build it before serving. Skipping this captured
     # screenshots of a designer reading "Renderer unavailable" with its
     # connector drawings missing.
     sys.path.insert(0, str(REPO / "pinout_gen"))
     from pinout_gen.designer import build_payload
     build_payload(REPO / "pinout_design" / "pinout_gen.zip")
 
-    server = subprocess.Popen(
-        [sys.executable, "-m", "http.server", str(PORT), "-d", str(REPO / "pinout_design")],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    time.sleep(1.5)
+    handler = partial(SimpleHTTPRequestHandler, directory=str(REPO / "pinout_design"))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    server_thread = Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    url = f"http://127.0.0.1:{server.server_port}/"
     tmpdir = tempfile.TemporaryDirectory()
-    toml_path = _without_local_dirs(toml_path, Path(tmpdir.name))
     try:
+        toml_path = _without_local_dirs(toml_path, Path(tmpdir.name))
         with sync_playwright() as pw:
             browser = pw.chromium.launch(channel="chrome", headless=True)
             page = browser.new_context(viewport={"width": 1440, "height": 900},
                                        device_scale_factor=2, color_scheme="dark").new_page()
-            page.goto(f"http://localhost:{PORT}/", wait_until="networkidle")
+            page.goto(url, wait_until="networkidle")
 
             # Wait for Pyodide, which draws every connector. Until it lands the
             # toolbar shows a progress line and the buttons below are disabled,
@@ -102,10 +103,14 @@ def main(toml_path: Path, png_path: Path):
             time.sleep(0.6)
             page.locator("#panel-board").screenshot(path=str(ASSETS / "workflow-2-connectors.png"))
 
-            # Whole window, toolbar, TOML pane.
+            # The overview shows the default Connectors tab. Switch to TOML
+            # only for its dedicated screenshot, then restore the list.
+            page.get_by_role("tab", name="Connectors", exact=True).click()
             page.screenshot(path=str(ASSETS / "designer-overview.png"))
             page.locator(".toolbar").screenshot(path=str(ASSETS / "workflow-6-save.png"))
+            page.get_by_role("tab", name="TOML", exact=True).click()
             page.locator("#panel-editor").screenshot(path=str(ASSETS / "workflow-5-toml.png"))
+            page.get_by_role("tab", name="Connectors", exact=True).click()
 
             # 3 + 4. Select a two-row connector so the preview + R1/R2 selectors show.
             target = page.evaluate("""() => {
@@ -150,9 +155,9 @@ def main(toml_path: Path, png_path: Path):
             # produced. Wait for the rendered page to appear in the frame.
             page.click("#generate-btn")
             # Pick a bundled theme rather than whatever the board names. A board
-            # using a theme from its own theme_dir cannot render in the browser
-            # at all, which is correct but makes a poor screenshot, and it would
-            # make the shot depend on which board the contributor passed.
+            # using a theme from its own theme_dir falls back to a matching
+            # bundled definition and displays a warning, which would make the
+            # shot depend on which board the contributor passed.
             page.wait_for_selector("#gen-theme")
             page.select_option("#gen-theme", "default")
             page.wait_for_selector("#gen-preview iframe")
@@ -173,7 +178,9 @@ def main(toml_path: Path, png_path: Path):
             browser.close()
         print("OK - 9 designer screenshots written to assets/")
     finally:
-        server.terminate()
+        server.shutdown()
+        server.server_close()
+        server_thread.join()
         tmpdir.cleanup()
 
 

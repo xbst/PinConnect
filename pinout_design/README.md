@@ -4,6 +4,8 @@ The designer for PinConnect. Load a board photo, draw a box over each connector,
 
 Hosted at <https://pinconnect.isiks.tech>.
 
+The left panel opens on **Connectors**, where you select, duplicate, delete, and drag connectors into the order used by the generated pinout. Switch to **TOML** to edit the source directly. Both views stay in step, and connector moves and copies preserve comments and pin tables. The designer remembers your last active tab.
+
 It is a static web app, but it cannot be opened from disk: it fetches its Python payload at startup and must be served over HTTP. The easiest way to run it locally is the CLI, which ships the designer with it:
 
 ```bash

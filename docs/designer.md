@@ -21,12 +21,12 @@ The designer must be served over HTTP. It fetches its runtime at startup, so ope
 
 ## The interface
 
-![The PinConnect Designer with the sample board loaded: TOML source on the left, the board image top-right, and the connector editor bottom-right](../assets/designer-overview.png)
+![The PinConnect Designer with the sample board loaded: the connector list on the left, the board image top-right, and the connector editor bottom-right](../assets/designer-overview.png)
 
 A toolbar across the top, and three panels whose dividers you can drag:
 
 - **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, **Generate**, a **Theme** selector, and **?** for the About box.
-- **TOML Source** (left): a live, editable view of the config. Edits here update the diagram, and every visual change updates the text.
+- **Connectors / TOML** (left): the **Connectors** tab has a **Board title** field, which sets the generated page's title in the browser tab, above the list of the board's connectors. It is selected on your first visit. The **TOML** tab holds the live, editable config. The designer remembers which tab you last used.
 - **Board Image** (top right): your photo with connector boxes over it, and the **+ Add Connector** button.
 - **Connector Editor** (bottom right): fields and pin list for the selected connector.
 
@@ -44,11 +44,13 @@ Click **Open Image** and choose your photo, taken top-down. It sets the coordina
 
 ### 2. Add connectors
 
-Click **+ Add Connector** (it becomes **Cancel Draw**), then drag a box over a connector. Releasing the drag opens the **New Connector** dialog, where you set the **ID** (one is suggested; it must be unique and non-empty), an optional **Name** (defaults to the ID), and the **Type**. Click **Create** to place it, or **Cancel** to discard the box. Very small boxes are ignored, so drag a real rectangle rather than clicking.
+Click **+ Add Connector** in the connector list or board panel (it becomes **Cancel Draw**), then drag a box over a connector. Releasing the drag opens the **New Connector** dialog, where you set the **ID** (one is suggested; it must be unique and non-empty), an optional **Name** (defaults to the ID), and the **Type**. Click **Create** to place it, or **Cancel** to discard the box. Very small boxes are ignored, so drag a real rectangle rather than clicking.
 
 Draw mode switches off after each connector, so click **+ Add Connector** again for the next.
 
 ![The board with a labeled box drawn over each connector](../assets/workflow-2-connectors.png)
+
+The **Connectors** tab shows each connector's name, type, pin count, and symbol when set. Click a row to select that connector on the board and in the editor. Drag its handle to reorder the list, or use **Move Up** and **Move Down** for the selected connector; this also sets connector order in the generated pinout. Each row has **Duplicate** and **Delete** buttons. A duplicate keeps the pins and settings, gets a unique ID and name, and appears slightly offset on the board so you can move it into place. Reordering, duplicating, and deleting all support Undo and Redo.
 
 In the board panel you can:
 
@@ -57,6 +59,8 @@ In the board panel you can:
 - **Resize** it using the handles on a selected box.
 - **Delete** the selected connector with the `Delete` key, which is ignored while you are typing in a text field.
 - **Zoom** with the mouse wheel, centered on the cursor, and **pan** by dragging with the middle or right mouse button, to line boxes up precisely.
+
+On a phone or tablet, use a finger the same way: tap a box to select it, drag it to move it, and drag a handle to resize it; touching just outside a handle grabs it too. In draw mode, dragging anywhere on the board draws a new box; outside draw mode, swiping across empty board scrolls the page as usual. Pinch with two fingers to zoom the board, and move two fingers together to pan it.
 
 ### 3. Edit the connector
 
@@ -91,9 +95,11 @@ Pin order in the list is the physical pin order in the output.
 
 ### 5. Edit the TOML directly (optional)
 
-The **TOML Source** pane is fully editable, and the two directions stay in step: type there and the diagram updates, change something visually and the text updates. Useful for bulk edits or pasting in a config you already have.
+Open the **TOML** tab in the left panel for the fully editable **TOML Source** pane. The two directions stay in step: type there and the diagram updates, change something visually and the text updates. Useful for bulk edits or pasting in a config you already have. Switch back to **Connectors** whenever you want to browse the list.
 
-Your comments and formatting survive. The designer patches the specific lines it needs rather than rewriting the file.
+Invalid or unfinished TOML keeps the source visible with an error and blocks visual edits until you correct it. Connector IDs must be non-empty and unique, including when you open a config or edit the source directly.
+
+Visual edits, from picking a theme or opening an image to changing a connector or its pins, rewrite only the values that change, so everything else, comments included, stays as written. Reordering and duplicating preserve each connector block's comments, formatting, and pin tables. Comments between connectors travel with the following connector, and comments above a pin travel with that pin; comments at the end of the document stay there. Put a comment inside a connector's block or inline with one of its fields if it must always travel with that connector. Deleting a connector or a pin removes the comments above it too. Duplicating copies the block and updates the copy's identity and position.
 
 ![The TOML Source pane showing the generated, syntax-highlighted config](../assets/workflow-5-toml.png)
 
@@ -103,7 +109,7 @@ Click **Generate**. The dialog renders the pinout and shows the real page, not a
 
 ![The Generate dialog showing a rendered pinout, with a theme selector, an embed toggle and a Download button](../assets/workflow-7-generate.png)
 
-- **Theme** re-renders with any of the built-in themes, so you can compare before committing.
+- **Theme** sets the board's `theme`, the same setting as the toolbar's selector, and re-renders, so the page you download always matches the config you save. Undo takes a change back once the dialog is closed.
 - **Embed image** writes the board photo into the HTML. On, you get one self-contained file. Off, the file is far smaller but needs the photo beside it. The size beside the toggle is the size of what you are about to download.
 - **Download** saves the page as `<image name>.pinout.html`.
 
@@ -126,9 +132,13 @@ If you close or reload the tab with changes you have not saved, the browser asks
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` or `Ctrl+Shift+Z` | Redo |
 | `Ctrl+S` | Save TOML |
+| `Ctrl+D` | Duplicate the selected connector |
+| `↑` / `↓` | Select the previous / next connector while the list has focus |
+| `Home` / `End` | Select the first / last connector while the list has focus |
+| `Alt+↑` / `Alt+↓` | Move the selected connector up / down while the list has focus |
 | `Delete` | Delete the selected connector |
 
-Use `Cmd` in place of `Ctrl` on macOS. Undo and Redo are also toolbar buttons. `Delete` is ignored while you are typing in a text field, and all of these are ignored while a dialog is open.
+Use `Cmd` in place of `Ctrl` and `Option` in place of `Alt` on macOS. Undo and Redo are also toolbar buttons. While you are typing in a text field, Undo takes back that typing first, and Redo puts it back. Duplicate and Delete are ignored while you are typing in a text field or using a select menu, and all of these are ignored while a dialog is open.
 
 ## Troubleshooting
 

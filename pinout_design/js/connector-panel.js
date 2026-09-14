@@ -169,7 +169,7 @@ export class ConnectorPanel {
       <div class="pin-row" data-idx="${index}">
         <span class="pin-drag-handle" draggable="true" data-idx="${index}">≡</span>
         <div class="pin-color-swatch" data-idx="${index}" style="background:${this._esc(pin.color)}" title="${this._esc(pin.color)}"></div>
-        <input type="text" class="pin-name-input" data-idx="${index}" value="${this._esc(pin.name)}">
+        <input type="text" id="pin-name-${index}" class="pin-name-input" data-idx="${index}" value="${this._esc(pin.name)}">
         ${rowSel}
         <button class="pin-delete-btn" data-idx="${index}">×</button>
       </div>

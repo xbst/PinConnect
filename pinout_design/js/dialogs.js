@@ -55,7 +55,9 @@ function saveFile(text, suggestedName, mime) {
 
 // ── Generate ────────────────────────────────────────────────────────
 
-export async function openGenerate(state, tomlText) {
+// getToml returns the config as it stands. The dialog's Theme dropdown edits
+// that config, so each render has to read it afresh.
+export async function openGenerate(state, getToml) {
   const { body, close, onClose } = openModal("Generate pinout", { wide: true });
   const board = state.board;
   const hasImage = !!state.imageDataUrl;
@@ -109,11 +111,10 @@ export async function openGenerate(state, tomlText) {
   addEventListener("message", onMessage);
   onClose(() => removeEventListener("message", onMessage));
 
+  // No theme override: the page renders from the config alone, so what you
+  // download is what pinout-gen makes from the config you save.
   const render = async (embed) =>
-    runtime.generate(tomlText, {
-      imageDataUri: embed && hasImage ? state.imageDataUrl : "",
-      themeName: themeEl.value,
-    });
+    runtime.generate(getToml(), { imageDataUri: embed && hasImage ? state.imageDataUrl : "" });
 
   const kb = (html) => `${(html.length / 1024).toFixed(0)} KB`;
 
@@ -175,7 +176,13 @@ export async function openGenerate(state, tomlText) {
 
   const stem = (board && board.image ? board.image.replace(/\.[^.]+$/, "") : "") || "board";
 
-  themeEl.addEventListener("change", refresh);
+  // The dropdown is the board's theme, the same setting as the toolbar's
+  // selector. Pending TOML that does not parse refuses the change, so put the
+  // dropdown back on the theme that stands.
+  themeEl.addEventListener("change", () => {
+    if (state.setTheme(themeEl.value, "visual")) refresh();
+    else themeEl.value = (state.board && state.board.theme) || "default";
+  });
   embedEl.addEventListener("change", showSize);
   downloadBtn.addEventListener("click", async () => {
     if (!ok) return;

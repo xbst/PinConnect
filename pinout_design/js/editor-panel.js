@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, stripComment, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -10,10 +10,9 @@ function span(cls, text) {
 }
 
 function highlightTomlLine(line) {
-  // Comment line or trailing comment
-  const commentIdx = findUnquotedHash(line);
-  let code = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
-  const comment = commentIdx >= 0 ? line.slice(commentIdx) : "";
+  // Comment line or trailing comment, split exactly where the parser splits it
+  const code = stripComment(line);
+  const comment = line.slice(code.length);
 
   let result = "";
 
@@ -42,30 +41,24 @@ function highlightTomlLine(line) {
   return result;
 }
 
+// Return every character of val, whitespace included: the highlight sits under
+// a transparent textarea, so a dropped space shifts the rest of the line away
+// from the caret.
 function highlightValue(val) {
   const trimmed = val.trim();
-  const lead = esc(val.slice(0, val.indexOf(trimmed)));
+  const start = val.indexOf(trimmed);
+  const lead = esc(val.slice(0, start));
+  const trail = esc(val.slice(start + trimmed.length));
   if (trimmed.startsWith('"') || trimmed.startsWith("'")) {
-    return lead + span("hl-string", esc(trimmed));
+    return lead + span("hl-string", esc(trimmed)) + trail;
   }
   if (trimmed === "true" || trimmed === "false") {
-    return lead + span("hl-bool", esc(trimmed));
+    return lead + span("hl-bool", esc(trimmed)) + trail;
   }
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    return lead + span("hl-number", esc(trimmed));
+    return lead + span("hl-number", esc(trimmed)) + trail;
   }
   return esc(val);
-}
-
-function findUnquotedHash(line) {
-  let inStr = false, quote = null;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inStr) { if (ch === quote && line[i - 1] !== "\\") inStr = false; }
-    else if (ch === '"' || ch === "'") { inStr = true; quote = ch; }
-    else if (ch === "#") return i;
-  }
-  return -1;
 }
 
 function highlightToml(text) {
@@ -78,6 +71,7 @@ export class EditorPanel {
     this.container = container;
     this._suppressSync = false;
     this._debounceTimer = null;
+    this._sourceMap = buildSourceMap("");
 
     this._buildDOM();
     this._bindEvents();
@@ -110,12 +104,21 @@ export class EditorPanel {
   }
 
   _bindState() {
+    this.state.on("before-mutation", request => {
+      if (this.flushChanges()) return;
+      request.cancel = true;
+      this.state.emit("source-error", {});
+    });
     this.state.on("board-changed", ({ origin }) => {
       if (origin === "editor") return;
+      if (origin === "undo" && this.state.sourceText !== null) {
+        this._setSourceText(this.state.sourceText);
+        return;
+      }
       // Theme selection ("visual") and image load ("image") change only the
       // [board] fields, so patch that block in place -- hand-written comments
-      // and every connector block survive. Other origins (init, undo/redo) can
-      // change the whole structure, so fall back to a full regen.
+      // and every connector block survive. Initialization without saved source
+      // text falls back to a full regen.
       if (origin === "image" || origin === "visual") {
         this._patchBoard();
       } else {
@@ -130,9 +133,15 @@ export class EditorPanel {
       this._patchConnector(connectorId);
     });
 
-    this.state.on("connector-added", ({ connectorId, origin }) => {
+    this.state.on("connector-added", ({ connectorId, sourceConnectorId, origin }) => {
       if (origin === "editor") return;
-      this._appendConnector(connectorId);
+      if (sourceConnectorId !== undefined) this._duplicateConnectorInSource(sourceConnectorId, connectorId);
+      else this._appendConnector(connectorId);
+    });
+
+    this.state.on("connectors-reordered", ({ fromIndex, toIndex, origin }) => {
+      if (origin === "editor") return;
+      this._setSourceText(moveConnectorBlock(this.textarea.value, fromIndex, toIndex));
     });
 
     this.state.on("connector-removed", ({ connectorId, origin }) => {
@@ -145,14 +154,15 @@ export class EditorPanel {
       this._patchConnector(newId, oldId);
     });
 
-    this.state.on("pin-changed", ({ connectorId, origin }) => {
+    this.state.on("pin-changed", ({ connectorId, removedIndex, origin }) => {
       if (origin === "editor") return;
-      this._patchConnector(connectorId);
+      if (removedIndex === undefined) this._patchConnector(connectorId);
+      else this._editPins(connectorId, (text, range) => removePinBlock(text, range, removedIndex));
     });
 
-    this.state.on("pins-reordered", ({ connectorId, origin }) => {
+    this.state.on("pins-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {
       if (origin === "editor") return;
-      this._patchConnector(connectorId);
+      this._editPins(connectorId, (text, range) => movePinBlock(text, range, fromIndex, toIndex));
     });
   }
 
@@ -196,6 +206,8 @@ export class EditorPanel {
   }
 
   _parseAndSync() {
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = null;
     const text = this.textarea.value;
     this.errorEl.textContent = "";
     this.errorEl.style.display = "none";
@@ -210,12 +222,34 @@ export class EditorPanel {
         })),
       });
       this.state.setBoard(boardObj, "editor");
+      this.state.sourceText = text;
+      this._sourceMap = buildSourceMap(text);
+      return true;
     } catch (e) {
       this.errorEl.textContent = e instanceof TomlParseError
         ? `Line ${e.line}: ${e.message}`
         : e.message;
       this.errorEl.style.display = "block";
+      return false;
     }
+  }
+
+  // Tabs call this before exposing the list, so a keystroke immediately
+  // followed by a tab switch cannot leave it showing a stale connector order.
+  flushChanges() {
+    if (this._debounceTimer !== null || this.textarea.value !== this.state.sourceText) return this._parseAndSync();
+    return this.errorEl.style.display !== "block";
+  }
+
+  _setSourceText(text) {
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = null;
+    this.textarea.value = text;
+    this.state.sourceText = text;
+    this._sourceMap = buildSourceMap(text);
+    this.errorEl.textContent = "";
+    this.errorEl.style.display = "none";
+    this._updateHighlight();
   }
 
   _syncFromState() {
@@ -233,8 +267,7 @@ export class EditorPanel {
         connector_dir: b.connector_dir, theme: b.theme, theme_dir: b.theme_dir },
       connData
     );
-    this.textarea.value = text;
-    this._updateHighlight();
+    this._setSourceText(text);
   }
 
   _boardData() {
@@ -247,18 +280,11 @@ export class EditorPanel {
 
   // Update just the [board] table's keys, leaving comments and connector blocks
   // intact -- so picking a theme or loading an image doesn't wipe the document.
+  // A config without a [board] table gains one rather than being regenerated.
   _patchBoard() {
     const text = this.textarea.value;
-    const range = buildSourceMap(text).board;
-    if (!range) { // no [board] block to patch -- fall back to a full sync
-      this._suppressSync = true;
-      this._syncFromState();
-      this._suppressSync = false;
-      return;
-    }
     this._suppressSync = true;
-    this.textarea.value = patchBoardInSource(text, range, this._boardData());
-    this._updateHighlight();
+    this._setSourceText(patchBoardInSource(text, buildSourceMap(text).board, this._boardData()));
     this._suppressSync = false;
   }
 
@@ -288,9 +314,17 @@ export class EditorPanel {
     }
 
     this._suppressSync = true;
-    this.textarea.value = patchConnectorInSource(text, range, this._connData(conn));
-    this._updateHighlight();
+    this._setSourceText(patchConnectorInSource(text, range, this._connData(conn)));
     this._suppressSync = false;
+  }
+
+  // Reordering or deleting a pin moves or removes its own lines, with the
+  // comments above it, so no comment ends up describing a different pin.
+  _editPins(connectorId, edit) {
+    const text = this.textarea.value;
+    const range = buildSourceMap(text).connectors.find(c => c.id === connectorId);
+    if (range) this._setSourceText(edit(text, range));
+    this._patchConnector(connectorId);
   }
 
   // Append a newly-added connector's block rather than regenerating the whole
@@ -301,14 +335,21 @@ export class EditorPanel {
     let text = this.textarea.value;
     if (text && !text.endsWith("\n")) text += "\n";
     this._suppressSync = true;
-    this.textarea.value = text + "\n" + serializeConnectorBlock(this._connData(conn)) + "\n";
-    this._updateHighlight();
+    this._setSourceText(text + "\n" + serializeConnectorBlock(this._connData(conn)) + "\n");
     this._suppressSync = false;
   }
 
-  // Delete just the removed connector's block (found by id), plus one blank
-  // separator above it, leaving the rest of the document — including comments —
-  // untouched. The connector is already gone from state, so match on the text.
+  _duplicateConnectorInSource(sourceConnectorId, connectorId) {
+    const text = this.textarea.value;
+    const index = buildSourceMap(text).connectors.findIndex(c => c.id === sourceConnectorId);
+    const conn = this.state.getConnector(connectorId);
+    if (index < 0 || !conn) return;
+    this._setSourceText(duplicateConnectorBlock(text, index, this._connData(conn)));
+  }
+
+  // Delete the same unit that move/duplicate uses, including its introductory
+  // comments; otherwise those comments would become attached to the next row.
+  // The connector is already gone from state, so match on the text by id.
   _removeConnectorFromSource(connectorId) {
     const text = this.textarea.value;
     const range = buildSourceMap(text).connectors.find(c => c.id === connectorId);
@@ -318,16 +359,14 @@ export class EditorPanel {
       this._suppressSync = false;
       return;
     }
-    const lines = text.split("\n");
-    let from = range.start;
-    if (from > 0 && lines[from - 1].trim() === "") from--;
     this._suppressSync = true;
-    this.textarea.value = [...lines.slice(0, from), ...lines.slice(range.end + 1)].join("\n");
-    this._updateHighlight();
+    this._setSourceText(removeConnectorBlock(text, range));
     this._suppressSync = false;
   }
 
   setValue(text) {
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = null;
     this.textarea.value = text;
     this._updateHighlight();
     this._parseAndSync();

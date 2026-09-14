@@ -23,7 +23,7 @@ from pinout_gen.config import (
     load_theme,
 )
 from pinout_gen.renderer import generate_html, render_connector_svg
-from pinout_gen.symbols import SYMBOLS
+from pinout_gen.symbols import SYMBOLS, render_symbol
 
 _PKG = Path(_config.__file__).resolve().parent
 _BUNDLED_CONNECTORS = _PKG / "connectors"
@@ -105,6 +105,11 @@ def symbol_catalog() -> str:
 
 
 # ── Rendering ────────────────────────────────────────────────────────
+
+def preview_symbol(symbol: str) -> str:
+    """The same safe icon or escaped glyph used in the generated pinout."""
+    return render_symbol(symbol)
+
 
 def _connector_from_dict(data: dict) -> Connector:
     return Connector(
