@@ -313,6 +313,9 @@ html, body {
   position: relative;
   overflow: hidden;
   background: var(--bg);
+  /* One finger may still scroll the page from the board, but a pinch that
+     starts here zooms the board, not the page. */
+  touch-action: pan-x pan-y;
 }
 
 #draw-mode-btn { margin-left: auto; padding: 2px 8px; font-size: 11px; }
@@ -391,6 +394,17 @@ html, body {
   text-anchor: middle;
   dominant-baseline: central;
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+/* The invisible touch target around each resize handle. Only a coarse primary
+   pointer uses it, so a mouse still hits exactly what it points at. */
+.resize-hit {
+  fill: transparent;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .resize-hit { pointer-events: all; }
 }
 
 /* Connector editor panel */

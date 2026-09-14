@@ -1,6 +1,9 @@
 import { Connector, Pin } from "./board-model.js";
 
 const HANDLE_SIZE = 12;
+// The invisible touch target around each handle, in screen pixels. It lies
+// beneath every box, so it only takes touches on empty board beside a handle.
+const HANDLE_HIT_SIZE = 40;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 10;
 const ZOOM_FACTOR = 1.1;
@@ -17,11 +20,18 @@ export class BoardPanel {
     this._zoom = 1;
     this._panX = 0;
     this._panY = 0;
+    // Touch pointers down on the board (pointerId -> client position), the
+    // pinch in progress, and whether two fingers have been down since the last
+    // time the board had none.
+    this._touches = new Map();
+    this._pinch = null;
+    this._gesture = false;
 
     this._bindState();
     this._bindDrawButton();
     this._bindViewportEvents();
     this._bindGlobalDragEvents();
+    this._bindTouchGestures();
     // A breakpoint or panel resize changes the available board viewport even
     // when the image dimensions stay the same.
     this._resizeObserver = new ResizeObserver(() => this.fitToView());
@@ -100,6 +110,80 @@ export class BoardPanel {
     this.container.addEventListener("mouseleave", stopPan);
 
     this.container.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+
+  // Two fingers on the board pinch to zoom and move together to pan: the touch
+  // counterparts of the wheel and the right-button drag. One finger keeps its
+  // jobs (drawing, moving, resizing, or scrolling the page from empty board),
+  // and a second finger landing mid-drag turns that drag into a pinch.
+  _bindTouchGestures() {
+    this.container.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      this._touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this._touches.size === 2) this._startPinch();
+    });
+    document.addEventListener("pointermove", (e) => {
+      const touch = this._touches.get(e.pointerId);
+      if (!touch) return;
+      touch.x = e.clientX;
+      touch.y = e.clientY;
+      if (this._pinch) this._updatePinch();
+    });
+    const lift = (e) => {
+      if (!this._touches.delete(e.pointerId)) return;
+      // With a third finger down, carry on pinching with the two that remain.
+      if (this._touches.size >= 2) this._startPinch();
+      else this._pinch = null;
+      if (this._touches.size === 0) this._gesture = false;
+    };
+    document.addEventListener("pointerup", lift);
+    document.addEventListener("pointercancel", lift);
+
+    // While two fingers work the board the page must neither scroll nor zoom,
+    // even with one finger left down afterward. touch-action on the board
+    // already rules out page zoom that starts there; these also keep a
+    // two-finger pan from scrolling the page. The touch list is checked
+    // directly, so this does not depend on pointer and touch event order.
+    const onBoard = (touches) => [...touches].filter(t => this.container.contains(t.target)).length;
+    this.container.addEventListener("touchstart", (e) => {
+      if (onBoard(e.touches) < 2) return;
+      this._gesture = true;
+      e.preventDefault();
+    }, { passive: false });
+    this.container.addEventListener("touchmove", (e) => {
+      if (this._gesture && e.cancelable) e.preventDefault();
+    }, { passive: false });
+  }
+
+  _startPinch() {
+    // A pinch replaces whatever the first finger had started.
+    if (this._drag) this._cancelDrag();
+    this._gesture = true;
+    const [a, b] = this._touches.values();
+    const rect = this.container.getBoundingClientRect();
+    this._pinch = {
+      dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+      x: (a.x + b.x) / 2 - rect.left,
+      y: (a.y + b.y) / 2 - rect.top,
+      zoom: this._zoom, panX: this._panX, panY: this._panY,
+    };
+  }
+
+  _updatePinch() {
+    const [a, b] = this._touches.values();
+    const p = this._pinch;
+    const rect = this.container.getBoundingClientRect();
+    const oldZoom = this._zoom;
+    this._zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, p.zoom * Math.hypot(b.x - a.x, b.y - a.y) / p.dist));
+    // Keep the board point that was under the fingers' starting midpoint under
+    // their current midpoint, so zoom and pan both follow the fingers.
+    const x = (a.x + b.x) / 2 - rect.left;
+    const y = (a.y + b.y) / 2 - rect.top;
+    this._panX = x - (p.x - p.panX) * (this._zoom / p.zoom);
+    this._panY = y - (p.y - p.panY) * (this._zoom / p.zoom);
+    this._applyTransform();
+    // Handle geometry is baked in at draw time, so re-draw at the new scale.
+    if (this._zoom !== oldZoom) this._highlightSelected(this.state.selectedConnectorId);
   }
 
   // Screen-px-to-image-px factor for overlay chrome: the wrapper is scaled by
@@ -227,7 +311,7 @@ export class BoardPanel {
     // browser delivers pointerdown or touchstart first. A touch on empty board
     // outside draw mode keeps its default and still scrolls the page.
     this.svg.addEventListener("touchstart", (e) => {
-      if (this.drawMode || e.target.closest(".resize-handle, .board-rect")) e.preventDefault();
+      if (this.drawMode || e.target.closest(".resize-handle, .resize-hit, .board-rect")) e.preventDefault();
     }, { passive: false });
     this.svg.addEventListener("click", (e) => {
       // A drag ends with a trailing click, but pointerup has already nulled
@@ -269,14 +353,17 @@ export class BoardPanel {
       return;
     }
 
-    const handle = e.target.closest(".resize-handle");
+    // A handle, or the invisible touch target around one. Targets sit outside
+    // any connector's group, but handles only ever belong to the selected
+    // connector, and a target stands for whichever handle is nearest.
+    const handle = e.target.closest(".resize-handle, .resize-hit");
     if (handle) {
-      const g = handle.closest("g[data-id]");
-      const id = g?.getAttribute("data-id");
+      const id = handle.closest("g[data-id]")?.dataset.id ?? this.state.selectedConnectorId;
       const conn = this.state.getConnector(id);
       if (conn) {
         this._drag = {
-          type: "resize", pointerId, id, handle: handle.dataset.handle,
+          type: "resize", pointerId, id,
+          handle: handle.classList.contains("resize-hit") ? this._nearestHandle(conn, pt) : handle.dataset.handle,
           origX1: conn.x1, origY1: conn.y1, origX2: conn.x2, origY2: conn.y2,
           startX: pt.x, startY: pt.y, moved: false,
         };
@@ -546,6 +633,7 @@ export class BoardPanel {
 
     g.querySelectorAll(".resize-handle").forEach(h => h.remove());
     if (connectorId === this.state.selectedConnectorId) {
+      this.svg.querySelectorAll(".resize-hit").forEach(t => t.remove());
       this._addHandles(g, x, y, w, h);
     }
   }
@@ -554,7 +642,7 @@ export class BoardPanel {
     if (!this.svg) return;
 
     this.svg.querySelectorAll(".board-rect").forEach(r => r.classList.remove("selected"));
-    this.svg.querySelectorAll(".resize-handle").forEach(h => h.remove());
+    this.svg.querySelectorAll(".resize-handle, .resize-hit").forEach(h => h.remove());
 
     if (selectedId) {
       const g = this._rectGroup(selectedId);
@@ -572,11 +660,8 @@ export class BoardPanel {
     }
   }
 
-  _addHandles(g, x, y, w, h) {
-    const ns = "http://www.w3.org/2000/svg";
-    const k = this._chromeK();
-    const hs = HANDLE_SIZE * k;
-    const positions = [
+  _handlePositions(x, y, w, h) {
+    return [
       { handle: "tl", cx: x, cy: y },
       { handle: "t",  cx: x + w / 2, cy: y },
       { handle: "tr", cx: x + w, cy: y },
@@ -586,8 +671,33 @@ export class BoardPanel {
       { handle: "b",  cx: x + w / 2, cy: y + h },
       { handle: "br", cx: x + w, cy: y + h },
     ];
+  }
 
-    for (const p of positions) {
+  // The handle a touch target stands for: the one nearest the touch, which
+  // also settles overlapping targets on a small box.
+  _nearestHandle(conn, pt) {
+    const x = Math.min(conn.x1, conn.x2), y = Math.min(conn.y1, conn.y2);
+    const positions = this._handlePositions(x, y, Math.abs(conn.x2 - conn.x1), Math.abs(conn.y2 - conn.y1));
+    const distance = (p) => Math.hypot(p.cx - pt.x, p.cy - pt.y);
+    return positions.reduce((best, p) => distance(p) < distance(best) ? p : best).handle;
+  }
+
+  _addHandles(g, x, y, w, h) {
+    const ns = "http://www.w3.org/2000/svg";
+    const k = this._chromeK();
+    const hs = HANDLE_SIZE * k;
+    const hit = HANDLE_HIT_SIZE * k;
+    const targets = document.createDocumentFragment();
+
+    for (const p of this._handlePositions(x, y, w, h)) {
+      const target = document.createElementNS(ns, "rect");
+      target.setAttribute("class", "resize-hit");
+      target.setAttribute("x", p.cx - hit / 2);
+      target.setAttribute("y", p.cy - hit / 2);
+      target.setAttribute("width", hit);
+      target.setAttribute("height", hit);
+      targets.appendChild(target);
+
       const r = document.createElementNS(ns, "rect");
       r.setAttribute("class", "resize-handle");
       r.dataset.handle = p.handle;
@@ -602,6 +712,9 @@ export class BoardPanel {
       r.style.cursor = this._handleCursor(p.handle);
       g.appendChild(r);
     }
+    // The targets go beneath every box, so a touch on any box still selects or
+    // moves that box; only empty board beside a handle reaches them.
+    this.svg.insertBefore(targets, this.svg.firstChild);
   }
 
   _handleCursor(handle) {
