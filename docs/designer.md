@@ -109,7 +109,7 @@ Click **Generate**. The dialog renders the pinout and shows the real page, not a
 
 ![The Generate dialog showing a rendered pinout, with a theme selector, an embed toggle and a Download button](../assets/workflow-7-generate.png)
 
-- **Theme** re-renders with any of the built-in themes, so you can compare before committing.
+- **Theme** sets the board's `theme`, the same setting as the toolbar's selector, and re-renders, so the page you download always matches the config you save. Undo takes a change back once the dialog is closed.
 - **Embed image** writes the board photo into the HTML. On, you get one self-contained file. Off, the file is far smaller but needs the photo beside it. The size beside the toggle is the size of what you are about to download.
 - **Download** saves the page as `<image name>.pinout.html`.
 

@@ -382,7 +382,7 @@ height = 600
   setupUnloadGuard(editorPanel);
 
   document.getElementById("generate-btn").addEventListener("click", () => {
-    openGenerate(state, editorPanel.getValue());
+    openGenerate(state, () => editorPanel.getValue());
   });
   document.getElementById("about-btn").addEventListener("click", openAbout);
 

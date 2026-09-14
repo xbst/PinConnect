@@ -160,15 +160,18 @@ export class BoardState {
     }
   }
 
+  // Returns false when the theme could not be set (no board yet, or pending
+  // TOML that does not parse), so the control that asked can show the old one.
   setTheme(theme, origin = "visual") {
-    if (!this._prepareMutation(origin)) return;
-    if (!this.board || this.board.theme === theme) return;
+    if (!this._prepareMutation(origin) || !this.board) return false;
+    if (this.board.theme === theme) return true;
     this._pushUndo();
     this._origin = origin;
     this.board.theme = theme;
     this.dirty = true;
     this.emit("board-changed", { board: this.board, origin });
     this._origin = null;
+    return true;
   }
 
   // Returns false when the title could not be set (no board yet, or pending
