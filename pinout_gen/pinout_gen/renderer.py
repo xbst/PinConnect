@@ -803,10 +803,15 @@ def _render_theme_css(theme: Theme) -> str:
     """Emit a theme's CSS: @font-face for any bundled fonts, the font-family
     variables (--ui-font, --label-font), then the colour custom-property blocks
     (light on :root, dark under both prefers-color-scheme and [data-theme=dark],
-    an explicit [data-theme=light] override), then any raw extra CSS."""
-    def block(selector: str, colors: dict[str, str]) -> str:
+    an explicit [data-theme=light] override), then any raw extra CSS.
+
+    Each colour block also declares ``color-scheme``.  A browser only lets an
+    iframe's canvas stay transparent while the embedded document's used
+    color-scheme matches the embedder's, so without this a ``bg`` of
+    ``transparent`` paints opaque white inside a dark host page."""
+    def block(selector: str, colors: dict[str, str], scheme: str) -> str:
         decls = "".join(f"--{k}:{v};" for k, v in colors.items())
-        return f"{selector}{{{decls}}}"
+        return f"{selector}{{{decls}color-scheme:{scheme}}}"
 
     parts: list[str] = []
 
@@ -825,10 +830,10 @@ def _render_theme_css(theme: Theme) -> str:
 
     light, dark = theme.colors_light, theme.colors_dark
     parts.extend([
-        block(":root", light),
-        f"@media(prefers-color-scheme:dark){{{block(':root', dark)}}}",
-        block(':root[data-theme="dark"]', dark),
-        block(':root[data-theme="light"]', light),
+        block(":root", light, "light"),
+        f"@media(prefers-color-scheme:dark){{{block(':root', dark, 'dark')}}}",
+        block(':root[data-theme="dark"]', dark, "dark"),
+        block(':root[data-theme="light"]', light, "light"),
     ])
     css = "\n".join(parts)
     if theme.extra_css.strip():
