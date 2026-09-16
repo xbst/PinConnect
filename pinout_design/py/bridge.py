@@ -178,7 +178,8 @@ def generate(board_toml: str, image_data_uri: str = "", theme_name: str = "") ->
 
     Runs the same sequence the CLI runs, against the same loaders, so the result
     matches ``pinout-gen`` byte for byte for the same input.  Returns JSON
-    holding the page and any warnings about input the browser cannot honor.
+    holding the page, plus any warnings about input the browser cannot honor
+    and any the theme itself raised.
     """
     WORK.mkdir(parents=True, exist_ok=True)
     BOARD_PATH.write_text(board_toml, encoding="utf-8")
@@ -198,4 +199,7 @@ def generate(board_toml: str, image_data_uri: str = "", theme_name: str = "") ->
         theme=theme,
         image_data_uri=image_data_uri or None,
     )
-    return json.dumps({"html": html, "warnings": _local_dir_warnings(board)})
+    return json.dumps({
+        "html": html,
+        "warnings": _local_dir_warnings(board) + theme.warnings,
+    })
