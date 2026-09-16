@@ -142,7 +142,14 @@ bg          = "#0b1220"
 text        = "#e2e8f0"
 ```
 
+Setting `bg = "transparent"` in both palettes lets an embedded pinout take the background of whatever it sits in — an admonition, a card, the page itself — instead of painting its own.
+The generated page declares a `color-scheme` to match the palette it is showing, which is what browsers require before they will let an iframe stay transparent over a host page in the opposite mode.
+
 Names outside this table are not rejected — they are emitted as CSS variables too. Defining `my-accent` in both palettes gives you `var(--my-accent)` to use from [`[extra_css]`](#extra_css), with light/dark switching handled for you.
+
+Values are checked as they load. A bare hex with no `#` (`bg = "f8f8f8"`) is not valid CSS — the browser drops the declaration that uses it and paints the element transparent instead — so `pinout-gen` adds the `#` for you and prints a warning. A value that is no recognizable color at all (a misspelled `gray`, say) is left alone but still warned about, since it would silently leave that element unstyled. Both are warnings, not errors: the page is still written. The designer shows the same warnings in its Generate dialog.
+
+Only the tokens in the table above are checked this way. A name outside it may legitimately hold any CSS your `[extra_css]` wants, so only the missing-`#` repair applies there.
 
 ### `[font]` and `[font.label]`
 

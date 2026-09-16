@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -308,6 +309,99 @@ _DEFAULT_COLORS_DARK: dict[str, str] = {
 }
 
 
+# ── Theme colors ─────────────────────────────────────────────────────
+
+# The CSS named colors, plus the keywords a color token may legitimately hold.
+# Used only to tell a real color from a typo: a value that matches nothing here
+# and is not a hex or a function gets a warning, not an error.
+_CSS_COLOR_KEYWORDS: frozenset[str] = frozenset("""
+aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond
+blue blueviolet brown burlywood cadetblue chartreuse chocolate coral
+cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray
+darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid
+darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey
+darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue
+firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod
+gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki
+lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon
+lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue
+lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue
+mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin
+navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod
+palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon
+sandybrown seagreen seashell sienna silver skyblue slateblue slategray
+slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet
+wheat white whitesmoke yellow yellowgreen
+transparent currentcolor inherit initial unset revert
+""".split())
+
+_BARE_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]+$")
+# rgb(), hsl(), oklch(), color-mix(), var(), linear-gradient() and friends.
+_FUNC_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9-]*\(.*\)$", re.DOTALL)
+
+
+def _check_color(token: str, value: str, scope: str, known: bool,
+                 warnings: list[str]) -> str:
+    """Sanity-check one ``[colors.*]`` value, returning the value to emit.
+
+    Colors reach the stylesheet verbatim, and CSS drops a custom property that
+    does not parse only where it is *used* -- so a malformed color does not
+    fail, it silently turns the element it paints transparent/unstyled.  Two
+    checks, both non-fatal, because unknown tokens are a documented extension
+    point and the color syntax keeps growing:
+
+    * A bare hex (``f8f8f8``) is never valid CSS in any position, so it is
+      unambiguously a missing ``#``: fix it and say so.
+    * Anything else that looks like no color at all is reported only for the
+      built-in tokens, whose meaning we know.  A custom token may legitimately
+      hold any CSS the theme's ``[extra_css]`` cares to use.
+    """
+    where = f"[colors.{scope}] {token}"
+    if not isinstance(value, str):
+        warnings.append(f"{where} = {value!r} is not a string; ignoring it.")
+        return ""
+    v = value.strip()
+    if v.lower() in _CSS_COLOR_KEYWORDS or _FUNC_RE.match(v):
+        return v
+    if _BARE_HEX_RE.match(v) and len(v) in (3, 4, 6, 8):
+        warnings.append(
+            f"{where} = \"{v}\" is missing its '#', which makes it invalid CSS "
+            f"(the element would render transparent); using \"#{v}\"."
+        )
+        return f"#{v}"
+    if _HEX_RE.match(v):
+        if len(v) - 1 in (3, 4, 6, 8):
+            return v
+        warnings.append(
+            f"{where} = \"{v}\" is not a valid hex color "
+            "(it needs 3, 4, 6 or 8 digits)."
+        )
+        return v
+    if known:
+        warnings.append(
+            f"{where} = \"{v}\" is not a recognized CSS color, so the element "
+            "it paints will render unstyled."
+        )
+    return v
+
+
+def _theme_colors(raw: object, scope: str, warnings: list[str]) -> dict[str, str]:
+    """Check and normalize one ``[colors.light]`` / ``[colors.dark]`` table."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, str] = {}
+    for token, value in raw.items():
+        known = token in _DEFAULT_COLORS_LIGHT
+        checked = _check_color(str(token), value, scope, known, warnings)
+        if checked:
+            out[str(token)] = checked
+    return out
+
+
 @dataclass
 class ThemeFont:
     """A font a theme uses.  ``source`` is ``google`` (loaded via a Fonts <link>),
@@ -371,6 +465,9 @@ class Theme:
     label_font: ThemeFont | None = None
     behavior: ThemeBehavior = field(default_factory=ThemeBehavior)
     extra_css: str = ""
+    # Non-fatal complaints from loading, e.g. a color that will not parse as CSS.
+    # The CLI prints these; the designer shows them in the Generate dialog.
+    warnings: list[str] = field(default_factory=list)
 
 
 _BUNDLED_THEMES = Path(__file__).parent / "themes"
@@ -432,9 +529,9 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
 
     t = raw.get("theme", {})
     theme.name = t.get("name", name)
-    colors = raw.get("colors", {})
-    theme.colors_light.update(colors.get("light", {}))
-    theme.colors_dark.update(colors.get("dark", {}))
+    colors = raw.get("colors", {}) if isinstance(raw.get("colors"), dict) else {}
+    theme.colors_light.update(_theme_colors(colors.get("light"), "light", theme.warnings))
+    theme.colors_dark.update(_theme_colors(colors.get("dark"), "dark", theme.warnings))
     fdict = raw.get("font", {})
     if isinstance(fdict, dict) and fdict:
         theme.font = _parse_font(fdict, toml_path.parent)
@@ -475,4 +572,6 @@ def load_theme(name: str, board_path: Path, theme_dir: str = "./themes") -> Them
         theme.extra_css = extra.get("css", "")
     elif isinstance(extra, str):
         theme.extra_css = extra
+
+    theme.warnings = [f"{toml_path.name}: {w}" for w in theme.warnings]
     return theme

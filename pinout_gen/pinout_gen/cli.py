@@ -114,6 +114,8 @@ def main(argv: list[str] | None = None) -> None:
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+    for warning in theme.warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
 
     image_data_uri: str | None = None
     if args.image_embed is not None:

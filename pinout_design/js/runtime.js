@@ -168,7 +168,8 @@ function pythonMessage(e) {
  *
  * Resolves to {html, warnings}. A warning means the board asked for something
  * the browser cannot do, such as reading connector types from a local folder,
- * so the page rendered but would not match what the CLI produces.
+ * so the page rendered but would not match what the CLI produces -- or that the
+ * theme holds a color that will not parse as CSS.
  */
 export async function generate(boardToml, { imageDataUri = "", themeName = "" } = {}) {
   let raw;
