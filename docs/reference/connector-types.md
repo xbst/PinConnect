@@ -25,6 +25,7 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 | `MX-F-2R` | grid | Micro-Fit female, two rows |
 | `USB-C` | box | Simple rectangular body |
 | `XT30-2+2` | xt30 | XT30 power + 2 signal pins |
+| `STEPSTICK-F` | stepstick | StepStick stepper-driver socket, female: two 8-way 2.54 mm headers and a two-pin tower, 18 pins in all |
 | `button` | button | Tactile push-button / switch footprint |
 | `slide-switch` | slide-switch | Slide switch; its pins are the slider's positions |
 | `none` | none | Nothing at all; marks a spot on the board that has no pinout to show |
@@ -70,6 +71,7 @@ That is `MX-F-2R.toml` verbatim. Copying a bundled type that resembles what you 
 ### `[connector]`
 
 - `name` — human-readable name for the connector family.
+- `default_pins` — optional list of the pins a new connector of this type starts with, written like a board's pins: `{ name = "GND", color = "#2C3E50", row = 1 }`, with `color` and `row` optional. It is what the designer's **New Connector** creates, in list order. Without it a new connector starts with one pin named `PIN1`. It does not change what `pinout-gen` draws, but the loader checks it on every run, so a malformed `default_pins` in a board's own connector type stops the command with an error. Only `name`, `color` and `row` are allowed; any other key, a `color` that is not a string, or a `row` beyond `rows` is rejected.
 - `style` — how the body is drawn. One of:
   - `box` — a plain rectangle.
   - `latch` — a latching housing (JST XH / PH look).
@@ -80,6 +82,7 @@ That is `MX-F-2R.toml` verbatim. Copying a bundled type that resembles what you 
   - `barrier` — a barrier screw-terminal with individual metal cages and cross-drive screws.
   - `button` — a tactile push-button / switch footprint (a round actuator between two pads).
   - `slide-switch` — a slide switch: a recessed actuator track carrying a knurled slider block at each of its labeled positions; uses `cavity_size` for the slider.
+  - `stepstick` — a StepStick socket: two 8-way female headers drawn as plain rectangles with a square socket, funneled at the entry, per way, and a two-pin tower standing on the lower header. The tower is drawn only when the connector has pins on row 3, so a plain A4988 or DRV8825 socket shows none. Where it stands, and so which way round the connector goes, follows `row3_padding_left`. Uses `rows = 3`, the `row3_*` keys, and `cavity_size` for the socket's mouth. The tower has to fit between the two headers, which the loader checks.
   - `sherlock` — a Sherlock housing: two latch ears on the body edge, and a stepped, chamfered mating half on the narrow sizes; uses `flare_max_pins` / `flare_width`.
   - `none` — nothing is drawn. The connector becomes a plain marker on the board; see the note above.
 
@@ -111,7 +114,7 @@ The pin count comes from the board config, not the type — `pin_pitch` and the 
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `rows` | `1` | `1` or `2`. The `row2_*` keys apply only when this is `2`. |
+| `rows` | `1` | `1`, `2` or `3`. The `row2_*` keys apply from `2` up, the `row3_*` keys only at `3`. |
 | `row2_pin_cy` | `0.0` | Second row's pin center offset from the top edge. |
 | `row2_pinout_side` | `"top"` | Which side the second row's lines exit. |
 | `row2_line_length` | `20.0` | Line length for the second row. |
@@ -119,11 +122,24 @@ The pin count comes from the board config, not the type — `pin_pitch` and the 
 | `row2_pin_radius` | `-1.0` | Second row's pin radius. Negative means inherit `pin_radius`. |
 | `row2_pin_pitch_y` | `0.0` | Above `0`, the second row becomes a *vertical* column of pins spaced this far apart, instead of a horizontal row. This is how `XT30-2+2` puts its two signal pins beside the power pair. |
 
+#### Third row
+
+With `rows = 3` a type gets a third group of pins, always a vertical column, like the vertical form of the second row. This is how `STEPSTICK-F` places the two pins of its tower beside the two headers. Pins reach it with `row = 3`; on a type with fewer rows they fall back to row 1.
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `row3_padding_left` | `-1.0` | Body edge to the column's pins. The column always stands over the body: a value past either end snaps to the nearest end pin position. Negative puts it on the last pin position of the body. `STEPSTICK-F` sets it to its first pin so the tower stands on the left. |
+| `row3_pin_cy` | `0.0` | The *first* (top) pin's center offset from the top edge. |
+| `row3_pin_pitch_y` | `10.0` | Spacing between the column's pins. |
+| `row3_pin_radius` | `-1.0` | Third row's pin radius. Negative means inherit `pin_radius`. |
+| `row3_pinout_side` | `"right"` | Which side the third row's lines exit. |
+| `row3_line_length` | `20.0` | Line length for the third row. |
+
 #### Style-specific
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `cavity_size` | `0.0` | Cavity size for the `grid` style; slider size for `slide-switch`. |
+| `cavity_size` | `0.0` | Cavity size for the `grid` style; slider size for `slide-switch`; socket size for `stepstick`. |
 | `mating_pin_scale` | `1.0` | Scale of the visible metal contact inside a `screw-terminal` wire opening. |
 | `flare_max_pins` | `0` | Pin count at or below which the housing flares wider. `0` never flares. |
 | `flare_width` | `0.0` | Extra body width per side while flared. |

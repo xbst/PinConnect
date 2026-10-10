@@ -85,7 +85,7 @@ The **Pins** section lists the connector's pins in order:
 - **+ Add Pin** appends a pin.
 - Edit each pin's **name** inline.
 - Click the **color swatch** for a preset or a custom hex value.
-- Set the **row** (R1 / R2) on two-row connector types.
+- Set the **row** (R1 / R2, plus R3 on types with a third row) on multi-row connector types.
 - **Reorder** by dragging the handle.
 - **Delete** with the × button.
 

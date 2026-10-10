@@ -556,7 +556,7 @@ export class BoardPanel {
         id, name: name || id, type,
         x1: Math.round(x1), y1: Math.round(y1),
         x2: Math.round(x2), y2: Math.round(y2),
-        pins: [new Pin("PIN1", "#888888")],
+        pins: this._startingPins(type),
       }), "visual");
       this.state.selectConnector(id);
       this.setDrawMode(false);
@@ -564,6 +564,13 @@ export class BoardPanel {
 
     dialog.querySelector("#new-conn-id").focus();
     dialog.querySelector("#new-conn-id").select();
+  }
+
+  /** A new connector's pins: the type's own default pins, else a single one. */
+  _startingPins(type) {
+    const defaults = this.state.connectorTypes.get(type)?.defaultPins ?? [];
+    if (!defaults.length) return [new Pin("PIN1", "#888888")];
+    return defaults.map(p => new Pin(p.name, p.color, p.row));
   }
 
   // --- Rendering ---

@@ -1,0 +1,52 @@
+[connector]
+name = "StepStick-F"
+style = "stepstick"
+
+# TMC2209 SilentStepStick pinout, seen from the socket's mating face. Row 1 is
+# the module's EN column and row 2 its VM column, each listed from the end beside
+# the tower. Row 3 is the tower: INDEX, then DIAG next to the EN column.
+# Turned 90 degrees clockwise this is the module's own top view.
+default_pins = [
+  { name = "EN", color = "#FFBF00", row = 1 },
+  { name = "MS1", color = "#FFBF00", row = 1 },
+  { name = "MS2", color = "#FFBF00", row = 1 },
+  { name = "SPREAD", color = "#FFBF00", row = 1 },
+  { name = "PDN_UART", color = "#9B59B6", row = 1 },
+  { name = "PDN_UART", color = "#9B59B6", row = 1 },
+  { name = "STEP", color = "#FFBF00", row = 1 },
+  { name = "DIR", color = "#FFBF00", row = 1 },
+  { name = "VM", color = "#E74C3C", row = 2 },
+  { name = "GND", color = "#2C3E50", row = 2 },
+  { name = "M2B", color = "#2ECC71", row = 2 },
+  { name = "M2A", color = "#2ECC71", row = 2 },
+  { name = "M1A", color = "#3498DB", row = 2 },
+  { name = "M1B", color = "#3498DB", row = 2 },
+  { name = "VIO", color = "#E74C3C", row = 2 },
+  { name = "GND", color = "#2C3E50", row = 2 },
+  { name = "INDEX", color = "#1ABC9C", row = 3 },
+  { name = "DIAG", color = "#1ABC9C", row = 3 },
+]
+
+[geometry]
+# Two 8-way 2.54 mm female headers, 12.7 mm (0.5 in) apart, with a two-pin tower
+# on the end of the lower one. Row 1 is the lower header, row 2 the upper one,
+# row 3 the tower. Drawn on the 2.54 mm grid at 10 units per pitch.
+pin_pitch = 10.0
+padding_left = 5.0
+padding_right = 5.0
+height = 60.0
+wall = 1.5
+pin_cy = 55.0
+pin_radius = 1.2
+pinout_side = "bottom"
+line_length = 12.0
+rows = 3
+row2_pin_cy = 5.0
+row2_pinout_side = "top"
+row2_line_length = 12.0
+row3_padding_left = 5.0
+row3_pin_cy = 35.0
+row3_pin_pitch_y = 10.0
+row3_pinout_side = "left"
+row3_line_length = 12.0
+cavity_size = 5.5

@@ -84,6 +84,7 @@ def connector_catalog() -> str:
             "slug": slug,
             "name": ct.name,
             "style": ct.style,
+            "default_pins": [{"name": p.name, "color": p.color, "row": p.row} for p in ct.default_pins],
             "geometry": {f.name: getattr(geo, f.name) for f in fields(geo)},
         })
     return json.dumps(out)

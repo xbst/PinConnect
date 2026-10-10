@@ -36,8 +36,8 @@ export class ConnectorPanel {
       // drawing, leaving the form and the pending click intact.
       const conn = this.state.getSelectedConnector();
       const ct = conn && this.state.connectorTypes.get(conn.type);
-      const isDualRow = !!(ct && ct.geometry.rows >= 2);
-      if (isDualRow !== this._isDualRow) this._render();
+      const rowCount = ct ? ct.geometry.rows : 1;
+      if (rowCount !== this._rowCount) this._render();
       else this._updateSvgPreview();
     });
     this.state.on("pin-changed", ({ connectorId, pinIndex, origin }) => {
@@ -86,8 +86,8 @@ export class ConnectorPanel {
     }
 
     const ct = this.state.connectorTypes.get(conn.type);
-    const isDualRow = ct && ct.geometry.rows >= 2;
-    this._isDualRow = !!isDualRow;
+    const rowCount = ct ? ct.geometry.rows : 1;
+    this._rowCount = rowCount;
 
     let svgHtml = "";
     if (ct) {
@@ -150,7 +150,7 @@ export class ConnectorPanel {
             <span>Pins (${conn.pins.length})</span>
             <button class="pin-add-btn" id="pin-add-btn">+ Add Pin</button>
           </div>
-          ${conn.pins.map((p, i) => this._renderPinRow(p, i, isDualRow)).join("")}
+          ${conn.pins.map((p, i) => this._renderPinRow(p, i, rowCount)).join("")}
         </div>
       </div>
     `;
@@ -158,11 +158,11 @@ export class ConnectorPanel {
     this._bindForm(conn);
   }
 
-  _renderPinRow(pin, index, isDualRow) {
-    const rowSel = isDualRow
+  _renderPinRow(pin, index, rowCount) {
+    const rowSel = rowCount >= 2
       ? `<select class="pin-row-select" data-idx="${index}">
-           <option value="1" ${pin.row === 1 ? "selected" : ""}>R1</option>
-           <option value="2" ${pin.row === 2 ? "selected" : ""}>R2</option>
+           ${Array.from({ length: Math.min(rowCount, 3) }, (_, r) =>
+             `<option value="${r + 1}" ${pin.row === r + 1 ? "selected" : ""}>R${r + 1}</option>`).join("")}
          </select>`
       : "";
     return `
@@ -292,18 +292,18 @@ export class ConnectorPanel {
 
     onFieldChange("#conn-id", "id");
     onFieldChange("#conn-name", "name");
-    // Type change gets a custom handler: switching to a single-row type would
-    // strand any row-2 pins (no R2 selector to fix them, mis-rendered at y=0),
-    // so pull them back to row 1 in the same update.
+    // Type change gets a custom handler: switching to a type with fewer rows
+    // would strand pins on a row it lacks (no selector entry to fix them,
+    // mis-rendered at y=0), so pull them back to row 1 in the same update.
     const typeEl = this.container.querySelector("#conn-type");
     if (typeEl) {
       typeEl.addEventListener("change", () => {
         const newType = typeEl.value;
         const c = this.state.getConnector(cid);
         const ct = this.state.connectorTypes.get(newType);
-        const isDual = !!(ct && ct.geometry.rows >= 2);
-        if (!isDual && c && c.pins.some(p => p.row === 2)) {
-          const pins = c.pins.map(p => new Pin(p.name, p.color, 1));
+        const rowCount = ct ? ct.geometry.rows : 1;
+        if (c && c.pins.some(p => p.row > rowCount)) {
+          const pins = c.pins.map(p => new Pin(p.name, p.color, p.row > rowCount ? 1 : p.row));
           this.state.updateConnector(cid, { type: newType, pins }, "visual");
         } else {
           this.state.updateConnector(cid, { type: newType }, "visual");

@@ -37,7 +37,7 @@ GALLERY_ORDER = ["XH-F", "PH-F", "MX-F-1R", "MX-F-2R", "SHERLOCK-F",
                  "HDR-127", "HDR-127-2R", "HDR-200", "HDR-200-2R",
                  "HDR-254", "HDR-254-2R",
                  "ST-254", "ST-508", "ST-BR-508", "ST-BR-950",
-                 "XT30-2+2", "slide-switch", "button", "USB-C"]
+                 "XT30-2+2", "STEPSTICK-F", "slide-switch", "button", "USB-C"]
 PALETTE = ["#E74C3C", "#F39C12", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C"]
 # Location markers read best with no pins (the docs say to leave pins off these).
 NO_PINS = {"USB-C", "button"}
@@ -65,8 +65,16 @@ def _page(cards_html, cols):
 </style></head><body><div class="grid">{cards_html}</div></body></html>"""
 
 
-def _pins_for(geo):
-    """A small, representative pin set colored from the palette."""
+def _pins_for(ct):
+    """A small, representative pin set colored from the palette.
+
+    A type that declares its own default pins is shown with exactly those, so
+    the card carries the real layout (a StepStick is 8 + 8 + 2, not 3 + 3).
+    """
+    geo = ct.geometry
+    if ct.default_pins:
+        return [Pin(name="", color=PALETTE[k % len(PALETTE)], row=p.row)
+                for k, p in enumerate(ct.default_pins)]
     if geo.row2_pin_pitch_y > 0:      # XT30-2+2: 2 power + 2 vertical signal
         spec = [(1, 2), (2, 2)]
     elif geo.rows >= 2:               # two-row grid: 3 over 3
@@ -91,7 +99,7 @@ def build_gallery():
     cards = []
     for name in GALLERY_ORDER:
         ct = load_connector_type(CONN_DIR / f"{name}.toml")
-        pins = [] if name in NO_PINS else _pins_for(ct.geometry)
+        pins = [] if name in NO_PINS else _pins_for(ct)
         cards.append(
             f'<figure class="card"><div class="art">{_svg(name, ct, pins)}</div>'
             f'<figcaption><span class="nm">{html.escape(name)}</span>'

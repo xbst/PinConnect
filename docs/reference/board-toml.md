@@ -154,9 +154,9 @@ Pins are listed in physical order. The first pin is pin 1.
 |-------|----------|---------|---------|
 | `name` | yes | — | Pin label (e.g. `VIN`, `GND`, `CAN_H`). |
 | `color` | no | `#888888` | Color of the pin's marker dot and its wire stub. Any CSS color works (`"#E74C3C"`, `"red"`), though the designer writes hex. Pin *label* text is colored by the [theme](themes.md), not by this. |
-| `row` | no | `1` | Which row the pin belongs to, for two-row connectors. Use `2` for the second row. |
+| `row` | no | `1` | Which row the pin belongs to, for multi-row connectors. Use `2` for the second row and `3` for the third, on the types that have one. |
 
-For single-row connectors, omit `row` (everything defaults to row 1). For two-row types like `MX-F-2R` or `HDR-254-2R`, assign each pin to `row = 1` or `row = 2`; order within each row is the order the pins appear in the file. Which side of the body each row sits on, and which way its labels run, comes from the connector type rather than from the board: on the two-row headers and `MX-F-2R`, row 1 labels below the body and row 2 above it.
+For single-row connectors, omit `row` (everything defaults to row 1). For two-row types like `MX-F-2R` or `HDR-254-2R`, assign each pin to `row = 1` or `row = 2`; order within each row is the order the pins appear in the file. `STEPSTICK-F` has a third group, the two-pin tower, which takes `row = 3`: its rows are the lower header (`1`), the upper header (`2`) and the tower (`3`). Which side of the body each row sits on, and which way its labels run, comes from the connector type rather than from the board: on the two-row headers and `MX-F-2R`, row 1 labels below the body and row 2 above it.
 
 ## Tips
 
