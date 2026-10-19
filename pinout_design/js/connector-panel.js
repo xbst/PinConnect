@@ -77,6 +77,10 @@ export class ConnectorPanel {
       this._clearNotice();
       this._render();
     });
+    // A renamed connector is still the one being edited: keep its picking.
+    this.state.on("connector-renamed", ({ oldId, newId }) => {
+      if (this._settingsFor === oldId) this._settingsFor = newId;
+    });
     // Undo, redo and TOML edits: the last action's notice no longer applies.
     this.state.on("board-changed", () => { this._clearNotice(); this._render(); });
     // The drawing needs pinout-gen, so redraw once it has booted.
