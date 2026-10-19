@@ -123,6 +123,13 @@ def _connector_from_dict(data: dict) -> Connector:
         for p in data.get("pins", [])
     ]
     cid = data.get("id", "")
+    # The designer drops keys a setting has no field for and lists their names
+    # in "unknown"; put them back so parse_settings rejects them by name.
+    settings = [
+        {**{k: None for k in s.get("unknown", [])}, **{k: v for k, v in s.items() if k != "unknown"}}
+        if isinstance(s, dict) else s
+        for s in data.get("settings", [])
+    ]
     return Connector(
         id=cid,
         name=data.get("name", ""),
@@ -130,7 +137,7 @@ def _connector_from_dict(data: dict) -> Connector:
         pins=pins,
         # Checked exactly as load_board checks them, so the preview fails with
         # the message Generate would give rather than drawing something it won't.
-        settings=parse_settings(data.get("settings", []), f"connector '{cid}'", len(pins)),
+        settings=parse_settings(settings, f"connector '{cid}'", len(pins)),
         x1=int(data.get("x1", 0)), y1=int(data.get("y1", 0)),
         x2=int(data.get("x2", 0)), y2=int(data.get("y2", 0)),
         orientation=int(data.get("orientation", 0)),

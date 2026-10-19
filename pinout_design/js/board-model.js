@@ -20,6 +20,9 @@ export class Setting {
     this.default = data.default ?? false;
     this.group = data.group ?? "";
     this.description = data.description ?? "";
+    // Keys the TOML gave this setting that it has no field for: kept so the
+    // preview can reject them exactly as Generate will.
+    this.unknown = [...(data.unknown ?? [])];
   }
 }
 

@@ -186,7 +186,13 @@ export function parseBoardToml(text) {
   const connectors = (raw.connector || []).map(c => ({
     ...connectorFields(c),
     pins: (c.pin || []).map(pinFields),
-    settings: (c.setting || []).map(settingFields),
+    // unknown names keys the model has no field for (a misspelled "jumper",
+    // say), so the preview can fail on them as Generate does. It sits outside
+    // settingFields, so patches never rewrite or add it.
+    settings: (c.setting || []).map(s => ({
+      ...settingFields(s),
+      unknown: Object.keys(s).filter(k => !(k in SETTING_DEFAULTS)),
+    })),
   }));
 
   return { board, connectors };
@@ -245,6 +251,8 @@ function settingFields(s) {
     description: s.description ?? "",
   };
 }
+
+const SETTING_DEFAULTS = settingFields({});
 
 // "2 - 5" and "2-5" are the same jumper; only a real change rewrites the line.
 function normalizeJumper(j) {
