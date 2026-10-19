@@ -109,6 +109,22 @@ class Pin:
 
 
 @dataclass
+class Setting:
+    """One way of fitting a header's jumpers, e.g. "5V" = a cap on pins 1-4.
+
+    ``jumpers`` holds 1-based pin numbers (positions in the connector's pin
+    list), one pair per cap; an empty list is the "no jumper" setting.  Settings
+    sharing a ``group`` are alternatives to each other, and each group is chosen
+    on its own.
+    """
+    label: str
+    jumpers: list[tuple[int, int]] = field(default_factory=list)
+    default: bool = False
+    group: str = ""
+    description: str = ""
+
+
+@dataclass
 class Connector:
     id: str
     name: str
@@ -122,6 +138,21 @@ class Connector:
     description: str = ""
     label_style: str = "staggered"
     symbol: str = ""
+    settings: list[Setting] = field(default_factory=list)
+
+    def setting_groups(self) -> dict[str, list[int]]:
+        """Setting indexes by group, groups in order of first appearance."""
+        groups: dict[str, list[int]] = {}
+        for i, s in enumerate(self.settings):
+            groups.setdefault(s.group, []).append(i)
+        return groups
+
+    def shown_settings(self) -> set[int]:
+        """The setting each group starts on: its default, else its first."""
+        return {
+            next((i for i in idxs if self.settings[i].default), idxs[0])
+            for idxs in self.setting_groups().values()
+        }
 
 
 @dataclass
@@ -237,8 +268,113 @@ def load_board(path: Path) -> Board:
             description=c.get("description", ""),
             label_style=label_style,
             symbol=c.get("symbol", ""),
+            settings=_load_settings(c.get("setting", []), ctx, len(pins)),
         ))
     return board
+
+
+_SETTING_KEYS = frozenset({"label", "jumpers", "default", "group", "description"})
+_JUMPER_RE = re.compile(r"^\s*([0-9]+)\s*-\s*([0-9]+)\s*$")
+
+
+def _load_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
+    """Parse and check a connector's ``[[connector.setting]]`` tables.
+
+    Unknown keys are rejected rather than ignored: a misspelled ``jumpers``
+    would otherwise load as a setting with no jumper at all, and the pinout
+    would show a header as open that should be bridged.
+    """
+    if isinstance(raw, dict):
+        raise ValueError(
+            f"{ctx}: settings must be written as '[[connector.setting]]' "
+            "(an array of tables), not '[connector.setting]'"
+        )
+    if not isinstance(raw, list):
+        raise ValueError(f"{ctx}: 'setting' must be a list of [[connector.setting]] tables")
+
+    settings: list[Setting] = []
+    for i, s in enumerate(raw):
+        where = f"{ctx} setting #{i + 1}"
+        if not isinstance(s, dict):
+            raise ValueError(f"{where} must be a table")
+        unknown = sorted(set(s) - _SETTING_KEYS)
+        if unknown:
+            raise ValueError(
+                f"{where}: unknown key(s): {', '.join(unknown)} "
+                f"(valid: {', '.join(sorted(_SETTING_KEYS))})"
+            )
+        label = s.get("label")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"{where}: missing required key 'label' (a nonempty string)")
+        where = f"{ctx} setting '{label}'"
+        for key in ("group", "description"):
+            if not isinstance(s.get(key, ""), str):
+                raise ValueError(f"{where}: {key} must be a string (got {s[key]!r})")
+        default = s.get("default", False)
+        if not isinstance(default, bool):
+            raise ValueError(f"{where}: default must be true or false (got {default!r})")
+
+        raw_jumpers = s.get("jumpers", [])
+        if not isinstance(raw_jumpers, list):
+            raise ValueError(
+                f"{where}: jumpers must be a list like [\"1-2\"] (got {raw_jumpers!r})"
+            )
+        jumpers: list[tuple[int, int]] = []
+        used: set[int] = set()
+        for j in raw_jumpers:
+            m = _JUMPER_RE.match(j) if isinstance(j, str) else None
+            if not m:
+                raise ValueError(
+                    f"{where}: jumper {j!r} must be two pin numbers joined by a hyphen, like \"1-2\""
+                )
+            a, b = int(m.group(1)), int(m.group(2))
+            if a == b:
+                raise ValueError(f"{where}: jumper '{j}' joins pin {a} to itself")
+            for p in (a, b):
+                if not 1 <= p <= n_pins:
+                    raise ValueError(
+                        f"{where}: jumper '{j}' names pin {p}, but the connector has "
+                        f"{n_pins} pin{'s' if n_pins != 1 else ''} (pins are numbered "
+                        "from 1 in the order they are listed)"
+                    )
+                if p in used:
+                    raise ValueError(
+                        f"{where}: pin {p} carries two jumpers; a pin holds only one cap"
+                    )
+                used.add(p)
+            jumpers.append((a, b))
+        settings.append(Setting(label=label, jumpers=jumpers, default=default,
+                                group=s.get("group", ""), description=s.get("description", "")))
+
+    # Checks across settings, one group at a time.
+    groups: dict[str, list[Setting]] = {}
+    for s in settings:
+        groups.setdefault(s.group, []).append(s)
+    for group, members in groups.items():
+        in_group = f" in group '{group}'" if group else ""
+        labels = [s.label for s in members]
+        dupes = sorted({x for x in labels if labels.count(x) > 1})
+        if dupes:
+            raise ValueError(f"{ctx}: two settings{in_group} are labeled '{dupes[0]}'")
+        defaults = [s.label for s in members if s.default]
+        if len(defaults) > 1:
+            raise ValueError(
+                f"{ctx}: settings '{defaults[0]}' and '{defaults[1]}'{in_group} are both "
+                "marked default; a group has at most one"
+            )
+    # The pinout opens with every group on its default (or first) setting, all
+    # drawn at once, so those have to fit on the header together.
+    owner: dict[int, str] = {}
+    for members in groups.values():
+        start = next((s for s in members if s.default), members[0])
+        for p in {p for pair in start.jumpers for p in pair}:
+            if p in owner:
+                raise ValueError(
+                    f"{ctx}: settings '{owner[p]}' and '{start.label}' are shown together "
+                    f"when the pinout opens, and both put a jumper on pin {p}"
+                )
+            owner[p] = start.label
+    return settings
 
 
 def _load_default_pins(raw: object, fname: str, rows: int) -> list[Pin]:
@@ -368,6 +504,7 @@ _DEFAULT_COLORS_LIGHT: dict[str, str] = {
     "line-color": "#777", "label-color": "#333",
     "desc-color": "#555", "type-color": "#888",
     "scroll-thumb": "rgba(0,0,0,.22)", "scroll-track": "transparent",
+    "jumper": "#2f6fdf", "jumper-stroke": "#163f8f",
 }
 _DEFAULT_COLORS_DARK: dict[str, str] = {
     "bg": "#131313", "text": "#e0e0e0",
@@ -380,6 +517,7 @@ _DEFAULT_COLORS_DARK: dict[str, str] = {
     "line-color": "#888", "label-color": "#ddd",
     "desc-color": "#aaa", "type-color": "#888",
     "scroll-thumb": "rgba(255,255,255,.20)", "scroll-track": "transparent",
+    "jumper": "#3b7cf0", "jumper-stroke": "#9cc0ff",
 }
 
 
