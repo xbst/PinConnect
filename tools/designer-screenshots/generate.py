@@ -128,11 +128,17 @@ def main(toml_path: Path, png_path: Path):
 
             # conn-form clips its tall preview inside the 40%-height panel; grow the
             # panel and hide the pin list so the whole form + preview is captured.
+            # The drawing grows with the panel, so hold it at its natural size:
+            # the shot shows the editor at its usual height, only uncropped.
             page.evaluate("""() => {
                 const p = document.getElementById('panel-connector');
                 p.style.height = '1100px'; p.style.flex = 'none';
                 const pl = document.querySelector('.pin-list');
                 if (pl) pl.dataset._disp = pl.style.display, pl.style.display = 'none';
+                const s = document.createElement('style');
+                s.id = 'shot-natural-preview';
+                s.textContent = '.conn-svg-preview svg { width: auto !important; }';
+                document.head.appendChild(s);
             }""")
             time.sleep(0.3)
             page.locator(".conn-form").screenshot(path=str(ASSETS / "workflow-3-connector.png"))
@@ -149,6 +155,7 @@ def main(toml_path: Path, png_path: Path):
             page.evaluate("""() => {
                 const p = document.getElementById('panel-connector');
                 p.style.height = ''; p.style.flex = '';
+                document.getElementById('shot-natural-preview')?.remove();
             }""")
 
             # 7. The Generate preview, which is where the pinout is actually
