@@ -49,8 +49,10 @@ export class ConnectorPanel {
       if (rowCount !== this._rowCount || this._settingsMode(conn) !== this._renderedSettingsMode) this._render();
       else this._updateSvgPreview();
     });
+    // A notice reports what one action did, so the next one clears it.
     this.state.on("pin-changed", ({ connectorId, pinIndex, droppedJumpers, origin }) => {
       if (connectorId !== this.state.selectedConnectorId) return;
+      this._clearNotice();
       if (droppedJumpers && droppedJumpers.length) {
         this._notice = "Deleting the pin removed " + droppedJumpers
           .map(d => `jumper ${d.jumper} from “${d.label}”`).join(", ") + ".";
@@ -65,14 +67,18 @@ export class ConnectorPanel {
     // user tabbed to survives; adding, deleting or re-defaulting rebuilds.
     this.state.on("settings-changed", ({ connectorId }) => {
       if (connectorId !== this.state.selectedConnectorId) return;
+      this._clearNotice();
       const conn = this.state.getSelectedConnector();
       if (conn && this._settingsKey(conn) !== this._renderedSettingsKey) this._render();
       else this._updateSvgPreview();
     });
     this.state.on("pins-reordered", ({ connectorId }) => {
-      if (connectorId === this.state.selectedConnectorId) this._render();
+      if (connectorId !== this.state.selectedConnectorId) return;
+      this._clearNotice();
+      this._render();
     });
-    this.state.on("board-changed", () => this._render());
+    // Undo, redo and TOML edits: the last action's notice no longer applies.
+    this.state.on("board-changed", () => { this._clearNotice(); this._render(); });
     // The drawing needs pinout-gen, so redraw once it has booted.
     this.state.on("catalogs-loaded", () => this._render());
   }
@@ -93,6 +99,11 @@ export class ConnectorPanel {
 
   _errorHtml(e) {
     return `<div class="conn-svg-error">${this._esc(e.message)}</div>`;
+  }
+
+  _clearNotice() {
+    this._notice = "";
+    this.container.querySelector(".setting-note.notice")?.remove();
   }
 
   // Jumper settings are offered on pin headers, and shown on any connector
@@ -192,7 +203,7 @@ export class ConnectorPanel {
     if (!s) return;
     if (pick.first === null || pick.first === pin) {
       pick.first = pick.first === pin ? null : pin;
-      this._notice = "";
+      this._clearNotice();
       this._updateSvgPreview();
       return;
     }
@@ -339,9 +350,9 @@ export class ConnectorPanel {
     const isHeader = ct && ct.style === "header-male";
     const note = isHeader ? "" :
       '<div class="setting-note error">Jumper settings only draw on pin header types; change the type or delete them.</div>';
-    const notice = this._notice ? `<div class="setting-note">${this._esc(this._notice)}</div>` : "";
+    const notice = this._notice ? `<div class="setting-note notice">${this._esc(this._notice)}</div>` : "";
     const pickHelp = this._pick
-      ? '<div class="setting-note">Click two neighboring pins in the drawing to add a jumper, or a fitted pair to remove it.</div>'
+      ? '<div class="setting-note pick-help">Click two neighboring pins in the drawing to add a jumper, or a fitted pair to remove it.</div>'
       : "";
     const empty = conn.settings.length ? "" :
       '<div class="setting-note">Add a setting for each way the header can be jumpered, such as "5V" with a jumper on 1-2 and "VIN" on 2-3, or "Off" with no jumper. Pins are numbered as in the list above.</div>';
