@@ -261,6 +261,20 @@ export function buildSourceMap(text) {
   let currentConn = null;
   let currentPin = null;
   let currentSetting = null;
+  // TOML hands a [[connector.pin]] or [[connector.setting]] to the last
+  // [[connector]] even after an unrelated table came between them, and the
+  // parser does too. The map must agree, or a patch would treat that pin or
+  // setting as new and write it a second time. Such a straggler is listed
+  // with its connector but stays outside the connector's block (detached):
+  // stretching the block over the unrelated table would let moving, copying
+  // or deleting the connector carry that table along, or duplicate it.
+  let lastConn = null;
+  let detached = false;
+  const reopen = () => {
+    if (!currentConn && lastConn) { currentConn = lastConn; detached = true; }
+    return currentConn;
+  };
+  const grow = i => { if (currentConn && !detached) currentConn.blockEnd = i; };
 
   for (let i = 0; i < lines.length; i++) {
     // Classify on the comment-stripped, trimmed line. A blank or comment-only
@@ -279,6 +293,7 @@ export function buildSourceMap(text) {
       // blockEnd also covers its pins and opaque subtables, which move with it.
       currentConn = { start: i, blockEnd: i, fieldsEnd: i, id: null, pins: [], settings: [] };
       currentPin = null; currentSetting = null; scope = "connector";
+      lastConn = currentConn; detached = false;
       map.connectors.push(currentConn);
       continue;
     }
@@ -286,9 +301,9 @@ export function buildSourceMap(text) {
       currentPin = { start: i, end: i, blockEnd: i };
       currentSetting = null;
       scope = "pin";
-      if (currentConn) {
+      if (reopen()) {
         currentConn.pins.push(currentPin);
-        currentConn.blockEnd = i;
+        grow(i);
       }
       continue;
     }
@@ -297,9 +312,9 @@ export function buildSourceMap(text) {
       currentSetting = { start: i, end: i, blockEnd: i };
       currentPin = null;
       scope = "setting";
-      if (currentConn) {
+      if (reopen()) {
         currentConn.settings.push(currentSetting);
-        currentConn.blockEnd = i;
+        grow(i);
       }
       continue;
     }
@@ -307,15 +322,15 @@ export function buildSourceMap(text) {
       // A pin's own subtables likewise move and delete with that pin.
       if (currentConn && currentPin && /^\[\[?\s*connector\s*\.\s*pin\s*\./.test(trimmed)) {
         currentPin.blockEnd = i;
-        currentConn.blockEnd = i;
+        grow(i);
         scope = "pin-descendant";
         continue;
       }
       // Unknown descendant tables still belong to their connector. The
       // designer does not edit them, but moving/copying/removing only their
       // parent would orphan them or attach them to a different connector.
-      if (currentConn && /^\[\[?\s*connector\s*\./.test(trimmed)) {
-        currentConn.blockEnd = i;
+      if (/^\[\[?\s*connector\s*\./.test(trimmed) && reopen()) {
+        grow(i);
         scope = "descendant"; currentPin = null; currentSetting = null;
         continue;
       }
@@ -328,7 +343,7 @@ export function buildSourceMap(text) {
     if (scope === "pin" && currentPin) {
       currentPin.end = i;
       currentPin.blockEnd = i;
-      if (currentConn) currentConn.blockEnd = i;
+      grow(i);
     } else if (scope === "connector" && currentConn) {
       currentConn.blockEnd = i;
       currentConn.fieldsEnd = i;
@@ -341,12 +356,12 @@ export function buildSourceMap(text) {
     } else if (scope === "setting" && currentSetting) {
       currentSetting.end = i;
       currentSetting.blockEnd = i;
-      if (currentConn) currentConn.blockEnd = i;
+      grow(i);
     } else if (scope === "pin-descendant" && currentPin) {
       currentPin.blockEnd = i;
-      currentConn.blockEnd = i;
+      grow(i);
     } else if (scope === "descendant" && currentConn) {
-      currentConn.blockEnd = i;
+      grow(i);
     } else if (scope === "board" && map.board) {
       map.board.end = i;
     }
