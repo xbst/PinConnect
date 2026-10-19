@@ -18,6 +18,8 @@
   --conn-stroke: #aaa;
   --label-color: #ddd;
   --line-color: #888;
+  --jumper: #3b7cf0;
+  --jumper-stroke: #9cc0ff;
 
   --hs-fill: rgba(59, 130, 246, 0.15);
   --hs-stroke: rgba(96, 165, 250, 0.6);
@@ -601,6 +603,109 @@ html, body {
   border-color: var(--border-focus);
   color: var(--text);
 }
+
+.pin-num {
+  min-width: 16px;
+  text-align: right;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: "Consolas", "Fira Code", monospace;
+}
+
+.conn-svg-error {
+  color: var(--danger);
+  font-size: 12px;
+  padding: 12px 0;
+}
+
+/* The preview shows the setting being edited, dimming the pins it leaves
+   alone, as the generated page does. */
+.conn-svg-preview svg [data-pin] { transition: opacity 0.15s; }
+.conn-svg-preview svg.pc-dim [data-pin] { opacity: 0.3; }
+.conn-svg-preview svg.pc-dim [data-pin].pc-on { opacity: 1; }
+.conn-svg-preview svg.picking { cursor: crosshair; }
+.pick-hit { fill: transparent; stroke: transparent; stroke-width: 0.8; cursor: pointer; }
+.pick-hit:hover { fill: var(--accent-bg); stroke: var(--accent-hover); }
+.pick-hit.first { fill: var(--accent-bg); stroke: var(--accent-hover); stroke-width: 1.2; }
+.pick-num {
+  fill: var(--text);
+  stroke: var(--bg-panel);
+  stroke-width: 0.8;
+  paint-order: stroke;
+  font-family: var(--ui-font);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Jumper settings */
+
+.setting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setting-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+.setting-note.error { color: var(--danger); }
+
+.setting-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.setting-card:hover { border-color: var(--text-muted); }
+.setting-card.active { border-color: var(--border-focus); }
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setting-card input[type="text"] {
+  min-width: 0;
+  padding: 2px 6px;
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+.setting-card input[type="text"]:focus { border-color: var(--border-focus); }
+.setting-label { flex: 2; }
+.setting-group { flex: 1; }
+.setting-jumpers { flex: 1; font-family: "Consolas", "Fira Code", monospace; }
+
+.setting-key {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.setting-default {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.setting-pick-btn { padding: 2px 8px; }
+.setting-pick-btn.on { border-color: var(--accent); color: var(--accent-hover); background: var(--accent-bg); }
 
 /* New connector dialog */
 

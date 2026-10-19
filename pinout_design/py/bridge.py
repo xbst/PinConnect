@@ -21,6 +21,7 @@ from pinout_gen.config import (
     load_board,
     load_connector_type,
     load_theme,
+    parse_settings,
 )
 from pinout_gen.renderer import generate_html, render_connector_svg
 from pinout_gen.symbols import SYMBOLS, render_symbol
@@ -113,18 +114,23 @@ def preview_symbol(symbol: str) -> str:
 
 
 def _connector_from_dict(data: dict) -> Connector:
+    pins = [
+        Pin(
+            name=p.get("name", ""),
+            color=p.get("color", "#888888"),
+            row=int(p.get("row", 1) or 1),
+        )
+        for p in data.get("pins", [])
+    ]
+    cid = data.get("id", "")
     return Connector(
-        id=data.get("id", ""),
+        id=cid,
         name=data.get("name", ""),
         type=data.get("type", ""),
-        pins=[
-            Pin(
-                name=p.get("name", ""),
-                color=p.get("color", "#888888"),
-                row=int(p.get("row", 1) or 1),
-            )
-            for p in data.get("pins", [])
-        ],
+        pins=pins,
+        # Checked exactly as load_board checks them, so the preview fails with
+        # the message Generate would give rather than drawing something it won't.
+        settings=parse_settings(data.get("settings", []), f"connector '{cid}'", len(pins)),
         x1=int(data.get("x1", 0)), y1=int(data.get("y1", 0)),
         x2=int(data.get("x2", 0)), y2=int(data.get("y2", 0)),
         orientation=int(data.get("orientation", 0)),

@@ -268,7 +268,7 @@ def load_board(path: Path) -> Board:
             description=c.get("description", ""),
             label_style=label_style,
             symbol=c.get("symbol", ""),
-            settings=_load_settings(c.get("setting", []), ctx, len(pins)),
+            settings=parse_settings(c.get("setting", []), ctx, len(pins)),
         ))
     return board
 
@@ -277,7 +277,7 @@ _SETTING_KEYS = frozenset({"label", "jumpers", "default", "group", "description"
 _JUMPER_RE = re.compile(r"^\s*([0-9]+)\s*-\s*([0-9]+)\s*$")
 
 
-def _load_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
+def parse_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
     """Parse and check a connector's ``[[connector.setting]]`` tables.
 
     Unknown keys are rejected rather than ignored: a misspelled ``jumpers``

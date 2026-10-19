@@ -186,6 +186,7 @@ export function parseBoardToml(text) {
   const connectors = (raw.connector || []).map(c => ({
     ...connectorFields(c),
     pins: (c.pin || []).map(pinFields),
+    settings: (c.setting || []).map(settingFields),
   }));
 
   return { board, connectors };
@@ -233,6 +234,24 @@ function pinFields(p) {
   };
 }
 
+// Values the model does not understand are kept as read, so pinout-gen reports
+// them on the preview and on Generate instead of the designer dropping them.
+function settingFields(s) {
+  return {
+    label: s.label ?? "",
+    jumpers: Array.isArray(s.jumpers) ? s.jumpers.map(normalizeJumper) : (s.jumpers ?? []),
+    default: s.default ?? false,
+    group: s.group ?? "",
+    description: s.description ?? "",
+  };
+}
+
+// "2 - 5" and "2-5" are the same jumper; only a real change rewrites the line.
+function normalizeJumper(j) {
+  const m = typeof j === "string" && j.match(/^\s*([0-9]+)\s*-\s*([0-9]+)\s*$/);
+  return m ? `${parseInt(m[1], 10)}-${parseInt(m[2], 10)}` : j;
+}
+
 // --- Source map: line ranges for each connector block ---
 
 export function buildSourceMap(text) {
@@ -241,6 +260,7 @@ export function buildSourceMap(text) {
   let scope = null;          // "board" | "connector" | "pin" | null
   let currentConn = null;
   let currentPin = null;
+  let currentSetting = null;
 
   for (let i = 0; i < lines.length; i++) {
     // Classify on the comment-stripped, trimmed line. A blank or comment-only
@@ -251,22 +271,34 @@ export function buildSourceMap(text) {
 
     if (/^\[\s*board\s*\]$/.test(trimmed)) {
       map.board = { start: i, end: i };
-      scope = "board"; currentConn = null; currentPin = null;
+      scope = "board"; currentConn = null; currentPin = null; currentSetting = null;
       continue;
     }
     if (/^\[\[\s*connector\s*\]\]$/.test(trimmed)) {
       // fieldsEnd bounds the connector's own keys, which patches edit in place;
       // blockEnd also covers its pins and opaque subtables, which move with it.
-      currentConn = { start: i, blockEnd: i, fieldsEnd: i, id: null, pins: [] };
-      currentPin = null; scope = "connector";
+      currentConn = { start: i, blockEnd: i, fieldsEnd: i, id: null, pins: [], settings: [] };
+      currentPin = null; currentSetting = null; scope = "connector";
       map.connectors.push(currentConn);
       continue;
     }
     if (/^\[\[\s*connector\s*\.\s*pin\s*\]\]$/.test(trimmed)) {
       currentPin = { start: i, end: i, blockEnd: i };
+      currentSetting = null;
       scope = "pin";
       if (currentConn) {
         currentConn.pins.push(currentPin);
+        currentConn.blockEnd = i;
+      }
+      continue;
+    }
+    // Jumper settings are blocks of their own, like pins.
+    if (/^\[\[\s*connector\s*\.\s*setting\s*\]\]$/.test(trimmed)) {
+      currentSetting = { start: i, end: i, blockEnd: i };
+      currentPin = null;
+      scope = "setting";
+      if (currentConn) {
+        currentConn.settings.push(currentSetting);
         currentConn.blockEnd = i;
       }
       continue;
@@ -284,11 +316,11 @@ export function buildSourceMap(text) {
       // parent would orphan them or attach them to a different connector.
       if (currentConn && /^\[\[?\s*connector\s*\./.test(trimmed)) {
         currentConn.blockEnd = i;
-        scope = "descendant"; currentPin = null;
+        scope = "descendant"; currentPin = null; currentSetting = null;
         continue;
       }
       // An unrelated table closes the current connector or board block.
-      scope = null; currentConn = null; currentPin = null;
+      scope = null; currentConn = null; currentPin = null; currentSetting = null;
       continue;
     }
 
@@ -306,6 +338,10 @@ export function buildSourceMap(text) {
           try { currentConn.id = parseTomlValue(m[1].trim(), i + 1); } catch { /* leave null */ }
         }
       }
+    } else if (scope === "setting" && currentSetting) {
+      currentSetting.end = i;
+      currentSetting.blockEnd = i;
+      if (currentConn) currentConn.blockEnd = i;
     } else if (scope === "pin-descendant" && currentPin) {
       currentPin.blockEnd = i;
       currentConn.blockEnd = i;
@@ -327,6 +363,7 @@ export function buildSourceMap(text) {
   for (const conn of map.connectors) {
     conn.blockStart = introduction(conn.start);
     for (const pin of conn.pins) pin.blockStart = introduction(pin.start);
+    for (const setting of conn.settings) setting.blockStart = introduction(setting.start);
   }
   return map;
 }
@@ -380,7 +417,6 @@ function patchKeyLines(lines, header, last, data, read, separator) {
   const defaults = read({});
   const values = new Map(Object.keys(defaults).filter(key => key in data).map(key => [key, data[key]]));
   const seen = new Set();
-  const valueText = value => typeof value === "string" ? quoteStr(value) : String(value);
   let indent = lines[header].text.match(/^\s*/)[0];
   for (let i = header + 1; i <= last; i++) {
     const code = stripComment(lines[i].text);
@@ -389,14 +425,28 @@ function patchKeyLines(lines, header, last, data, read, separator) {
     const key = match[2], value = values.get(key);
     seen.add(key);
     indent = match[1].match(/^\s*/)[0];
-    try { if (read({ [key]: parseTomlValue(match[3], i + 1) })[key] === value) continue; } catch { /* replace below */ }
+    try { if (sameValue(read({ [key]: parseTomlValue(match[3], i + 1) })[key], value)) continue; } catch { /* replace below */ }
     const formatted = typeof value === "string" && match[3].startsWith("'") && !/['\u0000-\u001f]/.test(value)
       ? `'${value}'` : valueText(value);
     lines[i].text = match[1] + formatted + match[4] + lines[i].text.slice(code.length);
   }
-  const missing = [...values].filter(([key, value]) => !seen.has(key) && value !== defaults[key])
+  const missing = [...values].filter(([key, value]) => !seen.has(key) && !sameValue(value, defaults[key]))
     .map(([key, value]) => ({ text: `${indent}${key} = ${valueText(value)}`, ending: separator }));
   lines.splice(last + 1, 0, ...missing);
+}
+
+// Arrays (a setting's jumpers) compare by content, not identity.
+function sameValue(a, b) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => sameValue(v, b[i]));
+  }
+  return a === b;
+}
+
+function valueText(value) {
+  if (typeof value === "string") return quoteStr(value);
+  if (Array.isArray(value)) return `[${value.map(valueText).join(", ")}]`;
+  return String(value);
 }
 
 // Bring one connector's lines in step with the model, bottom up so earlier
@@ -404,6 +454,27 @@ function patchKeyLines(lines, header, last, data, read, separator) {
 // by position, so a reordered or deleted pin must be moved or removed as a
 // block first (movePinBlock, removePinBlock) for its comments to follow it.
 function patchConnectorLines(lines, range, conn, separator) {
+  if (Array.isArray(conn.settings)) {
+    const settings = range.settings;
+    if (conn.settings.length > settings.length) {
+      // After the last setting, or else after the pins, so new settings follow them.
+      const after = settings.length ? settings[settings.length - 1].blockEnd
+        : range.pins.length ? range.pins[range.pins.length - 1].blockEnd : range.fieldsEnd;
+      lines.splice(after + 1, 0, ...conn.settings.slice(settings.length).flatMap(s => serializeSettingLines(s))
+        .map(text => ({ text, ending: separator })));
+    }
+    // Surplus settings remain only if no removeSettingBlock came first.
+    for (let i = settings.length - 1; i >= conn.settings.length; i--) {
+      lines.splice(settings[i].blockStart, settings[i].blockEnd - settings[i].blockStart + 1);
+    }
+    for (let i = Math.min(settings.length, conn.settings.length) - 1; i >= 0; i--) {
+      patchKeyLines(lines, settings[i].start, settings[i].end, conn.settings[i], settingFields, separator);
+    }
+    // Settings and pins can sit in either order, so find the pins again rather
+    // than trusting line numbers the edits above may have moved. The header
+    // sits above both, so its own line number still holds.
+    range = buildSourceMap(lineContents(lines)).connectors.find(c => c.start === range.start) ?? range;
+  }
   if (Array.isArray(conn.pins)) {
     const pins = range.pins;
     if (conn.pins.length > pins.length) {
@@ -478,6 +549,15 @@ export function removePinBlock(sourceText, range, pinIndex) {
   return joinSourceLines(lines, sourceText);
 }
 
+// A deleted setting takes the comments introducing it along, as a pin does.
+export function removeSettingBlock(sourceText, range, settingIndex) {
+  const setting = range?.settings[settingIndex];
+  if (!setting) return sourceText;
+  const lines = sourceLines(sourceText);
+  lines.splice(setting.blockStart, setting.blockEnd - setting.blockStart + 1);
+  return joinSourceLines(lines, sourceText);
+}
+
 // --- Serialization ---
 
 function quoteStr(s) {
@@ -506,6 +586,7 @@ export function serializeConnectorBlock(conn) {
   if (conn.symbol) lines.push(`symbol = ${quoteStr(conn.symbol)}`);
 
   for (const pin of conn.pins) lines.push(...serializePinLines(pin));
+  for (const setting of conn.settings || []) lines.push(...serializeSettingLines(setting));
 
   return lines.join("\n");
 }
@@ -514,6 +595,16 @@ function serializePinLines(pin) {
   const lines = ["", "  [[connector.pin]]", `  name = ${quoteStr(pin.name)}`];
   if (pin.color !== "#888888") lines.push(`  color = ${quoteStr(pin.color)}`);
   if (pin.row !== 1) lines.push(`  row = ${pin.row}`);
+  return lines;
+}
+
+function serializeSettingLines(s) {
+  const lines = ["", "  [[connector.setting]]"];
+  if (s.group) lines.push(`  group = ${valueText(s.group)}`);
+  lines.push(`  label = ${valueText(s.label)}`);
+  if (!sameValue(s.jumpers, [])) lines.push(`  jumpers = ${valueText(s.jumpers)}`);
+  if (s.default) lines.push(`  default = ${valueText(s.default)}`);
+  if (s.description) lines.push(`  description = ${valueText(s.description)}`);
   return lines;
 }
 

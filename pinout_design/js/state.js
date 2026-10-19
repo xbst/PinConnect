@@ -1,4 +1,4 @@
-import { Board, Connector, Pin } from "./board-model.js";
+import { Board, Connector, Pin, Setting, renumberJumpers } from "./board-model.js";
 
 export class BoardState {
   constructor() {
@@ -67,6 +67,7 @@ export class BoardState {
         orientation: c.orientation, description: c.description,
         label_style: c.label_style, symbol: c.symbol,
         pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
+        settings: c.settings.map(s => new Setting(s)),
       })),
       selectedConnectorId: this.selectedConnectorId,
       sourceText: this.sourceText,
@@ -365,9 +366,30 @@ export class BoardState {
     this._pushUndo();
     this._origin = origin;
     conn.pins.splice(pinIndex, 1);
+    // Jumpers name pins by position, so every later pin's number drops by one
+    // and a jumper on the deleted pin goes with it.
+    const removed = pinIndex + 1;
+    const { settings, dropped } = renumberJumpers(conn.settings, conn.pins.length + 1,
+      n => n === removed ? null : n > removed ? n - 1 : n);
+    conn.settings = settings;
     this.dirty = true;
     // removedIndex lets the editor delete that pin's own lines and comments.
-    this.emit("pin-changed", { connectorId, pinIndex: -1, removedIndex: pinIndex, origin });
+    this.emit("pin-changed", { connectorId, pinIndex: -1, removedIndex: pinIndex, droppedJumpers: dropped, origin });
+    this._origin = null;
+  }
+
+  // Settings are replaced as a whole list: there are few of them, and marking
+  // one default can clear another. removedIndex marks a deleted setting, so the
+  // editor removes that block, with its comments, rather than the last one.
+  setSettings(connectorId, settings, origin = "visual", removedIndex = undefined) {
+    if (!this._prepareMutation(origin)) return;
+    const conn = this.getConnector(connectorId);
+    if (!conn) return;
+    this._pushUndo();
+    this._origin = origin;
+    conn.settings = settings.map(s => new Setting(s));
+    this.dirty = true;
+    this.emit("settings-changed", { connectorId, removedIndex, origin });
     this._origin = null;
   }
 
@@ -380,8 +402,12 @@ export class BoardState {
     if (fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return false;
     this._pushUndo();
     this._origin = origin;
+    const order = conn.pins.map((_, i) => i + 1);   // old pin numbers, in their new order
     const [pin] = conn.pins.splice(fromIndex, 1);
     conn.pins.splice(toIndex, 0, pin);
+    const [moved] = order.splice(fromIndex, 1);
+    order.splice(toIndex, 0, moved);
+    conn.settings = renumberJumpers(conn.settings, order.length, n => order.indexOf(n) + 1).settings;
     this.dirty = true;
     this.emit("pins-reordered", { connectorId, fromIndex, toIndex, origin });
     this._origin = null;
