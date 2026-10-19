@@ -23,6 +23,6 @@ There are two ways of generating pinouts with it:
 
 ### Reference
 
-- [Board TOML](reference/board-toml.md): every field in a board config.
+- [Board TOML](reference/board-toml.md): every field in a board config, including jumper settings for pin headers.
 - [Connector types](reference/connector-types.md): the built-in library, and adding your own.
 - [Themes](reference/themes.md): colors, fonts, and layout behavior, and writing your own theme.

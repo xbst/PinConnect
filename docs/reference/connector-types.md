@@ -34,7 +34,9 @@ Type definitions live in `pinout_gen/pinout_gen/connectors/`, one `.toml` file p
 
 `USB-C` and `button` "connector types" are meant to be used to highlight the locations of these on your board, not for their pinouts. To render properly, they shouldn't include pins in your board TOML. `slide-switch` also highlights a location rather than a pinout, but it uses pins. Pins mark slider positions, rendered without pin circles.
 
-`none` goes further and draws nothing at all: a connector of that type is only a hotspot over the image, carrying a name and an optional description. Use it to point at anything with no pinout to show, such as a microcontroller, a mounting hole, a fuse holder, or a jumper you describe in words. It ignores any pins you give it, and both its list entry and its tooltip leave out the type name and pin count that other connectors carry, so nothing reads as "0-pin".
+The `header-male` types are also the ones that take [jumper settings](board-toml.md#connectorsetting): where a header's jumpers go and what each position means, drawn as jumper caps over the pins. A board connector of any other type with settings is an error.
+
+`none` goes further and draws nothing at all: a connector of that type is only a hotspot over the image, carrying a name and an optional description. Use it to point at anything with no pinout to show, such as a microcontroller, a mounting hole, or a fuse holder. It ignores any pins you give it, and both its list entry and its tooltip leave out the type name and pin count that other connectors carry, so nothing reads as "0-pin".
 
 Each type rendered, so you can pick one by its look:
 

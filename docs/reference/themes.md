@@ -129,6 +129,7 @@ CSS color values (hex, `rgb()`, `rgba()`, …). Token names are the generated CS
 | `desc-color` | Connector description text |
 | `type-color` | Connector type / pin-count text |
 | `scroll-thumb`, `scroll-track` | Themed scrollbar thumb and track |
+| `jumper`, `jumper-stroke` | Jumper cap fill, and its outline and openings, on headers with [jumper settings](board-toml.md#connectorsetting) |
 
 ```toml
 [colors.light]
@@ -185,7 +186,7 @@ weights = "400;500"
 | `sidebar_responsive_stack` | `false` | Below the breakpoint, the list moves **below** the board and animates open/closed |
 | `sidebar_stack_breakpoint` | `640` | Width in px at/under which stacking kicks in |
 | `show_symbols` | `true` | Show per-connector [symbols](board-toml.md#symbol); `false` hides them even if set on the board |
-| `symbol_style_fallback` | `false` | Give symbol-less connectors a default icon based on their type's style |
+| `symbol_style_fallback` | `false` | Give symbol-less connectors a default icon based on their type's style, and pin headers with jumper settings the `setting` icon |
 | `font_scale` | `1.0` | Scale the list / tooltip / bottom-bar text |
 | `symbol_size` | `16` | Connector-symbol icon size in px |
 | `tooltip_box_scale` | `1.5` | Tooltip drawing's long side, as a multiple of the connector's box on the board. `0` pins it to its natural size |
