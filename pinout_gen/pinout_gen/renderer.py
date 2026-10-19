@@ -1574,8 +1574,8 @@ function jDraw(b,hov){{
 function jReset(b){{if(!b)return;b.querySelectorAll('.tt-jg').forEach(g=>{{g.dataset.cur=g.dataset.def}});jDraw(b)}}
 function jBox(c){{return c.closest('.tt-b')||ttc}}
 ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide();return}}
-  const c=e.target.closest('.tt-jc');if(c){{c.closest('.tt-jg').dataset.cur=c.dataset.s;jDraw(jBox(c))}}}});
-ttc.addEventListener('pointerover',e=>{{const c=e.target.closest('.tt-jc');if(c&&e.pointerType!=='touch')jDraw(jBox(c),c)}});
+  const c=e.target.closest('.tt-jc');if(c&&pinned){{c.closest('.tt-jg').dataset.cur=c.dataset.s;jDraw(jBox(c))}}}});
+ttc.addEventListener('pointerover',e=>{{const c=e.target.closest('.tt-jc');if(c&&pinned&&e.pointerType!=='touch')jDraw(jBox(c),c)}});
 ttc.addEventListener('pointerout',e=>{{const c=e.target.closest('.tt-jc');if(c&&e.pointerType!=='touch')jDraw(jBox(c))}});
 function blk(id){{return [...ttc.querySelectorAll('.tt-b')].find(b=>b.dataset.id===id)||null}}
 function show(id,el){{
@@ -1595,6 +1595,9 @@ function show(id,el){{
   }}
   tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
   relayout();
+  /* Jumper buttons only work in a pinned tooltip, so keep them out of the Tab
+     order until then: pointer-events never stopped the keyboard. */
+  ttc.querySelectorAll('.tt-jc').forEach(c=>{{c.tabIndex=pinned?0:-1}});
 }}
 /* A hidden tooltip leaves the layout once its fade is over, so one parked under
    the board can't hold an embed's height open; relayout() tells the embed's
