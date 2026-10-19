@@ -195,9 +195,19 @@ export class ConnectorPanel {
     }
     svg.appendChild(layer);
     svg.classList.add("picking");
-    layer.addEventListener("click", e => {
+    // Pointerdown, not click: a field with an uncommitted edit commits on this
+    // same press, and the redraw that follows would remove the target before
+    // a click could land. Committing it first keeps that edit, too.
+    layer.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
       const hit = e.target.closest(".pick-hit");
-      if (hit) this._pickPin(conn, parseInt(hit.dataset.pickPin, 10));
+      if (!hit) return;
+      e.preventDefault();
+      const pin = parseInt(hit.dataset.pickPin, 10);
+      const focused = document.activeElement;
+      if (focused && focused !== document.body && this.container.contains(focused)) focused.blur();
+      const current = this.state.getSelectedConnector();
+      if (current) this._pickPin(current, pin);
     });
   }
 
