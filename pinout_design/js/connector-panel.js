@@ -410,20 +410,21 @@ export class ConnectorPanel {
   _renderSettingCard(s, i) {
     const jumpers = Array.isArray(s.jumpers) ? s.jumpers.join(", ") : String(s.jumpers ?? "");
     const picking = this._pick && this._pick.setting === i;
+    // Ids let undo's focus restore (main.js withActiveField) find the field again.
     return `
       <div class="setting-card${this._activeSetting === i ? " active" : ""}" data-sidx="${i}">
         <div class="setting-row">
-          <input type="text" class="setting-label" data-sidx="${i}" value="${this._esc(s.label)}" placeholder="Label" title="Label: the button text in the pinout">
-          <input type="text" class="setting-group" data-sidx="${i}" value="${this._esc(s.group)}" placeholder="Group" title="Group: settings with the same group are alternatives; leave empty for one group">
+          <input type="text" id="setting-label-${i}" class="setting-label" data-sidx="${i}" value="${this._esc(s.label)}" placeholder="Label" title="Label: the button text in the pinout">
+          <input type="text" id="setting-group-${i}" class="setting-group" data-sidx="${i}" value="${this._esc(s.group)}" placeholder="Group" title="Group: settings with the same group are alternatives; leave empty for one group">
           <label class="setting-default" title="Shown first, and marked default"><input type="checkbox" class="setting-default-cb" data-sidx="${i}" ${s.default === true ? "checked" : ""}>Default</label>
           <button class="pin-delete-btn setting-delete-btn" data-sidx="${i}" title="Delete setting">×</button>
         </div>
         <div class="setting-row">
           <span class="setting-key">Jumpers</span>
-          <input type="text" class="setting-jumpers" data-sidx="${i}" value="${this._esc(jumpers)}" placeholder="none: no jumper fitted" title="Pin pairs, like 1-2, 3-4">
+          <input type="text" id="setting-jumpers-${i}" class="setting-jumpers" data-sidx="${i}" value="${this._esc(jumpers)}" placeholder="none: no jumper fitted" title="Pin pairs, like 1-2, 3-4">
           <button class="pin-add-btn setting-pick-btn${picking ? " on" : ""}" data-sidx="${i}">${picking ? "Done" : "Pick"}</button>
         </div>
-        <input type="text" class="setting-desc" data-sidx="${i}" value="${this._esc(s.description)}" placeholder="Description (optional)">
+        <input type="text" id="setting-desc-${i}" class="setting-desc" data-sidx="${i}" value="${this._esc(s.description)}" placeholder="Description (optional)">
       </div>`;
   }
 
