@@ -126,14 +126,16 @@ export class ConnectorPanel {
   }
 
   // The settings the drawing shows: each group's default (or first), except
-  // that the setting being edited stands in for its own group.
+  // that the setting being edited stands in for its own group. While picking,
+  // that is always the setting the clicks edit.
   _shownSettings(conn) {
     const groups = new Map();
     conn.settings.forEach((s, i) => {
       if (!groups.has(s.group)) groups.set(s.group, []);
       groups.get(s.group).push(i);
     });
-    const active = conn.settings[this._activeSetting] ? this._activeSetting : null;
+    const edited = this._pick ? this._pick.setting : this._activeSetting;
+    const active = conn.settings[edited] ? edited : null;
     const shown = new Set();
     for (const idxs of groups.values()) {
       if (active !== null && idxs.includes(active)) shown.add(active);
@@ -440,6 +442,8 @@ export class ConnectorPanel {
       if (this._pick) {
         const setting = shift(this._pick.setting);
         this._pick = setting === null ? null : { ...this._pick, setting };
+        // The drawing and the clicks must keep pointing at the same setting.
+        if (this._pick) this._activeSetting = this._pick.setting;
       }
       this.state.setSettings(cid, settings, "visual", i);
     }));
@@ -468,7 +472,19 @@ export class ConnectorPanel {
   }
 
   _activate(i) {
-    if (this._activeSetting === i) return;
+    // Moving to another card ends picking, so the drawing never shows one
+    // setting while pin clicks edit another. No rebuild: that would destroy
+    // the control being clicked or focused.
+    if (this._pick && this._pick.setting !== i) {
+      this._pick = null;
+      this.container.querySelectorAll(".setting-pick-btn.on").forEach(b => {
+        b.classList.remove("on");
+        b.textContent = "Pick";
+      });
+      this.container.querySelector(".setting-note.pick-help")?.remove();
+    } else if (this._activeSetting === i) {
+      return;
+    }
     this._activeSetting = i;
     this.container.querySelectorAll(".setting-card").forEach(card =>
       card.classList.toggle("active", parseInt(card.dataset.sidx, 10) === i));
