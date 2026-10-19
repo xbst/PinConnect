@@ -277,6 +277,12 @@ _SETTING_KEYS = frozenset({"label", "jumpers", "default", "group", "description"
 _JUMPER_RE = re.compile(r"^\s*([0-9]+)\s*-\s*([0-9]+)\s*$")
 
 
+def setting_name(label: str, group: str = "") -> str:
+    """A setting as error messages name it.  Labels are unique only within a
+    group, so "On" alone could be any of several; the group says which."""
+    return f"'{label}' (group '{group}')" if group else f"'{label}'"
+
+
 def parse_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
     """Parse and check a connector's ``[[connector.setting]]`` tables.
 
@@ -303,13 +309,15 @@ def parse_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
                 f"{where}: unknown key(s): {', '.join(unknown)} "
                 f"(valid: {', '.join(sorted(_SETTING_KEYS))})"
             )
-        label = s.get("label")
-        if not isinstance(label, str) or not label.strip():
+        if "label" not in s:
             raise ValueError(f"{where}: missing required key 'label' (a nonempty string)")
-        where = f"{ctx} setting '{label}'"
+        label = s["label"]
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"{where}: label must be a nonempty string (got {label!r})")
         for key in ("group", "description"):
             if not isinstance(s.get(key, ""), str):
-                raise ValueError(f"{where}: {key} must be a string (got {s[key]!r})")
+                raise ValueError(f"{ctx} setting '{label}': {key} must be a string (got {s[key]!r})")
+        where = f"{ctx} setting {setting_name(label, s.get('group', ''))}"
         default = s.get("default", False)
         if not isinstance(default, bool):
             raise ValueError(f"{where}: default must be true or false (got {default!r})")
@@ -367,13 +375,14 @@ def parse_settings(raw: object, ctx: str, n_pins: int) -> list[Setting]:
     owner: dict[int, str] = {}
     for members in groups.values():
         start = next((s for s in members if s.default), members[0])
+        name = setting_name(start.label, start.group)
         for p in {p for pair in start.jumpers for p in pair}:
             if p in owner:
                 raise ValueError(
-                    f"{ctx}: settings '{owner[p]}' and '{start.label}' are shown together "
+                    f"{ctx}: settings {owner[p]} and {name} are shown together "
                     f"when the pinout opens, and both put a jumper on pin {p}"
                 )
-            owner[p] = start.label
+            owner[p] = name
     return settings
 
 

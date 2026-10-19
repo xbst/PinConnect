@@ -5,7 +5,7 @@ import html
 import json
 import math
 
-from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme
+from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme, setting_name
 from .symbols import render_symbol
 
 SCALE = 3.0
@@ -620,7 +620,8 @@ def _check_jumpers(connector: Connector, pin_map: dict[int, tuple[int, int]]) ->
             if (ra == rb and abs(sa - sb) == 1) or ({ra, rb} == {1, 2} and sa == sb):
                 continue
             raise ValueError(
-                f"connector '{connector.id}' setting '{s.label}': jumper '{a}-{b}' joins pins "
+                f"connector '{connector.id}' setting {setting_name(s.label, s.group)}: "
+                f"jumper '{a}-{b}' joins pins "
                 "that are not next to each other on the header; a jumper cap only bridges "
                 "neighboring pins"
             )
