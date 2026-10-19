@@ -450,8 +450,9 @@ export class ConnectorPanel {
     onText(".setting-label", "label");
     onText(".setting-group", "group");
     onText(".setting-desc", "description");
-    // Any separator works: "1-2, 3-4", "1-2 3-4" or "1-2;3-4".
-    onText(".setting-jumpers", "jumpers", v => v.split(/[\s,;]+/).filter(Boolean));
+    // Any separator works: "1-2, 3-4", "1-2 3-4" or "1-2;3-4", and spaces
+    // around a hyphen ("1 - 2") stay part of their jumper.
+    onText(".setting-jumpers", "jumpers", v => v.replace(/\s*-\s*/g, "-").split(/[\s,;]+/).filter(Boolean));
 
     // One default per group: marking one clears the rest of its group.
     list.querySelectorAll(".setting-default-cb").forEach(el => el.addEventListener("change", () => {
