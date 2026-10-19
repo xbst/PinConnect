@@ -462,7 +462,8 @@ export class ConnectorPanel {
     if (addBtn) addBtn.addEventListener("click", () => {
       const c = current();
       if (!c) return;
-      // A new setting joins the last one's group, the usual next step.
+      // A new setting joins the last one's group, the usual next step, under
+      // a label nothing in that group uses yet (labels are unique per group).
       const last = c.settings[c.settings.length - 1];
       const settings = [...c.settings.map(s => new Setting(s)),
         new Setting({ label: `Setting ${c.settings.length + 1}`, group: last ? last.group : "" })];
