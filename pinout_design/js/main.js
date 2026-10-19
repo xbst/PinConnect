@@ -161,6 +161,8 @@ function setupResizers() {
 
   const resizerV = document.getElementById("resizer-v");
   const panelBoard = document.getElementById("panel-board");
+  const panelConnector = document.getElementById("panel-connector");
+  const panelRight = document.getElementById("panel-right");
   let startY, startH;
 
   resizerV.addEventListener("mousedown", (e) => {
@@ -168,8 +170,15 @@ function setupResizers() {
     startH = panelBoard.offsetHeight;
     resizerV.classList.add("active");
     const onMove = (e) => {
-      panelBoard.style.height = Math.max(100, startH + e.clientY - startY) + "px";
+      // The connector editor takes whatever the board leaves, rather than
+      // keeping its starting share and leaving a gap under it; the board
+      // stops short of squeezing it below its minimum height.
+      const room = panelRight.clientHeight - resizerV.offsetHeight
+        - parseFloat(getComputedStyle(panelConnector).minHeight || "0");
+      panelBoard.style.height = Math.max(100, Math.min(room, startH + e.clientY - startY)) + "px";
       panelBoard.style.flex = "none";
+      panelConnector.style.height = "auto";
+      panelConnector.style.flex = "1 1 0";
     };
     const onUp = () => {
       resizerV.classList.remove("active");

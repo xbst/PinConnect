@@ -30,6 +30,9 @@ export class ConnectorPanel {
 
     this._closePopupBound = (e) => this._closePopupOnOutsideClick(e);
     this._bindState();
+    // Dragging a divider or resizing the window changes the room the drawing
+    // has, so fit it again.
+    if (window.ResizeObserver) new ResizeObserver(() => this._fitPreview()).observe(container);
   }
 
   _bindState() {
@@ -113,6 +116,7 @@ export class ConnectorPanel {
       try { previewEl.innerHTML = this._previewHtml(conn); }
       catch (e) { previewEl.innerHTML = this._errorHtml(e); }
       this._decoratePreview(conn);
+      this._fitPreview();
     }
   }
 
@@ -376,6 +380,7 @@ export class ConnectorPanel {
     this._bindForm(conn);
     this._bindSettings(conn);
     this._decoratePreview(conn);
+    this._fitPreview();
     this._restoreFocus(focusKey);
   }
 
@@ -399,6 +404,19 @@ export class ConnectorPanel {
     const el = this.container.querySelector(key.sel)
       || (key.inSettings ? this.container.querySelector("#setting-add-btn") : null);
     el?.focus({ preventScroll: true });
+  }
+
+  // The drawing grows with the panel, up to half its height, so a bigger panel
+  // gives bigger pin targets to pick; it never shrinks below its natural size
+  // (the stylesheet's max-width still fits it into a narrow panel).
+  _fitPreview() {
+    const svg = this.container.querySelector(".conn-svg-preview svg");
+    if (!svg) return;
+    const w = +svg.getAttribute("width"), h = +svg.getAttribute("height");
+    const box = this.container.getBoundingClientRect();
+    if (!(w > 0 && h > 0 && box.width > 0 && box.height > 0)) return;
+    const scale = Math.max(1, Math.min((box.width - 60) / w, (box.height * 0.5) / h, 4));
+    svg.style.width = `${(w * scale).toFixed(0)}px`;
   }
 
   _renderSettings(conn, ct) {
@@ -529,8 +547,11 @@ export class ConnectorPanel {
       // A new setting joins the last one's group, the usual next step, under
       // a label nothing in that group uses yet (labels are unique per group).
       const last = c.settings[c.settings.length - 1];
-      const settings = [...c.settings.map(s => new Setting(s)),
-        new Setting({ label: `Setting ${c.settings.length + 1}`, group: last ? last.group : "" })];
+      const group = last ? last.group : "";
+      const used = new Set(c.settings.filter(s => s.group === group).map(s => s.label));
+      let n = c.settings.length + 1;
+      while (used.has(`Setting ${n}`)) n++;
+      const settings = [...c.settings.map(s => new Setting(s)), new Setting({ label: `Setting ${n}`, group })];
       this._activeSetting = settings.length - 1;
       this.state.setSettings(cid, settings, "visual");
     });
