@@ -1307,8 +1307,10 @@ body{{display:flex;height:100%;overflow:hidden}}
 .tt-jb{{display:flex;flex-wrap:wrap;gap:6px}}
 .tt-jd{{grid-column:2;display:grid;font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);line-height:1.5}}
 .tt-jg.nl .tt-jb,.tt-jg.nl .tt-jd{{grid-column:1/-1}}
-.tt-jd>div{{grid-area:1/1;visibility:hidden}}
-.tt-jd>div.on{{visibility:visible}}
+/* Hide the others rather than force the shown one visible: in panel mode a
+   forced visibility:visible would show through its hidden block. */
+.tt-jd>div{{grid-area:1/1}}
+.tt-jd>div:not(.on){{visibility:hidden}}
 .tt-jc{{font:inherit;font-size:calc(12.5px*var(--font-scale));color:var(--text);background:none;
   border:1px solid var(--tip-border);border-radius:999px;padding:3px 11px;cursor:pointer;
   transition:background .15s,border-color .15s}}
