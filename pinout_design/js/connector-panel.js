@@ -707,7 +707,8 @@ export class ConnectorPanel {
       });
     });
 
-    this.container.querySelectorAll(".pin-delete-btn").forEach(el => {
+    // Scoped to the pin list: setting cards reuse this button's look.
+    this.container.querySelectorAll(".pin-list .pin-delete-btn").forEach(el => {
       el.addEventListener("click", () => {
         const idx = parseInt(el.dataset.idx);
         this.state.removePin(cid, idx, "visual");
