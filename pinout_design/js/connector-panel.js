@@ -31,8 +31,14 @@ export class ConnectorPanel {
     this._closePopupBound = (e) => this._closePopupOnOutsideClick(e);
     this._bindState();
     // Dragging a divider or resizing the window changes the room the drawing
-    // has, so fit it again.
-    if (window.ResizeObserver) new ResizeObserver(() => this._fitPreview()).observe(container);
+    // has, so fit it again. The observer also keeps the panel's size, so a
+    // redraw can fit the drawing without measuring the page (see _fitPreview).
+    this._box = null;
+    if (window.ResizeObserver) new ResizeObserver(entries => {
+      const s = entries[0].borderBoxSize && entries[0].borderBoxSize[0];
+      this._box = s ? { width: s.inlineSize, height: s.blockSize } : null;
+      this._fitPreview();
+    }).observe(container);
   }
 
   _bindState() {
@@ -413,7 +419,11 @@ export class ConnectorPanel {
     const svg = this.container.querySelector(".conn-svg-preview svg");
     if (!svg) return;
     const w = +svg.getAttribute("width"), h = +svg.getAttribute("height");
-    const box = this.container.getBoundingClientRect();
+    // Measuring now would lay the page out with the new drawing still at its
+    // natural size; in a tall, scrolled panel that shrinks the content, the
+    // scroll position snaps, and whatever is under the pointer moves away
+    // mid-click. The observer's last size avoids that.
+    const box = this._box || this.container.getBoundingClientRect();
     if (!(w > 0 && h > 0 && box.width > 0 && box.height > 0)) return;
     const scale = Math.max(1, Math.min((box.width - 60) / w, (box.height * 0.5) / h, 4));
     svg.style.width = `${(w * scale).toFixed(0)}px`;
