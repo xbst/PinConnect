@@ -313,6 +313,7 @@ export class ConnectorPanel {
     const symbolOptions = (this.state.symbolNames || [])
       .map(n => `<option value="${n}">`).join("");
 
+    const focusKey = this._focusKey();
     this.container.innerHTML = `
       <div class="conn-form">
         <div class="conn-form-row">
@@ -360,6 +361,29 @@ export class ConnectorPanel {
     this._bindForm(conn);
     this._bindSettings(conn);
     this._decoratePreview(conn);
+    this._restoreFocus(focusKey);
+  }
+
+  // A rebuild replaces every control, so a keyboard user would land on the
+  // page body. Remember the focused control by what identifies it (its id, or
+  // its class and row) and focus its replacement afterward.
+  _focusKey() {
+    const f = document.activeElement;
+    if (!f || f === document.body || !this.container.contains(f)) return null;
+    const inSettings = !!f.closest(".setting-list");
+    if (f.id) return { sel: `#${CSS.escape(f.id)}`, inSettings };
+    const cls = f.classList[0];
+    if (cls && f.dataset.sidx !== undefined) return { sel: `.${cls}[data-sidx="${f.dataset.sidx}"]`, inSettings };
+    if (cls && f.dataset.idx !== undefined) return { sel: `.${cls}[data-idx="${f.dataset.idx}"]`, inSettings };
+    return null;
+  }
+
+  _restoreFocus(key) {
+    if (!key) return;
+    // A deleted last setting leaves nothing in its place: fall back to Add.
+    const el = this.container.querySelector(key.sel)
+      || (key.inSettings ? this.container.querySelector("#setting-add-btn") : null);
+    el?.focus({ preventScroll: true });
   }
 
   _renderSettings(conn, ct) {
