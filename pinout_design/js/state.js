@@ -393,6 +393,24 @@ export class BoardState {
     this._origin = null;
   }
 
+  // toIndex is the setting's final index, after removal from fromIndex. The
+  // order is the order of the buttons in the pinout.
+  reorderSettings(connectorId, fromIndex, toIndex, origin = "visual") {
+    if (!this._prepareMutation(origin)) return false;
+    const conn = this.getConnector(connectorId);
+    if (!conn || !Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return false;
+    const count = conn.settings.length;
+    if (fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return false;
+    this._pushUndo();
+    this._origin = origin;
+    const [setting] = conn.settings.splice(fromIndex, 1);
+    conn.settings.splice(toIndex, 0, setting);
+    this.dirty = true;
+    this.emit("settings-reordered", { connectorId, fromIndex, toIndex, origin });
+    this._origin = null;
+    return true;
+  }
+
   // toIndex is the pin's final index, after removal from fromIndex.
   reorderPins(connectorId, fromIndex, toIndex, origin = "visual") {
     if (!this._prepareMutation(origin)) return false;

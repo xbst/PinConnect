@@ -72,6 +72,21 @@ export class ConnectorPanel {
       if (conn && this._settingsKey(conn) !== this._renderedSettingsKey) this._render();
       else this._updateSvgPreview();
     });
+    // The setting being shown or picked keeps its identity through a move.
+    this.state.on("settings-reordered", ({ connectorId, fromIndex, toIndex }) => {
+      if (connectorId !== this.state.selectedConnectorId) return;
+      const moved = k => {
+        if (k === null || k === undefined) return k;
+        if (k === fromIndex) return toIndex;
+        if (fromIndex < k && k <= toIndex) return k - 1;
+        if (toIndex <= k && k < fromIndex) return k + 1;
+        return k;
+      };
+      this._activeSetting = moved(this._activeSetting);
+      if (this._pick) this._pick = { ...this._pick, setting: moved(this._pick.setting) };
+      this._clearNotice();
+      this._render();
+    });
     this.state.on("pins-reordered", ({ connectorId }) => {
       if (connectorId !== this.state.selectedConnectorId) return;
       this._clearNotice();
@@ -414,6 +429,7 @@ export class ConnectorPanel {
     return `
       <div class="setting-card${this._activeSetting === i ? " active" : ""}" data-sidx="${i}">
         <div class="setting-row">
+          <span class="setting-drag-handle" draggable="true" data-sidx="${i}" title="Drag to reorder · Alt+↑/↓ to move">≡</span>
           <input type="text" id="setting-label-${i}" class="setting-label" data-sidx="${i}" value="${this._esc(s.label)}" placeholder="Label" title="Label: the button text in the pinout">
           <input type="text" id="setting-group-${i}" class="setting-group" data-sidx="${i}" value="${this._esc(s.group)}" placeholder="Group" title="Group: settings with the same group are alternatives; leave empty for one group">
           <label class="setting-default" title="Shown first, and marked default"><input type="checkbox" class="setting-default-cb" data-sidx="${i}" ${s.default === true ? "checked" : ""}>Default</label>
@@ -439,7 +455,19 @@ export class ConnectorPanel {
     list.querySelectorAll(".setting-card").forEach(card => {
       card.addEventListener("focusin", () => this._activate(idx(card)));
       card.addEventListener("pointerdown", () => this._activate(idx(card)));
+      // Alt+↑/↓ anywhere in a card moves it, as in the connector list.
+      card.addEventListener("keydown", e => {
+        if (!e.altKey || e.ctrlKey || e.metaKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+        e.preventDefault();
+        const from = idx(card), to = from + (e.key === "ArrowUp" ? -1 : 1);
+        // Commit a field being typed in first, so the move cannot drop its text.
+        if (e.target.matches("input[type=text]")) e.target.blur();
+        if (!this.state.reorderSettings(cid, from, to, "visual")) return;
+        const field = e.target.classList[0];
+        this.container.querySelector(`.${field}[data-sidx="${to}"]`)?.focus();
+      });
     });
+    this._bindSettingDrag(cid, list);
 
     const onText = (cls, key, read = v => v) => {
       list.querySelectorAll(cls).forEach(el => el.addEventListener("change", () => {
@@ -526,6 +554,52 @@ export class ConnectorPanel {
     this.container.querySelectorAll(".setting-card").forEach(card =>
       card.classList.toggle("active", parseInt(card.dataset.sidx, 10) === i));
     this._updateSvgPreview();
+  }
+
+  // Cards reorder by dragging their handle, with the connector list's drop
+  // marks. A private drag type keeps stray drops (text, files, pins) out.
+  _bindSettingDrag(cid, list) {
+    const TYPE = "application/x-pinconnect-setting";
+    const cards = () => [...list.querySelectorAll(".setting-card")];
+    const clear = () => cards().forEach(c => c.classList.remove("dragging", "drop-before", "drop-after"));
+    const target = e => {
+      const card = e.target.closest(".setting-card");
+      const all = cards();
+      if (!card) return { card: all[all.length - 1], after: true, boundary: all.length };
+      const r = card.getBoundingClientRect();
+      const after = e.clientY >= r.top + r.height / 2;
+      return { card, after, boundary: all.indexOf(card) + (after ? 1 : 0) };
+    };
+    let from = null;
+    list.querySelectorAll(".setting-drag-handle").forEach(h => h.addEventListener("dragstart", e => {
+      from = parseInt(h.dataset.sidx, 10);
+      e.dataTransfer.setData(TYPE, String(from));
+      e.dataTransfer.effectAllowed = "move";
+      const card = h.closest(".setting-card");
+      e.dataTransfer.setDragImage(card, 12, 12);
+      card.classList.add("dragging");
+    }));
+    list.addEventListener("dragover", e => {
+      if (from === null || ![...e.dataTransfer.types].includes(TYPE)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      clear();
+      cards()[from]?.classList.add("dragging");
+      const t = target(e);
+      t.card?.classList.add(t.after ? "drop-after" : "drop-before");
+    });
+    list.addEventListener("dragleave", e => { if (!list.contains(e.relatedTarget)) clear(); });
+    list.addEventListener("drop", e => {
+      if (from === null || ![...e.dataTransfer.types].includes(TYPE)) return;
+      e.preventDefault();
+      const { boundary } = target(e);
+      const to = boundary - (from < boundary ? 1 : 0);
+      const moving = from;
+      from = null;
+      clear();
+      if (to !== moving) this.state.reorderSettings(cid, moving, to, "visual");
+    });
+    list.addEventListener("dragend", () => { from = null; clear(); });
   }
 
   _renderPinRow(pin, index, rowCount, numbered = false) {

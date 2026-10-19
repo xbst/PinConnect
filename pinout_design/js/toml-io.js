@@ -572,6 +572,24 @@ export function removePinBlock(sourceText, range, pinIndex) {
   return joinSourceLines(lines, sourceText);
 }
 
+// Settings move like pins: with the comments introducing them, and toIndex is
+// the setting's final index.
+export function moveSettingBlock(sourceText, range, fromIndex, toIndex) {
+  const count = range ? range.settings.length : 0;
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) ||
+      fromIndex < 0 || fromIndex >= count || toIndex < 0 || toIndex >= count || fromIndex === toIndex) return sourceText;
+  const lines = sourceLines(sourceText);
+  const setting = range.settings[fromIndex];
+  const block = lines.splice(setting.blockStart, setting.blockEnd - setting.blockStart + 1);
+  const remaining = buildSourceMap(lineContents(lines)).connectors.find(c => c.start === range.start)?.settings;
+  if (!remaining?.length) return sourceText;
+  const insertion = toIndex < remaining.length
+    ? remaining[toIndex].blockStart
+    : remaining[remaining.length - 1].blockEnd + 1;
+  lines.splice(insertion, 0, ...block);
+  return joinSourceLines(lines, sourceText);
+}
+
 // A deleted setting takes the comments introducing it along, as a pin does.
 export function removeSettingBlock(sourceText, range, settingIndex) {
   const setting = range?.settings[settingIndex];

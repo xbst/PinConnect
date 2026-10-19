@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, removeSettingBlock, stripComment, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, moveSettingBlock, removeSettingBlock, stripComment, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -164,6 +164,11 @@ export class EditorPanel {
       if (origin === "editor") return;
       if (removedIndex === undefined) this._patchConnector(connectorId);
       else this._editPins(connectorId, (text, range) => removeSettingBlock(text, range, removedIndex));
+    });
+
+    this.state.on("settings-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {
+      if (origin === "editor") return;
+      this._editPins(connectorId, (text, range) => moveSettingBlock(text, range, fromIndex, toIndex));
     });
 
     this.state.on("pins-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {

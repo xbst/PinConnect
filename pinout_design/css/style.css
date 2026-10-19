@@ -666,6 +666,26 @@ html, body {
 
 .setting-card:hover { border-color: var(--text-muted); }
 .setting-card.active { border-color: var(--border-focus); }
+.setting-card { position: relative; }
+.setting-card.dragging { opacity: 0.5; }
+.setting-card.drop-before::before, .setting-card.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-hover);
+  pointer-events: none;
+}
+.setting-card.drop-before::before { top: -4px; }
+.setting-card.drop-after::after { bottom: -4px; }
+
+.setting-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 11px;
+  user-select: none;
+}
 
 .setting-row {
   display: flex;
