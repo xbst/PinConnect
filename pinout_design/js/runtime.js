@@ -133,7 +133,13 @@ export async function symbolCatalog() {
  */
 export function previewConnectorSvg(connector) {
   if (!_bridge) return null;
-  return _bridge.preview_connector_svg(JSON.stringify(connector));
+  try {
+    return _bridge.preview_connector_svg(JSON.stringify(connector));
+  } catch (e) {
+    // A connector the generator rejects (a jumper on pins that are not
+    // neighbors, say) is an everyday state while editing: say why, briefly.
+    throw new Error(pythonMessage(e));
+  }
 }
 
 // Keep named icons and aliases in Python alongside the generator's symbols.

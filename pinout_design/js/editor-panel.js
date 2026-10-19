@@ -1,4 +1,4 @@
-import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, stripComment, TomlParseError } from "./toml-io.js";
+import { parseBoardToml, buildSourceMap, serializeBoardToml, serializeConnectorBlock, patchConnectorInSource, patchBoardInSource, moveConnectorBlock, duplicateConnectorBlock, removeConnectorBlock, movePinBlock, removePinBlock, moveSettingBlock, removeSettingBlock, stripComment, TomlParseError } from "./toml-io.js";
 import { Board, Connector, Pin } from "./board-model.js";
 
 function esc(s) {
@@ -160,6 +160,17 @@ export class EditorPanel {
       else this._editPins(connectorId, (text, range) => removePinBlock(text, range, removedIndex));
     });
 
+    this.state.on("settings-changed", ({ connectorId, removedIndex, origin }) => {
+      if (origin === "editor") return;
+      if (removedIndex === undefined) this._patchConnector(connectorId);
+      else this._editPins(connectorId, (text, range) => removeSettingBlock(text, range, removedIndex));
+    });
+
+    this.state.on("settings-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {
+      if (origin === "editor") return;
+      this._editPins(connectorId, (text, range) => moveSettingBlock(text, range, fromIndex, toIndex));
+    });
+
     this.state.on("pins-reordered", ({ connectorId, fromIndex, toIndex, origin }) => {
       if (origin === "editor") return;
       this._editPins(connectorId, (text, range) => movePinBlock(text, range, fromIndex, toIndex));
@@ -261,6 +272,7 @@ export class EditorPanel {
       orientation: c.orientation, description: c.description,
       label_style: c.label_style, symbol: c.symbol,
       pins: c.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
+      settings: c.settings.map(s => ({ ...s })),
     }));
     const text = serializeBoardToml(
       { title: b.title, image: b.image, width: b.width, height: b.height,
@@ -295,6 +307,7 @@ export class EditorPanel {
       orientation: conn.orientation, description: conn.description,
       label_style: conn.label_style, symbol: conn.symbol,
       pins: conn.pins.map(p => ({ name: p.name, color: p.color, row: p.row })),
+      settings: conn.settings.map(s => ({ ...s })),
     };
   }
 
@@ -318,8 +331,9 @@ export class EditorPanel {
     this._suppressSync = false;
   }
 
-  // Reordering or deleting a pin moves or removes its own lines, with the
-  // comments above it, so no comment ends up describing a different pin.
+  // Reordering or deleting a pin (or deleting a setting) moves or removes its
+  // own lines, with the comments above it, so no comment ends up describing a
+  // different one.
   _editPins(connectorId, edit) {
     const text = this.textarea.value;
     const range = buildSourceMap(text).connectors.find(c => c.id === connectorId);

@@ -130,13 +130,15 @@ def icon_svg(name: str) -> str | None:
     return f"{_SVG_OPEN}{inner}</svg>" if inner else None
 
 
-def render_symbol(symbol: str, style: str = "", *, style_fallback: bool = False) -> str:
+def render_symbol(symbol: str, style: str = "", *, style_fallback: bool = False,
+                  jumpers: bool = False) -> str:
     """Safe inner HTML for a connector's symbol, or '' for no symbol.
 
     - ``"none"`` → '' (explicitly suppressed)
     - a known icon name (incl. aliases) → its SVG
     - any other non-empty string → a literal unicode glyph (HTML-escaped)
-    - empty → the connector style's default icon if ``style_fallback`` else ''
+    - empty → if ``style_fallback``, the settings icon for a header with jumper
+      settings (``jumpers``), else the connector style's default icon; '' otherwise
     """
     s = (symbol or "").strip()
     if s.lower() == "none":
@@ -145,7 +147,7 @@ def render_symbol(symbol: str, style: str = "", *, style_fallback: bool = False)
         svg = icon_svg(s)
         return svg if svg is not None else html.escape(s)
     if style_fallback:
-        name = _STYLE_DEFAULTS.get(style)
+        name = "setting" if jumpers else _STYLE_DEFAULTS.get(style)
         if name:
             return icon_svg(name) or ""
     return ""

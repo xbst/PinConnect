@@ -5,7 +5,7 @@ import html
 import json
 import math
 
-from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme
+from .config import Board, Connector, ConnectorGeometry, ConnectorType, Pin, Theme, setting_name
 from .symbols import render_symbol
 
 SCALE = 3.0
@@ -574,9 +574,67 @@ def _stepstick_sockets(geo: ConnectorGeometry, n_per_row: int, n_tower: int, tow
     return '\n'.join(parts)
 
 
+# ── Jumpers: a shunt cap over two neighboring header pins ─────────────
+#
+# A cap is drawn in the finished drawing's coordinates, from the two pin
+# centres, so it needs no case per orientation.  It covers both pins with a
+# margin, shows a grip ridge across its middle, and has an opening over each
+# pin, through which the pin's coloured dot (drawn later, on top) shows.
+
+_CAP_WIDTH = 0.92   # cap width as a fraction of the pitch: caps on neighboring pins stay apart
+
+
+def _jumper_cap(p1: tuple[float, float], p2: tuple[float, float], width: float) -> str:
+    (x1, y1), (x2, y2) = p1, p2
+    horiz = abs(x2 - x1) >= abs(y2 - y1)
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    # The two pins share a row or a column, so one of these terms is zero.
+    length = abs(x2 - x1) + abs(y2 - y1) + width
+    w, h = (length, width) if horiz else (width, length)
+    stk = 'stroke="var(--jumper-stroke,#163f8f)"'
+    grip = width * 0.32
+    gx1, gy1, gx2, gy2 = (cx, cy - grip, cx, cy + grip) if horiz else (cx - grip, cy, cx + grip, cy)
+    hole = width * 0.46
+    parts = [
+        f'<rect x="{cx - w / 2:.1f}" y="{cy - h / 2:.1f}" width="{w:.1f}" height="{h:.1f}" '
+        f'rx="{width * 0.13:.1f}" fill="var(--jumper,#2f6fdf)" {stk} stroke-width="0.7"/>',
+        f'<line x1="{gx1:.1f}" y1="{gy1:.1f}" x2="{gx2:.1f}" y2="{gy2:.1f}" '
+        f'{stk} stroke-width="0.6" stroke-opacity="0.8"/>',
+    ]
+    for px, py in (p1, p2):
+        parts.append(
+            f'<rect x="{px - hole / 2:.1f}" y="{py - hole / 2:.1f}" width="{hole:.1f}" '
+            f'height="{hole:.1f}" rx="{hole * 0.12:.1f}" fill="var(--conn-cavity,#d0d0c8)" '
+            f'{stk} stroke-width="0.4"/>'
+        )
+    return '\n'.join(parts)
+
+
+def _check_jumpers(connector: Connector, pin_map: dict[int, tuple[int, int]]) -> None:
+    """Every jumper must bridge neighbors: one slot apart in a row, or the same
+    slot in rows 1 and 2.  A cap cannot reach further, and a drawing of one
+    spanning a third pin would tell the reader to short the wrong pins."""
+    for s in connector.settings:
+        for a, b in s.jumpers:
+            (sa, ra), (sb, rb) = pin_map[a - 1], pin_map[b - 1]
+            if (ra == rb and abs(sa - sb) == 1) or ({ra, rb} == {1, 2} and sa == sb):
+                continue
+            raise ValueError(
+                f"connector '{connector.id}' setting {setting_name(s.label, s.group)}: "
+                f"jumper '{a}-{b}' joins pins "
+                "that are not next to each other on the header; a jumper cap only bridges "
+                "neighboring pins"
+            )
+
+
 # ── Render one connector's pinout SVG ────────────────────────────────
 
 def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
+    if connector.settings and conn_type.style != "header-male":
+        raise ValueError(
+            f"connector '{connector.id}': jumper settings need a pin header type "
+            f"(style header-male), but '{connector.type}' is drawn as '{conn_type.style}'"
+        )
     # The "none" style has no body and no pinout: the connector is only a
     # hotspot marking something on the board, so there is nothing to draw.
     if conn_type.style == "none":
@@ -607,6 +665,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         pin_map[gi] = (row_idx, 2)
     for row_idx, gi in enumerate(r3_global):
         pin_map[gi] = (row_idx, 3)
+    _check_jumpers(connector, pin_map)
 
     # ── Connector dims at 0° ──
     pxs0 = geo.pin_centers_x(n_per_row)
@@ -799,6 +858,26 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
 
     parts.append('</g>')
 
+    # ── 1b. Jumper caps, one group per setting (on the body, under the wires) ──
+    # Every setting is drawn; the ones a group does not open on are hidden, so
+    # the drawing on its own shows the starting setup and the page only toggles
+    # which groups display.  data-pins lists the pins a setting bridges.
+    if connector.settings:
+        shown = connector.shown_settings()
+        cap_w = geo.pin_pitch * _CAP_WIDTH
+        for si, s in enumerate(connector.settings):
+            if not s.jumpers:
+                continue
+            bridged = " ".join(str(p) for pair in s.jumpers for p in pair)
+            hidden = "" if si in shown else ' display="none"'
+            parts.append(f'<g data-setting="{si}" data-pins="{bridged}"{hidden}>')
+            parts.extend(_jumper_cap(_pin_pos(a - 1), _pin_pos(b - 1), cap_w) for a, b in s.jumpers)
+            parts.append('</g>')
+    # Pin numbers on each pin's wire, dot and label let the page dim the pins
+    # a setting leaves alone.  Only jumper headers carry them.
+    def pin_attr(i: int) -> str:
+        return f' data-pin="{i + 1}"' if connector.settings else ""
+
     # ── 2. Colored wires (over the connector body) ──
     for i in range(n):
         row_num = row_of[i]
@@ -812,7 +891,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         elif eff == "right":  lx2, ly2 = body_rgt + ll + stair_offset, rpy
         else:                 lx2, ly2 = body_lft - ll - stair_offset, rpy
         parts.append(
-            f'<line x1="{rpx:.1f}" y1="{rpy:.1f}" '
+            f'<line{pin_attr(i)} x1="{rpx:.1f}" y1="{rpy:.1f}" '
             f'x2="{lx2:.1f}" y2="{ly2:.1f}" '
             f'stroke="{col}" stroke-width="1" stroke-opacity="0.65"/>'
         )
@@ -830,7 +909,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
         pr = row_radius[row_num]
         marker_stroke_w = min(0.9, max(0.3, pr * 0.5))
         parts.append(
-            f'<circle cx="{rpx:.1f}" cy="{rpy:.1f}" r="{pr:.1f}" '
+            f'<circle{pin_attr(i)} cx="{rpx:.1f}" cy="{rpy:.1f}" r="{pr:.1f}" '
             f'fill="{col}" stroke="var(--conn-stroke,#555)" stroke-width="{marker_stroke_w:.1f}"/>'
         )
 
@@ -844,7 +923,7 @@ def render_connector_svg(connector: Connector, conn_type: ConnectorType) -> str:
             tx, ty, ta, tb = body_lft - ll - stair_offset - 3, rpy, "end", "central"
 
         parts.append(
-            f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="{font_sz}" font-weight="500" '
+            f'<text{pin_attr(i)} x="{tx:.1f}" y="{ty:.1f}" font-size="{font_sz}" font-weight="500" '
             f'text-anchor="{ta}" dominant-baseline="{tb}" '
             f'fill="var(--label-color,#333)">{name}</text>'
         )
@@ -868,6 +947,40 @@ def _meta_line(connector: Connector, conn_type: ConnectorType) -> str:
     # positions rather than calling them pins.
     unit = "position" if conn_type.style == "slide-switch" else "pin"
     return f"{conn_type.name} · {len(connector.pins)}-{unit}"
+
+
+def _settings_html(connector: Connector) -> str:
+    """The tooltip's "Jumper settings" strip: a row of buttons per group.
+
+    Each group records the setting it opens on (``data-def``) and the one now
+    shown (``data-cur``); the page's script moves ``data-cur`` and redraws.  A
+    group's descriptions share one grid cell, so switching settings never
+    changes the tooltip's height.
+    """
+    if not connector.settings:
+        return ""
+    shown = connector.shown_settings()
+    rows: list[str] = []
+    for group, idxs in connector.setting_groups().items():
+        start = next(i for i in idxs if i in shown)
+        buttons = []
+        for i in idxs:
+            cls = "tt-jc" + (" def" if connector.settings[i].default else "") + (" sel" if i == start else "")
+            buttons.append(f'<button type="button" class="{cls}" data-s="{i}">'
+                           f'{html.escape(connector.settings[i].label)}</button>')
+        descs = []
+        for i in idxs:
+            if connector.settings[i].description:
+                on = ' class="on"' if i == start else ""
+                descs.append(f'<div data-s="{i}"{on}>{html.escape(connector.settings[i].description)}</div>')
+        label = f'<span class="tt-jl">{html.escape(group)}</span>' if group else ""
+        rows.append(
+            f'<div class="tt-jg{"" if group else " nl"}" data-def="{start}" data-cur="{start}">'
+            f'{label}<div class="tt-jb">{"".join(buttons)}</div>'
+            + (f'<div class="tt-jd">{"".join(descs)}</div>' if descs else "")
+            + '</div>'
+        )
+    return f'<div class="tt-j"><div class="tt-jh">Jumper settings</div>{"".join(rows)}</div>'
 
 
 def _theme_fonts(theme: Theme) -> list:
@@ -1063,13 +1176,16 @@ def generate_html(board: Board, connector_types: dict[str, ConnectorType], *,
     for conn in board.connectors:
         ct = connector_types[conn.type]
         svg = render_connector_svg(conn, ct)
-        sym = render_symbol(conn.symbol, ct.style, style_fallback=style_fb) if show_sym else ""
+        sym = render_symbol(conn.symbol, ct.style, style_fallback=style_fb,
+                            jumpers=bool(conn.settings)) if show_sym else ""
         sym_html[conn.id] = sym
         connector_data[conn.id] = {
             "name": conn.name, "svg": svg, "description": conn.description,
             "meta": _meta_line(conn, ct),
             "symbol": f'<span class="tt-sym">{sym}</span>' if sym else "",
         }
+        if conn.settings:
+            connector_data[conn.id]["jumpers"] = _settings_html(conn)
     hotspot_rects: list[str] = []
     for conn in board.connectors:
         x, y = min(conn.x1, conn.x2), min(conn.y1, conn.y2)
@@ -1179,6 +1295,34 @@ body{{display:flex;height:100%;overflow:hidden}}
    between, or trail the header's rule under nothing at all. */
 .tt-h:last-child{{margin-bottom:0;padding-bottom:0;border-bottom:0}}
 .tt-h+.tt-d{{border-top:0;padding-top:0}}
+/* Jumper settings under a jumper header's drawing.  The groups dissolve into
+   one two-column grid, so group names line up and so do their buttons. */
+.tt-j{{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;
+  margin-top:10px;padding-top:8px;border-top:1px solid var(--divider)}}
+.tt-jh{{grid-column:1/-1;font-size:calc(11px*var(--font-scale));letter-spacing:.04em;
+  text-transform:uppercase;color:var(--type-color)}}
+/* The buttons only respond in a pinned tooltip, so say how to get one. */
+.tt:not(.pin) .tt-jh::after{{content:" · click the connector to choose";text-transform:none;letter-spacing:0}}
+.tt-jg{{display:contents}}
+.tt-jl{{font-size:calc(12px*var(--font-scale));color:var(--desc-color)}}
+.tt-jb{{display:flex;flex-wrap:wrap;gap:6px}}
+.tt-jd{{grid-column:2;display:grid;font-size:calc(12.5px*var(--font-scale));color:var(--desc-color);line-height:1.5}}
+.tt-jg.nl .tt-jb,.tt-jg.nl .tt-jd{{grid-column:1/-1}}
+/* Hide the others rather than force the shown one visible: in panel mode a
+   forced visibility:visible would show through its hidden block. */
+.tt-jd>div{{grid-area:1/1}}
+.tt-jd>div:not(.on){{visibility:hidden}}
+.tt-jc{{font:inherit;font-size:calc(12.5px*var(--font-scale));color:var(--text);background:none;
+  border:1px solid var(--tip-border);border-radius:999px;padding:3px 11px;cursor:pointer;
+  transition:background .15s,border-color .15s}}
+@media(hover:hover){{.tt-jc:hover{{background:var(--hs-hover)}}}}
+.tt-jc.sel{{background:var(--hs-active);border-color:var(--hs-stroke);font-weight:500}}
+.tt-jc.def::after{{content:"default";margin-left:6px;font-size:calc(10px*var(--font-scale));
+  font-weight:400;color:var(--type-color)}}
+/* Pins a shown jumper does not touch fade back. */
+.tt-s [data-pin]{{transition:opacity .15s}}
+.tt-s svg.pc-dim [data-pin]{{opacity:.3}}
+.tt-s svg.pc-dim [data-pin].pc-on{{opacity:1}}
 /* Centered with inset + auto margins rather than left:50%/translate: an
    absolutely positioned box's shrink-to-fit width is capped by the room to the
    right of its `left`, so the translate trick halved the pill and wrapped it
@@ -1406,9 +1550,34 @@ function block(d){{
   let sh=d.svg?`<div class="tt-s">${{d.svg}}</div>`:'';
   return `<div class="tt-h"><span class="tt-n">${{d.symbol||''}}${{esc(d.name)}}</span>`+mh+
     `<button class="tt-x" type="button" title="Close" aria-label="Close">&times;</button></div>`+
-    sh+dh;
+    sh+(d.jumpers||'')+dh;
 }}
-ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide()}}}});
+/* Jumper settings.  Each group (.tt-jg) holds the setting it shows in
+   data-cur.  jDraw shows those settings' caps -- a hovered button stands in for
+   its group's choice -- dims the pins none of them bridge, and marks the
+   buttons and the shown description. */
+function jDraw(b,hov){{
+  const act=new Set(),on=new Set(),svg=b.querySelector('.tt-s>svg');
+  b.querySelectorAll('.tt-jg').forEach(g=>{{
+    const s=hov&&hov.closest('.tt-jg')===g?hov.dataset.s:g.dataset.cur;act.add(s);
+    g.querySelectorAll('.tt-jc').forEach(c=>c.classList.toggle('sel',c.dataset.s===g.dataset.cur));
+    g.querySelectorAll('.tt-jd>[data-s]').forEach(t=>t.classList.toggle('on',t.dataset.s===s));
+  }});
+  if(!svg)return;
+  svg.querySelectorAll('[data-setting]').forEach(e=>{{
+    if(!act.has(e.dataset.setting)){{e.setAttribute('display','none');return}}
+    e.removeAttribute('display');e.dataset.pins.split(' ').forEach(p=>on.add(p));
+  }});
+  svg.classList.toggle('pc-dim',on.size>0);
+  svg.querySelectorAll('[data-pin]').forEach(e=>e.classList.toggle('pc-on',on.has(e.dataset.pin)));
+}}
+/* Every open starts from the defaults: this is a reference, not a configurator. */
+function jReset(b){{if(!b)return;b.querySelectorAll('.tt-jg').forEach(g=>{{g.dataset.cur=g.dataset.def}});jDraw(b)}}
+function jBox(c){{return c.closest('.tt-b')||ttc}}
+ttc.addEventListener('click',e=>{{if(e.target.closest('.tt-x')){{e.stopPropagation();hide();return}}
+  const c=e.target.closest('.tt-jc');if(c&&pinned){{c.closest('.tt-jg').dataset.cur=c.dataset.s;jDraw(jBox(c))}}}});
+ttc.addEventListener('pointerover',e=>{{const c=e.target.closest('.tt-jc');if(c&&pinned&&e.pointerType!=='touch')jDraw(jBox(c),c)}});
+ttc.addEventListener('pointerout',e=>{{const c=e.target.closest('.tt-jc');if(c&&e.pointerType!=='touch')jDraw(jBox(c))}});
 function blk(id){{return [...ttc.querySelectorAll('.tt-b')].find(b=>b.dataset.id===id)||null}}
 function show(id,el){{
   const d=C[id]; if(!d) return; hideHint();
@@ -1417,14 +1586,19 @@ function show(id,el){{
        it visible in place of the hint pill (the .has class). */
     ttc.querySelectorAll('.tt-b.on').forEach(b=>b.classList.remove('on'));
     const b=blk(id);if(b)b.classList.add('on');
+    jReset(b);
     tt.classList.add('has');
   }}else{{
     clearTimeout(ttOff); tt.classList.remove('off');
     ttc.innerHTML=block(d);
+    jReset(ttc);
     pos(el);
   }}
   tt.classList.add('vis'); tt.classList.toggle('pin',pinned); aId=id;
   relayout();
+  /* Jumper buttons only work in a pinned tooltip, so keep them out of the Tab
+     order until then: pointer-events never stopped the keyboard. */
+  ttc.querySelectorAll('.tt-jc').forEach(c=>{{c.tabIndex=pinned?0:-1}});
 }}
 /* A hidden tooltip leaves the layout once its fade is over, so one parked under
    the board can't hold an embed's height open; relayout() tells the embed's

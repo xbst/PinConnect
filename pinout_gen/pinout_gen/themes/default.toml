@@ -73,6 +73,8 @@ name = "Default"
 # type-color  = "#888"                   # connector type / pin-count text
 # scroll-thumb= "rgba(0,0,0,.22)"        # connector-list / tooltip scrollbar thumb
 # scroll-track= "transparent"            # scrollbar track
+# jumper      = "#2f6fdf"                # jumper cap fill, on headers with jumper settings
+# jumper-stroke = "#163f8f"              # jumper cap outlines and openings
 #
 # [colors.dark]
 # bg          = "#131313"

@@ -125,8 +125,15 @@ def main(argv: list[str] | None = None) -> None:
             image_path = Path(args.image_embed).resolve()
         image_data_uri = _embed_image(image_path)
 
-    html = generate_html(board, connector_types, theme=theme,
-                         image_data_uri=image_data_uri)
+    # Some board errors can only be found while drawing, against the connector
+    # type's layout (a jumper between pins that are not neighbors, say), so
+    # they get the same one-line report as the ones found while loading.
+    try:
+        html = generate_html(board, connector_types, theme=theme,
+                             image_data_uri=image_data_uri)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     out_path: Path = args.output or config_path.with_suffix(".pinout.html")
     # Write LF explicitly. Text mode translates to CRLF on Windows, so the same

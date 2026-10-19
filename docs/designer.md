@@ -28,7 +28,7 @@ A toolbar across the top, and three panels whose dividers you can drag:
 - **Toolbar**: Undo, Redo, Open Image, Open TOML, Save TOML, **Generate**, a **Theme** selector, and **?** for the About box.
 - **Connectors / TOML** (left): the **Connectors** tab has a **Board title** field, which sets the generated page's title in the browser tab, above the list of the board's connectors. It is selected on your first visit. The **TOML** tab holds the live, editable config. The designer remembers which tab you last used.
 - **Board Image** (top right): your photo with connector boxes over it, and the **+ Add Connector** button.
-- **Connector Editor** (bottom right): fields and pin list for the selected connector.
+- **Connector Editor** (bottom right): fields and pin list for the selected connector, and its jumper settings on a pin header. It takes all the room below the divider, and the connector drawing in it grows with it, so dragging the divider up gives a bigger drawing to work on.
 
 While the runtime is still starting, the toolbar shows its progress and **Generate** and **+ Add Connector** are disabled. Loading a photo works straight away.
 
@@ -93,17 +93,34 @@ Pin order in the list is the physical pin order in the output.
 
 ![The Pins list for the CAN connector: a drag handle, color swatch, name field, and row selector for each pin](../assets/workflow-4-pins.png)
 
-### 5. Edit the TOML directly (optional)
+### 5. Add jumper settings (pin headers)
+
+A jumper header is read by position rather than by pin, so on the pin header types (`HDR-*`) the editor adds a **Jumper settings** section below the pins, and numbers each pin in the list: those are the numbers jumpers use. Each setting is one way of fitting the header's jumpers, and becomes a button in the generated pinout. The [board TOML reference](reference/board-toml.md#connectorsetting) shows how common headers map to settings, from an on/off jumper to a microstepping table.
+
+![The connector editor for a fan voltage selector in pick mode: the drawing with its pins numbered 1 to 6 and a jumper cap on pins 3 and 4, above three setting cards for 5V, 12V and VIN, with the 12V card active and its Pick button showing Done](../assets/workflow-jumpers.png)
+
+- **+ Add Setting** appends a setting, in the same group as the last one.
+- **Label** is the button's text, and **Group** makes settings into independent choices: settings with the same group are alternatives. Leave Group empty when the whole header is one choice.
+- **Default** marks the setting the pinout opens on. Checking it clears it from the rest of the group.
+- **Jumpers** lists the fitted jumpers as pin pairs, such as `1-2, 3-4`. Leave it empty for a setting with no jumper, such as "Off".
+- **Pick** lets you build the jumpers on the drawing instead. The pins get their numbers, and clicking two neighboring pins adds the jumper between them, while clicking a pair that is already fitted removes it. A pair that is not next to each other is refused with a note. Click **Done**, or work in another setting, to finish.
+- **Description** is optional text shown under the buttons while the setting is shown.
+- **Reorder** settings by dragging their handle, or with `Alt+↑` / `Alt+↓` from anywhere in a setting. The order is the order of the buttons.
+- **Delete** a setting with its × button.
+
+Working in a setting shows it on the drawing, with the pins it leaves alone faded, as the generated pinout does. Deleting or moving a pin renumbers every jumper so it stays on the same pins, and a jumper on a deleted pin is removed, with a note saying which. A setting the generator would reject, such as a jumper between pins that are not neighbors, shows the generator's own message in place of the drawing. Changing a connector with settings to a type that is not a pin header keeps the settings and says why they no longer draw.
+
+### 6. Edit the TOML directly (optional)
 
 Open the **TOML** tab in the left panel for the fully editable **TOML Source** pane. The two directions stay in step: type there and the diagram updates, change something visually and the text updates. Useful for bulk edits or pasting in a config you already have. Switch back to **Connectors** whenever you want to browse the list.
 
 Invalid or unfinished TOML keeps the source visible with an error and blocks visual edits until you correct it. Connector IDs must be non-empty and unique, including when you open a config or edit the source directly.
 
-Visual edits, from picking a theme or opening an image to changing a connector or its pins, rewrite only the values that change, so everything else, comments included, stays as written. Reordering and duplicating preserve each connector block's comments, formatting, and pin tables. Comments between connectors travel with the following connector, and comments above a pin travel with that pin; comments at the end of the document stay there. Put a comment inside a connector's block or inline with one of its fields if it must always travel with that connector. Deleting a connector or a pin removes the comments above it too. Duplicating copies the block and updates the copy's identity and position.
+Visual edits, from picking a theme or opening an image to changing a connector, its pins or its jumper settings, rewrite only the values that change, so everything else, comments included, stays as written. Reordering and duplicating preserve each connector block's comments, formatting, and pin and setting tables. Comments between connectors travel with the following connector, and comments above a pin or a jumper setting travel with it; comments at the end of the document stay there. Put a comment inside a connector's block or inline with one of its fields if it must always travel with that connector. Deleting a connector, a pin or a setting removes the comments above it too. Duplicating copies the block and updates the copy's identity and position.
 
 ![The TOML Source pane showing the generated, syntax-highlighted config](../assets/workflow-5-toml.png)
 
-### 6. Generate the pinout
+### 7. Generate the pinout
 
 Click **Generate**. The dialog renders the pinout and shows the real page, not an approximation.
 
@@ -115,7 +132,7 @@ Click **Generate**. The dialog renders the pinout and shows the real page, not a
 
 If the config cannot be rendered, the dialog shows why and Download is disabled until it can.
 
-### 7. Save the config
+### 8. Save the config
 
 Click **Save TOML**, and keep the file with your board photo.
 
@@ -135,7 +152,7 @@ If you close or reload the tab with changes you have not saved, the browser asks
 | `Ctrl+D` | Duplicate the selected connector |
 | `↑` / `↓` | Select the previous / next connector while the list has focus |
 | `Home` / `End` | Select the first / last connector while the list has focus |
-| `Alt+↑` / `Alt+↓` | Move the selected connector up / down while the list has focus |
+| `Alt+↑` / `Alt+↓` | Move the selected connector up / down while the list has focus, or a jumper setting up / down from anywhere in that setting |
 | `Delete` | Delete the selected connector |
 
 Use `Cmd` in place of `Ctrl` and `Option` in place of `Alt` on macOS. Undo and Redo are also toolbar buttons. While you are typing in a text field, Undo takes back that typing first, and Redo puts it back. Duplicate and Delete are ignored while you are typing in a text field or using a select menu, and all of these are ignored while a dialog is open.
