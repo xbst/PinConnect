@@ -24,8 +24,8 @@ class _Handler(SimpleHTTPRequestHandler):
     wrong answer here.
 
     The payload is served from wherever it was actually built, which is not
-    always inside the served directory: an installed package may be read-only,
-    in which case it lives in a per-user cache.
+    always inside the served directory: for an installed package it lives in
+    a per-user cache.
     """
 
     payload: Path | None = None
@@ -96,7 +96,7 @@ def serve(port: int = 0, *, open_browser: bool = True) -> None:
     print(f"Designer:  {root}")
     print(f"Payload:   {payload}  ({payload.stat().st_size / 1024:.0f} KB)")
     if payload.parent != root:
-        print("           (built outside the package, which is not writable)")
+        print("           (built in the user cache, outside the installed package)")
 
     bound = _pick_port(port)
     handler = partial(_Handler, directory=str(root))

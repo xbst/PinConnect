@@ -60,16 +60,22 @@ def _cache_root() -> Path:
 def default_payload_path() -> Path:
     """Where to build the payload when nobody names a location.
 
-    Beside the designer when that directory is writable, which keeps a source
-    checkout self-contained and lets a plain HTTP server find the file. An
-    installed package is often read-only or owned by root, and writing into
-    site-packages would leave a file pip never recorded and will not remove,
-    so that case goes to a per-user cache instead.
+    Beside the designer in a writable source checkout (which an editable
+    install points at), which keeps the checkout self-contained and lets a
+    plain HTTP server find the file. An installed package goes to a per-user
+    cache instead, even when site-packages is writable, as it is in most
+    virtual environments: a file written there is one pip never recorded and
+    will not remove.
     """
     root = designer_root()
-    if os.access(root, os.W_OK):
+    if _in_source_checkout() and os.access(root, os.W_OK):
         return root / PAYLOAD_NAME
     return _cache_root() / "pinconnect" / PAYLOAD_NAME
+
+
+def _in_source_checkout() -> bool:
+    """Whether this package is ``src/pinconnect`` in a checkout, not an install."""
+    return _PKG.parent.name == "src" and (_PKG.parent.parent / "pyproject.toml").is_file()
 
 
 def payload_is_stale(dest: Path, members: list[tuple[str, Path]]) -> bool:
