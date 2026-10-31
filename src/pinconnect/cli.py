@@ -1,4 +1,11 @@
-"""Command-line interface for the pinout generator."""
+"""Command-line interface: the ``pinconnect`` command and the legacy ``pinout-gen``.
+
+``main`` is ``pinconnect``: with a config file it renders the pinout, and with
+none it opens the designer.  ``legacy_main`` keeps the old ``pinout-gen``
+command line working exactly as it always has, flags, help and error messages
+included, since scripts and CI jobs call it and some match its output.  Both
+share the code that does the work.
+"""
 from __future__ import annotations
 
 import argparse
@@ -25,10 +32,8 @@ def _embed_image(path: Path) -> str:
     return f"data:{mime};base64,{b64}"
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate interactive pinout diagrams for documentation sites.",
-    )
+def _add_render_arguments(parser: argparse.ArgumentParser) -> None:
+    """The config and the options that shape its rendering, shared by both commands."""
     parser.add_argument(
         "config",
         nargs="?",
@@ -61,40 +66,19 @@ def main(argv: list[str] | None = None) -> None:
              "Resolved from the board's theme_dir, then the bundled themes.",
     )
 
-    parser.add_argument(
-        "--serve",
-        nargs="?",
-        const=0,
-        type=int,
-        default=None,
-        metavar="PORT",
-        help="Serve the visual designer and open it in a browser, instead of "
-             "rendering a config.  Without a port, one free port is chosen.",
-    )
-    parser.add_argument(
-        "--no-browser",
-        action="store_true",
-        help="With --serve, do not open a browser window.",
-    )
 
-    args = parser.parse_args(argv)
+def _serve_designer(port: int, open_browser: bool) -> None:
+    from .serve import serve
+    try:
+        serve(port, open_browser=open_browser)
+    except (FileNotFoundError, ValueError, OSError) as e:
+        # A bad port, an unwritable install and a missing designer all
+        # deserve a message rather than a traceback.
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    if args.serve is not None:
-        if args.config is not None:
-            parser.error("--serve renders nothing, so it takes no config file")
-        from .serve import serve
-        try:
-            serve(args.serve, open_browser=not args.no_browser)
-        except (FileNotFoundError, ValueError, OSError) as e:
-            # A bad port, an unwritable install and a missing designer all
-            # deserve a message rather than a traceback.
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
 
-    if args.config is None:
-        parser.error("a config file is required (use --serve to open the designer)")
-
+def _render(args: argparse.Namespace) -> None:
     config_path: Path = args.config.resolve()
 
     if not config_path.exists():
@@ -143,6 +127,123 @@ def main(argv: list[str] | None = None) -> None:
     with open(out_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
     print(f"Generated: {out_path}  ({len(board.connectors)} connectors)")
+
+
+_MODES = """\
+modes:
+  pinconnect                 open the designer in a browser
+  pinconnect board.toml      render board.toml to board.pinout.html
+"""
+
+
+def main(argv: list[str] | None = None) -> None:
+    """The ``pinconnect`` command: render a config, or open the designer without one."""
+    parser = argparse.ArgumentParser(
+        prog="pinconnect",
+        # Wrapped by hand: the raw formatter keeps the epilog's columns, and
+        # it applies to the description too.
+        description="Render a board TOML config to an interactive pinout page "
+                    "for\ndocumentation sites.  Without a config, open the "
+                    "visual designer that\nwrites one.",
+        epilog=_MODES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_render_arguments(parser)
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Designer only: serve on this port.  Without it, a free port is "
+             "chosen.",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Designer only: do not open a browser window.",
+    )
+    # The old way to open the designer, kept so `pinconnect --serve 8000` and
+    # scripts written for pinout-gen still work.  Hidden from the help.
+    parser.add_argument(
+        "--serve",
+        nargs="?",
+        const=0,
+        type=int,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.config is None:
+        if args.port is not None and args.serve not in (None, 0, args.port):
+            parser.error("--serve and --port name different ports")
+        render_only = [name for name, given in (
+            ("--output", args.output is not None),
+            ("--image-embed", args.image_embed is not None),
+            ("--theme", args.theme is not None),
+        ) if given]
+        if render_only:
+            parser.error(f"{' and '.join(render_only)} "
+                         f"{'needs' if len(render_only) == 1 else 'need'} "
+                         "a config file to render")
+        port = args.port if args.port is not None else (args.serve or 0)
+        _serve_designer(port, open_browser=not args.no_browser)
+        return
+
+    designer_only = [name for name, given in (
+        ("--port", args.port is not None),
+        ("--serve", args.serve is not None),
+        ("--no-browser", args.no_browser),
+    ) if given]
+    if designer_only:
+        parser.error(f"{' and '.join(designer_only)} "
+                     f"{'applies' if len(designer_only) == 1 else 'apply'} "
+                     "only to the designer, which opens when no config file "
+                     "is given")
+    _render(args)
+
+
+def legacy_main(argv: list[str] | None = None) -> None:
+    """The ``pinout-gen`` command, unchanged.
+
+    The parser, help text and messages are exactly those of pinout-gen 0.2.0.
+    Do not edit them: the old name is kept working for good, and anything that
+    matches its output has to keep matching.
+    """
+    parser = argparse.ArgumentParser(
+        description="Generate interactive pinout diagrams for documentation sites.",
+    )
+    _add_render_arguments(parser)
+
+    parser.add_argument(
+        "--serve",
+        nargs="?",
+        const=0,
+        type=int,
+        default=None,
+        metavar="PORT",
+        help="Serve the visual designer and open it in a browser, instead of "
+             "rendering a config.  Without a port, one free port is chosen.",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="With --serve, do not open a browser window.",
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.serve is not None:
+        if args.config is not None:
+            parser.error("--serve renders nothing, so it takes no config file")
+        _serve_designer(args.serve, open_browser=not args.no_browser)
+        return
+
+    if args.config is None:
+        parser.error("a config file is required (use --serve to open the designer)")
+
+    _render(args)
 
 
 if __name__ == "__main__":

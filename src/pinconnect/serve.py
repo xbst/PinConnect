@@ -109,7 +109,9 @@ def serve(port: int = 0, *, open_browser: bool = True) -> None:
         raise OSError(f"could not serve on port {bound}: {e}") from None
 
     url = f"http://127.0.0.1:{bound}"
-    print(f"Serving:   {url}\nPress Ctrl+C to stop.")
+    # Flushed so a script or tool reading a pipe sees the address before
+    # serving blocks.
+    print(f"Serving:   {url}\nPress Ctrl+C to stop.", flush=True)
     if open_browser:
         webbrowser.open(url)
     try:
