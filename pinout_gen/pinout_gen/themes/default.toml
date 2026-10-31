@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────
 # PinConnect theme — "default"
 #
-# This is the built-in default.  It sets only a name: every colour falls
+# This is the built-in default.  It sets only a name: every color falls
 # back to PinConnect's built-in palette (defined in pinout_gen/config.py),
 # so a board with no `theme` renders exactly like this.
 #
@@ -28,7 +28,7 @@ name = "Default"
 # source  = "google"
 # weights = "400;500"
 
-# Behaviour of the pinout chrome.  Omit [behavior] to keep the classic layout:
+# Behavior of the pinout chrome.  Omit [behavior] to keep the classic layout:
 # a collapsed 240px sidebar that sits beside the image at all widths.
 #
 # [behavior]
@@ -50,7 +50,7 @@ name = "Default"
 # tooltip_panel_min_height = 0       # floor in px for the "panel" box; it is otherwise as tall as the tallest connector's pinout
 # fullscreen_button        = true    # fullscreen button beside the list toggle (opens the page in a new tab where fullscreen is unavailable)
 
-# Colours are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
+# Colors are CSS values (hex, rgb(), rgba(), …).  `light` applies in light
 # mode, `dark` in dark mode; the viewer's theme toggle and OS scheme both
 # switch between them.  Token names are the generated CSS variables without
 # the leading `--`.
