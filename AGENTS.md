@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in the PinConnect repository. Human-facing documentation lives in [`docs/`](docs/) and [`README.md`](README.md); this file covers how the pieces fit together and the conventions to follow when changing them.
+Guidance for AI coding agents working in the PinConnect repository. Human-facing documentation lives in a separate repository, [doctools-docs](https://github.com/xbst/doctools-docs), published at <https://doctools.isiks.tech/pinconnect/>; this repository keeps only a short [`README.md`](README.md). This file covers how the pieces fit together and the conventions to follow when changing them.
 
 ## What this project is
 
@@ -28,8 +28,7 @@ The board TOML config is the interface between the designer and the renderer; th
 - `examples/example.toml` — example board config.
 - `pinout_gen/` — the `pinout-gen` compatibility stub, a distribution of its own (see "Compatibility stubs" below).
 - `pinout_embed/` — the `pinout-embed` compatibility stub, likewise.
-- `docs/` — human documentation.
-- `tools/` — repo-level doc-asset generators, each its own folder with a `generate.py` and a `README.md` (see "Regenerating doc images" below).
+- `assets/pinout-demo.gif` — the README's demo animation. Every other doc image lives in doctools-docs (see "Documentation" below).
 
 ## Key facts and gotchas
 
@@ -99,23 +98,19 @@ Install the Markdown extension (it needs `attr_list` enabled beside it for the `
 pip install "git+https://github.com/xbst/md-iframe.git@master"
 ```
 
-## Regenerating doc images
+## Documentation
 
-The images in `docs/` are generated, not hand-made, so they can be refreshed when the thing they show changes. Each generator is a `tools/<name>/generate.py` with its own README, run from the repo root; they import `pinconnect` from `src/`, so no install is needed (all need `pip install playwright pillow`; Playwright drives the system Chrome, no download). Regenerate the relevant set and commit the updated assets in the same change:
+The docs live in [doctools-docs](https://github.com/xbst/doctools-docs) (a sibling checkout, `..\doctools-docs`), a Zensical site shared with md-iframe and future tools. The PinConnect pages are under its `docs/pinconnect/`; topics shared by every tool (publishing from CI, light and dark mode, theming) are under `docs/guides/`, and `docs/migration.md` records the old names. Its live examples are rendered in its CI from `master`, so they show what `master` generates.
 
-- `tools/symbol-icons/` — the symbol SVGs in `assets/symbols/` (after editing `symbols.py`).
-- `tools/connector-gallery/` — `connector-gallery.webp` and `label-styles.webp` (after adding/changing a connector type or body style).
-- `tools/theme-gallery/` — the 12 `theme-*.webp` (after a theme or renderer change that affects appearance).
-- `tools/designer-screenshots/` — the 9 `designer-*`/`workflow-*` PNGs (after a change to the designer's chrome). It builds the payload and waits for the runtime before shooting, so the images never capture a half-started app.
-- `tools/jumper-gallery/` — `jumper-shapes.webp` and `workflow-jumpers.png` (after a change to how jumper settings draw, the tooltip's settings strip, or the designer's settings section). Its `sample.toml` holds one header per common shape, so it needs no outside board.
-
-`connector-gallery` and `symbol-icons` render straight from the package and need no board, and `jumper-gallery` brings its own. `theme-gallery` and `designer-screenshots` need a sample board+image; they default to the maintainer's board (outside the repo), so pass your own as arguments. `tools/demo-gif/` is intentionally git-ignored (local-only).
+- **A behavior change here usually needs a docs change there.** Make it in doctools-docs in step with the code change, as a commit in that repository, and mention it in this one's commit message.
+- **The doc images are generated there too.** Its `tools/` holds the generators (`symbol-icons`, `connector-gallery`, `theme-gallery`, `designer-screenshots`, `jumper-gallery`), which render with the installed `pinconnect`; to shoot a change before it reaches `master`, `pip install -e` this checkout into doctools-docs' venv. Rerun the matching generator after changing `symbols.py`, a connector type or body style, a theme or the renderer's look, the designer's chrome, or how jumper settings draw, and commit only images whose pixels changed. Its `tools/README.md` has the table.
+- `tools/demo-gif/` here is intentionally git-ignored (local-only); it makes `assets/pinout-demo.gif`.
 
 ## Conventions
 
-- **Docs use one line per paragraph.** GitHub's Markdown viewer soft-wraps, so do not hard-wrap prose in `docs/` or the READMEs — keep each paragraph on a single line.
+- **Docs use one line per paragraph.** GitHub's Markdown viewer soft-wraps, so do not hard-wrap prose in the READMEs or in doctools-docs — keep each paragraph on a single line.
 - **Docs are US English.** Prose uses `colors`, `behaviors`, `gray`, `labeled` — matching the TOML keys users actually type (`color`, `[colors.light]`, `[behavior]`). This applies to image alt text and table headers too.
-- **Keep the docs in step with behavior.** The board TOML reference (`docs/reference/board-toml.md`), connector types (`docs/reference/connector-types.md`), themes (`docs/reference/themes.md`), and `config.py` describe the same three schemas; change them together.
+- **Keep the docs in step with behavior, across repositories.** doctools-docs' board TOML reference (`docs/pinconnect/reference/board-toml.md`), connector types (`docs/pinconnect/reference/connector-types.md`), themes (`docs/pinconnect/reference/themes.md`), and this repository's `config.py` describe the same three schemas; change them together. The same goes for its light and dark guide (the theme-sync contract) and md-iframe's auto-height page (the height message).
 - **Generated and ephemeral directories are git-ignored** via the root `.gitignore` plus a `*` `.gitignore` inside each throwaway directory (`venv/`, `build/`, `*.egg-info/`, `__pycache__/`, `.claude/`). Do not commit `*.pinout.html` output or `src/pinconnect/designer/pinconnect.zip`.
 - **No new runtime dependencies without reason.** `pinconnect` relies only on the standard library (`tomllib`, with a `tomli` fallback below 3.11); the designer is dependency-free vanilla JS at runtime. Keep it that way unless there is a strong case.
 
