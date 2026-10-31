@@ -9,10 +9,15 @@ import importlib
 import sys
 import warnings
 
+# Attributed to this module, not to the importer: Python skips the import
+# machinery's frames, so stacklevel=2 would land on a script's own
+# `import pinout_gen`, and a DeprecationWarning raised from __main__ is shown by
+# default. Old scripts must keep a clean stderr (PowerShell 5.1 can turn native
+# stderr into an error), so it is shown only when warnings are enabled.
 warnings.warn(
     "pinout_gen was renamed to pinconnect; import pinconnect instead",
     DeprecationWarning,
-    stacklevel=2,
+    stacklevel=1,
 )
 
 _RENAMED = {
