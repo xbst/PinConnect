@@ -1111,9 +1111,13 @@ def _render_behavior_css(theme: Theme) -> str:
 
 def _render_height_script(theme: Theme) -> str:
     """When the theme stacks the list on narrow screens, emit a script that
-    reports the document height to an embedding page so pinout-embed's listener
-    can grow the iframe to fit.  Posts 0 when not stacked (wide screens), which
-    tells the parent to revert to the author's fixed height."""
+    reports the document height to an embedding page so its listener can grow
+    the iframe to fit.  Posts 0 when not stacked (wide screens), which tells the
+    parent to revert to the author's fixed height.
+
+    One message carries the height under two keys: ``mdIframeHeight`` for the
+    md-iframe Markdown extension, and ``pinconnectHeight`` for sites still on
+    pinout-embed, which listens for that key alone."""
     if not theme.behavior.sidebar_responsive_stack:
         return ""
     bp = theme.behavior.sidebar_stack_breakpoint
@@ -1131,7 +1135,7 @@ def _render_height_script(theme: Theme) -> str:
         "       viewport height, so it could never shrink when the list closes). */\n"
         "    var v=0,b=document.body;if(stacked()&&b)v=Math.ceil(b.scrollHeight);\n"
         "    if(Math.abs(v-last)<=2)return;last=v;\n"
-        "    try{parent.postMessage({pinconnectHeight:v},'*');}catch(e){}\n"
+        "    try{parent.postMessage({pinconnectHeight:v,mdIframeHeight:v},'*');}catch(e){}\n"
         "  }\n"
         "  addEventListener('load',report);addEventListener('resize',report);\n"
         "  /* The page fires this when a tooltip parked under the board appears or\n"

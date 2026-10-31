@@ -94,7 +94,7 @@ export async function openGenerate(state, getToml) {
   onClose(() => { if (previewUrl) URL.revokeObjectURL(previewUrl); });
 
   // Honor the height protocol the generated page speaks, the same one
-  // pinout-embed's listener implements. A theme that stacks the connector list
+  // md-iframe's listener implements. A theme that stacks the connector list
   // below the board reports its content height and hides its own scrollbar,
   // expecting whoever embeds it to grow the frame. A fixed-height frame just
   // clipped it, with no way to scroll to the rest. Ocean stacks at every width,
