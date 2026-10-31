@@ -1,23 +1,15 @@
 # pinout-embed
 
-A Python-Markdown extension for embedding PinConnect pinouts in MkDocs / Zensical sites. It replaces an image-style tag with a responsive `<iframe>` at build time.
+**Moved to [md-iframe](https://github.com/xbst/md-iframe).** The Markdown extension now lives in its own repository and embeds any HTML page, not only pinouts:
 
 ```bash
-pip install ./pinout_embed
+pip install "git+https://github.com/xbst/md-iframe.git@master"
 ```
-
-Enable it (with `attr_list`) in `mkdocs.yml`:
 
 ```yaml
 markdown_extensions:
   - attr_list
-  - pinout_embed
+  - md_iframe
 ```
 
-Then embed a generated pinout:
-
-```markdown
-![Board Pinout](board.pinout.html){ type=application/pinout style="min-height:60vh;width:100%" }
-```
-
-**Usage:** see [docs/embedding.md](../docs/embedding.md).
+This folder stays so that old install lines keep working, including `#subdirectory=pinout_embed` URLs and `pinout-embed @ ...` lines in requirements files. Installing it installs md-iframe, and existing sites build unchanged: `- pinout_embed` still loads the extension, `pinout_embed:PinoutExtension` still imports, and `{ type=application/pinout }` tags still embed. It will not be removed, but new setups should install md-iframe directly.
