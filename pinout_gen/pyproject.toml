@@ -9,6 +9,7 @@ version = "0.3.0"
 description = "Renamed to pinconnect. This package keeps the pinout-gen name working."
 readme = "README.md"
 license = "GPL-3.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = [
     "pinconnect @ git+https://github.com/xbst/PinConnect.git@master",

@@ -9,6 +9,7 @@ version = "0.2.0"
 description = "Moved to md-iframe. This package keeps the pinout-embed name working."
 readme = "README.md"
 license = "GPL-3.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = [
     "md-iframe @ git+https://github.com/xbst/md-iframe.git@master",
