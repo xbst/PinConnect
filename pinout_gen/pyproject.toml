@@ -1,0 +1,28 @@
+# pinout-gen was renamed to pinconnect. This distribution stays, under the old
+# name, so existing install lines and requirements files keep working: it pulls
+# in pinconnect and owns every file with an old name (the `pinout-gen` script
+# and the `pinout_gen` package). pinconnect must never ship those files, or an
+# in-place upgrade from pinout-gen 0.2.0 deletes them. See AGENTS.md.
+[project]
+name = "pinout-gen"
+version = "0.3.0"
+description = "Renamed to pinconnect. This package keeps the pinout-gen name working."
+readme = "README.md"
+license = "GPL-3.0"
+requires-python = ">=3.9"
+dependencies = [
+    "pinconnect @ git+https://github.com/xbst/PinConnect.git@master",
+]
+
+[project.urls]
+Homepage = "https://github.com/xbst/PinConnect"
+
+[project.scripts]
+pinout-gen = "pinconnect.cli:legacy_main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pinout_gen"]
