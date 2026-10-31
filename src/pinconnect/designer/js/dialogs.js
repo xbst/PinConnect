@@ -6,7 +6,7 @@
 import * as runtime from "./runtime.js";
 
 const REPO_URL = "https://github.com/xbst/PinConnect";
-const DOCS_URL = "https://github.com/xbst/PinConnect/blob/master/docs/README.md";
+const DOCS_URL = "https://doctools.isiks.tech/pinconnect/";
 const ABOUT_SEEN_KEY = "pinconnect.about.seen";
 
 function esc(s) {

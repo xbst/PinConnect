@@ -13,3 +13,5 @@ markdown_extensions:
 ```
 
 This folder stays so that old install lines keep working, including `#subdirectory=pinout_embed` URLs and `pinout-embed @ ...` lines in requirements files. Installing it installs md-iframe, and existing sites build unchanged: `- pinout_embed` still loads the extension, `pinout_embed:PinoutExtension` still imports, and `{ type=application/pinout }` tags still embed. It will not be removed, but new setups should install md-iframe directly.
+
+See the [md-iframe documentation](https://doctools.isiks.tech/md-iframe/) for usage, and [Migrating from the old names](https://doctools.isiks.tech/migration/) for what changed.

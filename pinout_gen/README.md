@@ -10,4 +10,4 @@ pinconnect                    # open the visual designer
 
 This folder stays so that old install lines keep working, including `#subdirectory=pinout_gen` URLs and `pinout-gen @ ...` lines in requirements files. Installing it installs `pinconnect` and keeps the `pinout-gen` command and the `pinout_gen` import name, with the same behavior as before. It will not be removed, but new setups should install `pinconnect` directly.
 
-See the [PinConnect README](../README.md) for usage.
+See the [PinConnect documentation](https://doctools.isiks.tech/pinconnect/) for usage, and [Migrating from the old names](https://doctools.isiks.tech/migration/) for what changed.
