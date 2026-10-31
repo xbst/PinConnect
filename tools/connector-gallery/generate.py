@@ -1,6 +1,6 @@
 """Generate the connector-type gallery and the label-style comparison images.
 
-Both are produced from pinout_gen's own ``render_connector_svg`` — the exact
+Both are produced from pinconnect's own ``render_connector_svg`` — the exact
 drawing the generator emits — laid out as dark grid cards and rasterized with
 Playwright, so the docs never drift from the renderer.
 
@@ -24,11 +24,11 @@ from playwright.sync_api import sync_playwright
 from PIL import Image
 
 REPO = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(REPO / "pinout_gen"))
-from pinout_gen.config import load_connector_type, Connector, Pin, _DEFAULT_COLORS_DARK
-from pinout_gen.renderer import render_connector_svg
+sys.path.insert(0, str(REPO / "src"))
+from pinconnect.config import load_connector_type, Connector, Pin, _DEFAULT_COLORS_DARK
+from pinconnect.renderer import render_connector_svg
 
-CONN_DIR = REPO / "pinout_gen" / "pinout_gen" / "connectors"
+CONN_DIR = REPO / "src" / "pinconnect" / "connectors"
 ASSETS = REPO / "assets"
 
 # Grouped by family so the gallery reads sensibly rather than alphabetically.

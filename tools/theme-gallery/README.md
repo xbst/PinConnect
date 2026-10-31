@@ -2,7 +2,7 @@
 
 Regenerates the twelve bundled-theme screenshots in [themes.md](../../docs/reference/themes.md): `theme-<name>-{light,dark}.webp` for `default`, `slate`, `ocean`, `terminal`, `midnight`, and `workbench`.
 
-For each theme it runs `pinout-gen` on a sample board with that theme, opens the result in the system Chrome (light and dark), opens the connector list and pins one connector's tooltip — a single frame that exercises nearly every theme token: list, symbols, tooltip, connector housing, pin labels, and the active-item highlight. `ocean` always stacks its list below the board, so it is captured full-page.
+For each theme it runs `pinconnect` on a sample board with that theme, opens the result in the system Chrome (light and dark), opens the connector list and pins one connector's tooltip — a single frame that exercises nearly every theme token: list, symbols, tooltip, connector housing, pin labels, and the active-item highlight. `ocean` always stacks its list below the board, so it is captured full-page.
 
 Run from the repository root after a theme or renderer change that affects appearance:
 

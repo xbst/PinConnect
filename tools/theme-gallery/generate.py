@@ -19,6 +19,7 @@ content. Requires ``playwright`` and ``pillow``; Playwright drives the system
 Chrome (``channel="chrome"``), so there is no browser download. The pinouts
 load their fonts from Google Fonts, so this needs network access.
 """
+import os
 import socket
 import sys
 import shutil
@@ -49,13 +50,13 @@ DEFAULT_PNG = REPO.parent / "docs-zensical" / "docs" / "pinouts" / "bnc" / "bnc.
 
 
 def generate_pinouts(toml_path: Path, png_path: Path, work: Path):
-    """pinout-gen the board under each theme into `work`, image copied alongside."""
+    """Render the board under each theme with pinconnect into `work`, image copied alongside."""
     shutil.copy(png_path, work / png_path.name)
     for theme in THEMES:
         out = work / f"{theme}.html"
-        subprocess.run([sys.executable, "-m", "pinout_gen.cli", str(toml_path),
+        subprocess.run([sys.executable, "-m", "pinconnect", str(toml_path),
                         "-o", str(out), "-t", theme],
-                       cwd=str(REPO / "pinout_gen"), check=True,
+                       env={**os.environ, "PYTHONPATH": str(REPO / "src")}, check=True,
                        stdout=subprocess.DEVNULL)
         print(f"  generated {theme}.html")
 

@@ -7,7 +7,7 @@
                                     for the fan voltage selector (docs/designer.md)
 
 Both come from sample.toml beside this script, so no board outside the repo is
-needed. The tooltips are the generator's real page, rendered with pinout-gen and
+needed. The tooltips are the generator's real page, rendered with pinconnect and
 opened in the system Chrome; the designer shot drives the real designer.
 
 Run from the repository root:
@@ -34,10 +34,10 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 ASSETS = REPO / "assets"
 SAMPLE = HERE / "sample.toml"
-sys.path.insert(0, str(REPO / "pinout_gen"))
+sys.path.insert(0, str(REPO / "src"))
 
-from pinout_gen.config import Theme, load_all_connector_types, load_board  # noqa: E402
-from pinout_gen.renderer import generate_html  # noqa: E402
+from pinconnect.config import Theme, load_all_connector_types, load_board  # noqa: E402
+from pinconnect.renderer import generate_html  # noqa: E402
 
 # Gallery order and the setting each card shows (indexes into the connector's
 # settings), picked so every card has at least one jumper fitted.
@@ -110,13 +110,14 @@ def shapes(browser, tmp: Path):
 def designer(browser):
     # The designer fetches its Python payload at startup and will not draw
     # without it, so build it before serving.
-    from pinout_gen.designer import build_payload
-    build_payload(REPO / "pinout_design" / "pinout_gen.zip")
+    from pinconnect.payload import PAYLOAD_NAME, build_payload, designer_root
+    root = designer_root()
+    build_payload(root / PAYLOAD_NAME)
     class Quiet(SimpleHTTPRequestHandler):
         def log_message(self, *args):
             pass
 
-    handler = partial(Quiet, directory=str(REPO / "pinout_design"))
+    handler = partial(Quiet, directory=str(root))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     Thread(target=server.serve_forever, daemon=True).start()
     tmp = tempfile.TemporaryDirectory()

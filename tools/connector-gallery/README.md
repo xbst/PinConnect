@@ -5,7 +5,7 @@ Generates two doc images from the bundled connector types:
 - `assets/connector-gallery.webp` — every type in a labeled grid, shown in [connector types](../../docs/reference/connector-types.md).
 - `assets/label-styles.webp` — one header under each `label_style`, shown in the [board TOML reference](../../docs/reference/board-toml.md#label_style).
 
-Both are drawn with pinout-gen's own `render_connector_svg`, so they always match what the generator produces — no hand-drawn art to keep in sync.
+Both are drawn with pinconnect's own `render_connector_svg`, so they always match what the generator produces — no hand-drawn art to keep in sync.
 
 Run from the repository root after adding or changing a connector type or a body style:
 

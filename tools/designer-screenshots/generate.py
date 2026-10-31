@@ -59,11 +59,12 @@ def main(toml_path: Path, png_path: Path):
     # without it, so build it before serving. Skipping this captured
     # screenshots of a designer reading "Renderer unavailable" with its
     # connector drawings missing.
-    sys.path.insert(0, str(REPO / "pinout_gen"))
-    from pinout_gen.designer import build_payload
-    build_payload(REPO / "pinout_design" / "pinout_gen.zip")
+    sys.path.insert(0, str(REPO / "src"))
+    from pinconnect.payload import PAYLOAD_NAME, build_payload, designer_root
+    designer = designer_root()
+    build_payload(designer / PAYLOAD_NAME)
 
-    handler = partial(SimpleHTTPRequestHandler, directory=str(REPO / "pinout_design"))
+    handler = partial(SimpleHTTPRequestHandler, directory=str(designer))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     server_thread = Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
