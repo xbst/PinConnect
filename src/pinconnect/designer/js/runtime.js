@@ -50,7 +50,9 @@ async function boot() {
   if (!resp.ok) {
     throw new Error(
       `Could not load ${PAYLOAD_URL} (HTTP ${resp.status}). If you are serving ` +
-      "this folder yourself, run python -m pinconnect.payload first."
+      "this folder yourself, run python -m pinconnect.payload " +
+      `<this folder>/${PAYLOAD_URL} first, or open the designer with the ` +
+      "pinconnect command, which serves it for you."
     );
   }
   const bytes = new Uint8Array(await resp.arrayBuffer());

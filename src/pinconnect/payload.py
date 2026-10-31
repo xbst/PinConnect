@@ -175,8 +175,10 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("dest", nargs="?", type=Path, default=None,
                         help="Where to write the zip.  Defaults to beside the "
-                             "designer, or the user cache when that is not "
-                             "writable.")
+                             "designer in a source checkout, and to the user "
+                             "cache for an installed package.  When serving "
+                             "the designer folder yourself, name "
+                             "<designer folder>/" + PAYLOAD_NAME + ".")
     parser.add_argument("--force", action="store_true",
                         help="Rebuild even if the payload is current.")
     args = parser.parse_args(argv)
