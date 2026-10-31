@@ -8,6 +8,7 @@ Python payload, so opening index.html from disk does not work.
 from __future__ import annotations
 
 import socket
+import sys
 import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -61,18 +62,57 @@ class _Handler(SimpleHTTPRequestHandler):
         pass  # one line per asset is noise; errors still surface below
 
 
+# On Windows, SO_REUSEADDR lets a socket bind a port another process is already
+# listening on, so the designer would share a port with some other server and
+# report it as its own. SO_EXCLUSIVEADDRUSE is the safe option there; Windows
+# does not hold a port in TIME_WAIT against a new listener, so nothing is lost.
+_WINDOWS = sys.platform == "win32"
+
+
+def _set_port_options(s: socket.socket) -> None:
+    if _WINDOWS:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    else:
+        # The real server sets allow_reuse_address; without the same option
+        # here a port still in TIME_WAIT from the previous run reads as taken
+        # on Linux and macOS, and the requested port is abandoned for no reason.
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+
+class _Server(ThreadingHTTPServer):
+    allow_reuse_address = not _WINDOWS
+
+    def server_bind(self) -> None:
+        if _WINDOWS:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def _answers(port: int) -> bool:
+    """Whether something already accepts connections on 127.0.0.1 at this port.
+
+    A bind alone cannot tell on Windows: it succeeds while another server
+    listens on all interfaces, as `python -m http.server` does by default. A
+    listener accepts within milliseconds; a closed port is only slow to refuse
+    (Windows retries the handshake), so a short timeout means free.
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+            return True
+    except OSError:
+        return False
+
+
 def _probe(port: int) -> int | None:
     """Bind a port to see whether it is free, returning the number it got."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        # The real server sets allow_reuse_address; without the same option here
-        # a port still in TIME_WAIT from the previous run reads as taken on
-        # Linux and macOS, and the requested port is abandoned for no reason.
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        _set_port_options(s)
         try:
             s.bind(("127.0.0.1", port))
-            return s.getsockname()[1]
+            got = s.getsockname()[1]
         except OSError:
             return None
+    return None if _answers(got) else got
 
 
 def _pick_port(preferred: int) -> int:
@@ -81,10 +121,13 @@ def _pick_port(preferred: int) -> int:
         if got is not None:
             return got
         print(f"Port {preferred} is in use, choosing another.")
-    got = _probe(0)
-    if got is None:
-        raise OSError("could not bind a port")
-    return got
+    # A port the system hands out can still be held on another address, so
+    # ask again a few times before giving up.
+    for _ in range(10):
+        got = _probe(0)
+        if got is not None:
+            return got
+    raise OSError("could not bind a port")
 
 
 def serve(port: int = 0, *, open_browser: bool = True) -> None:
@@ -104,7 +147,7 @@ def serve(port: int = 0, *, open_browser: bool = True) -> None:
     # The probe socket is closed by now, so another process could take the port
     # in between. Report that rather than dying on a bare traceback.
     try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", bound), handler)
+        httpd = _Server(("127.0.0.1", bound), handler)
     except OSError as e:
         raise OSError(f"could not serve on port {bound}: {e}") from None
 
