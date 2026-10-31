@@ -88,7 +88,9 @@ def _render(args: argparse.Namespace) -> None:
     try:
         board = load_board(config_path)
         connector_types = load_all_connector_types(board, config_path)
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, OSError) as e:
+        # OSError covers more than a missing file: a config path that is a
+        # directory, or one the user cannot read.
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -124,8 +126,13 @@ def _render(args: argparse.Namespace) -> None:
     # config rendered on two machines produced two different files, and the
     # designer (which always writes LF) disagreed with the CLI byte for byte.
     # Path.write_text only grew a newline argument in 3.10, and this supports 3.9.
-    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(html)
+    try:
+        with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(html)
+    except OSError as e:
+        # A missing output directory is the common case; -o says it must exist.
+        print(f"Error: cannot write output file: {out_path}: {e}", file=sys.stderr)
+        sys.exit(1)
     print(f"Generated: {out_path}  ({len(board.connectors)} connectors)")
 
 
