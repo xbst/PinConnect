@@ -1,14 +1,14 @@
-// Loads pinout-gen into the page under Pyodide.
+// Loads pinconnect into the page under Pyodide.
 //
 // The designer used to carry a hand-written JavaScript copy of the renderer,
 // which meant every connector style had to be drawn twice and the two copies
 // could disagree. Running the real package instead means the preview and the
-// downloaded file come from the same code as the `pinout-gen` command.
+// downloaded file come from the same code as the `pinconnect` command.
 
 export const PYODIDE_VERSION = "v314.0.6";
 
 const PYODIDE_BASE = `https://cdn.jsdelivr.net/pyodide/${PYODIDE_VERSION}/full/`;
-const PAYLOAD_URL = "pinout_gen.zip";
+const PAYLOAD_URL = "pinconnect.zip";
 const ROOT_DIR = "/pinconnect";
 const PKG_DIR = `${ROOT_DIR}/pkg`;
 
@@ -40,7 +40,7 @@ async function boot() {
   } catch (e) {
     throw new Error(
       "Could not download the Python runtime from cdn.jsdelivr.net. Check your " +
-      "network or allowlist that host, or use the pinout-gen command line tool."
+      "network or allowlist that host, or use the pinconnect command line tool."
     );
   }
   const py = await loadPyodide({ indexURL: PYODIDE_BASE });
@@ -50,7 +50,7 @@ async function boot() {
   if (!resp.ok) {
     throw new Error(
       `Could not load ${PAYLOAD_URL} (HTTP ${resp.status}). If you are serving ` +
-      "this folder yourself, run tools/build-payload.py first."
+      "this folder yourself, run python -m pinconnect.payload first."
     );
   }
   const bytes = new Uint8Array(await resp.arrayBuffer());
@@ -72,7 +72,7 @@ if "${PKG_DIR}" not in sys.path:
   return py;
 }
 
-/** Resolves once pinout-gen is importable. Safe to call repeatedly. */
+/** Resolves once pinconnect is importable. Safe to call repeatedly. */
 export function ready() {
   if (!_boot) {
     _boot = boot().catch((e) => {
@@ -102,7 +102,7 @@ async function bridge() {
   return _bridge;
 }
 
-/** True once pinout-gen is importable, for callers that cannot await. */
+/** True once pinconnect is importable, for callers that cannot await. */
 export function isReady() {
   return _bridge !== null;
 }

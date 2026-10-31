@@ -1,8 +1,8 @@
 """Serve the designer locally.
 
-`pinout-gen --serve` exists so the designer is one command away rather than a
-directory change, a separate web server, and a reminder to activate a virtual
-environment.  The designer has to be served over HTTP because it fetches its
+`pinconnect` with no config file serves the designer, so it is one command
+away rather than a directory change, a separate web server, and a reminder to
+activate a virtual environment.  The designer has to be served over HTTP because it fetches its
 Python payload, so opening index.html from disk does not work.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .designer import PAYLOAD_NAME, build_payload, designer_root
+from .payload import PAYLOAD_NAME, build_payload, designer_root
 
 
 class _Handler(SimpleHTTPRequestHandler):

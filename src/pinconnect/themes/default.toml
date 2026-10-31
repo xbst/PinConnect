@@ -2,7 +2,7 @@
 # PinConnect theme — "default"
 #
 # This is the built-in default.  It sets only a name: every color falls
-# back to PinConnect's built-in palette (defined in pinout_gen/config.py),
+# back to PinConnect's built-in palette (defined in pinconnect/config.py),
 # so a board with no `theme` renders exactly like this.
 #
 # To make your own theme, copy this file to `<name>.toml` (in the bundled

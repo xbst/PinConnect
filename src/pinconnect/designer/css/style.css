@@ -30,7 +30,7 @@
   --panel-header-h: 32px;
   --resizer: 4px;
 
-  /* Matches --ui-font in pinout-gen's default theme, so the designer and the
+  /* Matches --ui-font in pinconnect's default theme, so the designer and the
      pinouts it produces read the same. */
   --ui-font: "Roboto", system-ui, sans-serif;
 }
@@ -1240,7 +1240,7 @@ html, body {
 }
 
 /* A board asking for something the browser cannot do: it still rendered, but
-   not the way pinout-gen would. Sits above the preview so it is read before
+   not the way pinconnect would. Sits above the preview so it is read before
    the file is downloaded. */
 .gen-warn {
   margin: 0 0 10px;

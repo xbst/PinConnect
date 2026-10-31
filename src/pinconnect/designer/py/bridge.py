@@ -1,4 +1,4 @@
-"""The designer's bridge into pinout-gen, running under Pyodide.
+"""The designer's bridge into pinconnect, running under Pyodide.
 
 Everything crossing into JavaScript is a JSON string or plain text, so the
 browser side never holds a Python proxy it has to free.  This module is the
@@ -11,8 +11,8 @@ import json
 from dataclasses import fields
 from pathlib import Path
 
-import pinout_gen.config as _config
-from pinout_gen.config import (
+import pinconnect.config as _config
+from pinconnect.config import (
     Board,
     Connector,
     ConnectorType,
@@ -23,8 +23,8 @@ from pinout_gen.config import (
     load_theme,
     parse_settings,
 )
-from pinout_gen.renderer import generate_html, render_connector_svg
-from pinout_gen.symbols import SYMBOLS, render_symbol
+from pinconnect.renderer import generate_html, render_connector_svg
+from pinconnect.symbols import SYMBOLS, render_symbol
 
 _PKG = Path(_config.__file__).resolve().parent
 _BUNDLED_CONNECTORS = _PKG / "connectors"
@@ -40,7 +40,7 @@ BOARD_PATH = WORK / "board.toml"
 _CUSTOM_DIR_HINT = (
     "The designer can only use the connector types and themes bundled with "
     "PinConnect. A board that points connector_dir or theme_dir at its own "
-    "files has to be rendered with the pinout-gen command line tool."
+    "files has to be rendered with the pinconnect command line tool."
 )
 
 _type_cache: dict[str, ConnectorType] = {}
@@ -175,7 +175,7 @@ def _local_dir_warnings(board: Board) -> list[str]:
         out.append(
             f"This board reads connector types from '{board.connector_dir}', which "
             "the designer cannot open. Any type defined there was drawn with the "
-            "bundled definition of the same name instead, so pinout-gen would "
+            "bundled definition of the same name instead, so pinconnect would "
             "produce a different file."
         )
     if board.theme_dir and board.theme_dir != _DEFAULT_THEME_DIR:
@@ -191,7 +191,7 @@ def generate(board_toml: str, image_data_uri: str = "", theme_name: str = "") ->
     """Render a board TOML to a finished pinout page.
 
     Runs the same sequence the CLI runs, against the same loaders, so the result
-    matches ``pinout-gen`` byte for byte for the same input.  Returns JSON
+    matches ``pinconnect`` byte for byte for the same input.  Returns JSON
     holding the page, plus any warnings about input the browser cannot honor
     and any the theme itself raised.
     """

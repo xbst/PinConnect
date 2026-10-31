@@ -3,7 +3,9 @@
 The designer loads this package into Pyodide rather than reimplementing the
 renderer in JavaScript, so it needs the package source as a zip it can fetch.
 That zip is generated, never committed: ``build_payload`` writes it, and both
-``pinout-gen --serve`` and the GitHub Pages workflow call it.
+``pinconnect`` (when it opens the designer) and the GitHub Pages workflow call
+it.  ``python -m pinconnect.payload`` builds it by hand, for serving the
+designer some other way.
 """
 from __future__ import annotations
 
@@ -14,31 +16,22 @@ from pathlib import Path
 
 _PKG = Path(__file__).resolve().parent
 
-PAYLOAD_NAME = "pinout_gen.zip"
+PAYLOAD_NAME = "pinconnect.zip"
 
 # Server-side only modules.  They would never be imported in the browser, so
 # keeping them out of the payload saves bytes and avoids confusing tracebacks.
-_PAYLOAD_EXCLUDE = {"cli.py", "serve.py", "designer.py"}
+_PAYLOAD_EXCLUDE = {"cli.py", "serve.py", "payload.py", "__main__.py"}
 
 
 def designer_root() -> Path:
-    """Directory holding the designer's static files.
-
-    A sibling checkout wins over the copy inside the package.  Only a source
-    tree has that sibling: in an installed wheel the path does not exist, so the
-    packaged copy is used.  Checking the checkout first matters because building
-    a wheel leaves its copy behind in the source tree, and preferring that copy
-    would quietly serve stale files to whoever is editing the designer.
-    """
-    candidates = (_PKG.parent.parent / "pinout_design", _PKG / "designer")
-    for path in candidates:
-        if (path / "index.html").is_file():
-            return path
-    raise FileNotFoundError(
-        "Could not find the designer's files. Looked in:\n  "
-        + "\n  ".join(str(p) for p in candidates)
-        + "\nReinstall pinout-gen, or run --serve from a source checkout."
-    )
+    """Directory holding the designer's static files, inside the package."""
+    root = _PKG / "designer"
+    if not (root / "index.html").is_file():
+        raise FileNotFoundError(
+            f"Could not find the designer's files in {root}\n"
+            "Reinstall pinconnect."
+        )
+    return root
 
 
 def _payload_members() -> list[tuple[str, Path]]:
@@ -48,14 +41,13 @@ def _payload_members() -> list[tuple[str, Path]]:
         if not path.is_file() or path.suffix not in (".py", ".toml"):
             continue
         rel = path.relative_to(_PKG)
-        # Skip caches, the designer copied in beside us, and the server-side
-        # modules.  Without the designer check a wheel build would nest the
-        # designer inside its own payload.
+        # Skip caches, the designer (its bridge is added above, and the rest is
+        # static files the page loads itself) and the server-side modules.
         if "__pycache__" in rel.parts or rel.parts[0] == "designer":
             continue
         if len(rel.parts) == 1 and rel.name in _PAYLOAD_EXCLUDE:
             continue
-        members.append((f"pinout_gen/{rel.as_posix()}", path))
+        members.append((f"pinconnect/{rel.as_posix()}", path))
     return members
 
 
@@ -137,3 +129,26 @@ def build_payload(dest: Path | None = None, *, force: bool = False) -> Path:
             return fallback
         _write_payload(fallback, members)
         return fallback
+
+
+def main(argv: list[str] | None = None) -> None:
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog="python -m pinconnect.payload",
+        description="Build the Pyodide payload the designer fetches at startup. "
+                    "pinconnect does this itself when it opens the designer; run "
+                    "this only when serving the designer some other way.",
+    )
+    parser.add_argument("dest", nargs="?", type=Path, default=None,
+                        help="Where to write the zip.  Defaults to beside the "
+                             "designer, or the user cache when that is not "
+                             "writable.")
+    parser.add_argument("--force", action="store_true",
+                        help="Rebuild even if the payload is current.")
+    args = parser.parse_args(argv)
+    dest = build_payload(args.dest, force=args.force)
+    print(f"Wrote {dest}  ({dest.stat().st_size / 1024:.0f} KB)")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,5 @@
 // The board model the designer edits. Connector type geometry is not modelled
-// here: it comes from pinout-gen through the Python bridge, so there is one
+// here: it comes from pinconnect through the Python bridge, so there is one
 // definition of a connector's shape rather than two that can disagree.
 
 export class Pin {
@@ -12,7 +12,7 @@ export class Pin {
 
 // One way of fitting a header's jumpers. jumpers holds "a-b" strings of 1-based
 // pin-list positions, as written in the TOML; a value that is not a list is
-// kept as read, so pinout-gen reports it rather than the designer hiding it.
+// kept as read, so pinconnect reports it rather than the designer hiding it.
 export class Setting {
   constructor(data = {}) {
     this.label = data.label ?? "";
@@ -35,7 +35,7 @@ export function parseJumper(j) {
 // Renumber every setting's jumpers after the pin list changed. newNumber maps
 // an old pin number (1..count) to its new one, or to null when that pin is
 // gone; a jumper that loses a pin is dropped and reported. Numbers that named
-// no pin, and entries that are not jumpers, are left alone for pinout-gen to
+// no pin, and entries that are not jumpers, are left alone for pinconnect to
 // report.
 export function renumberJumpers(settings, count, newNumber) {
   const dropped = [];

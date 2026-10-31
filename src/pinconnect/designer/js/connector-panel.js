@@ -107,7 +107,7 @@ export class ConnectorPanel {
     });
     // Undo, redo and TOML edits: the last action's notice no longer applies.
     this.state.on("board-changed", () => { this._clearNotice(); this._render(); });
-    // The drawing needs pinout-gen, so redraw once it has booted.
+    // The drawing needs pinconnect, so redraw once it has booted.
     this.state.on("catalogs-loaded", () => this._render());
   }
 
@@ -859,7 +859,7 @@ export class ConnectorPanel {
   }
 
   _esc(s) {
-    // String(): a setting can hold a value pinout-gen will reject, like a number.
+    // String(): a setting can hold a value pinconnect will reject, like a number.
     return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;")
                           .replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }

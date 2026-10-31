@@ -1,0 +1,41 @@
+[project]
+name = "pinconnect"
+version = "0.3.0"
+description = "Interactive pinout diagrams for documentation sites, with a visual designer"
+requires-python = ">=3.9"
+dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
+]
+readme = "README.md"
+license = "GPL-3.0"
+
+[project.urls]
+Homepage = "https://github.com/xbst/PinConnect"
+Designer = "https://pinconnect.isiks.tech"
+
+# Only the `pinconnect` command. The old `pinout-gen` command belongs to the
+# `pinout-gen` compatibility distribution: two distributions installing the same
+# script corrupt each other on upgrade.
+[project.scripts]
+pinconnect = "pinconnect.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["pinconnect"]
+
+[tool.setuptools.package-data]
+# The designer is listed by file type rather than with a recursive glob: older
+# setuptools releases do not expand `**`, and naming the types keeps the
+# generated payload zip and any bytecode caches out of the wheel.
+pinconnect = [
+    "connectors/*.toml",
+    "themes/*.toml",
+    "designer/*.html",
+    "designer/css/*.css",
+    "designer/js/*.js",
+    "designer/py/*.py",
+]

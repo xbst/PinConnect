@@ -10,7 +10,7 @@ import { openGenerate, openAbout, maybeShowAboutOnFirstVisit } from "./dialogs.j
 
 const state = new BoardState();
 
-// Connector geometry, themes and the symbol list all come from pinout-gen
+// Connector geometry, themes and the symbol list all come from pinconnect
 // itself now, so there is nothing here to keep in step with the Python side.
 async function loadCatalogs() {
   const [connectors, themes, symbols] = await Promise.all([

@@ -1,6 +1,6 @@
 // The Generate preview and the About box.
 //
-// Generate renders through the same code path as the `pinout-gen` command, so
+// Generate renders through the same code path as the `pinconnect` command, so
 // what the preview shows is what the downloaded file contains.
 
 import * as runtime from "./runtime.js";
@@ -112,7 +112,7 @@ export async function openGenerate(state, getToml) {
   onClose(() => removeEventListener("message", onMessage));
 
   // No theme override: the page renders from the config alone, so what you
-  // download is what pinout-gen makes from the config you save.
+  // download is what pinconnect makes from the config you save.
   const render = async (embed) =>
     runtime.generate(getToml(), { imageDataUri: embed && hasImage ? state.imageDataUrl : "" });
 
@@ -208,7 +208,7 @@ export function openAbout() {
     `then press <strong>Generate</strong> to get a single HTML file you can open ` +
     `in a browser or embed in a documentation site.</p>` +
     `<p>This designer runs the real generator in your browser, so nothing is ` +
-    `uploaded. There is also a <code>pinout-gen</code> command for regenerating ` +
+    `uploaded. There is also a <code>pinconnect</code> command for regenerating ` +
     `pinouts from a saved config.</p>` +
     `<p class="about-links">` +
     `<a href="${DOCS_URL}" target="_blank" rel="noopener">Documentation</a>` +

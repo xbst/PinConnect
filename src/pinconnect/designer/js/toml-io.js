@@ -240,7 +240,7 @@ function pinFields(p) {
   };
 }
 
-// Values the model does not understand are kept as read, so pinout-gen reports
+// Values the model does not understand are kept as read, so pinconnect reports
 // them on the preview and on Generate instead of the designer dropping them.
 function settingFields(s) {
   return {
