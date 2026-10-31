@@ -9,6 +9,7 @@ designer some other way.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import zipfile
@@ -57,6 +58,18 @@ def _cache_root() -> Path:
     return Path(base) if base else Path.home() / ".cache"
 
 
+def _cache_path() -> Path:
+    """This install's payload in the per-user cache.
+
+    Keyed by the package's location, because every virtual environment has its
+    own pinconnect, possibly of another version: one shared file would let
+    whichever install built last serve its Python code under another install's
+    designer, and two servers running at once would rewrite it under each other.
+    """
+    key = hashlib.sha256(str(_PKG).encode("utf-8")).hexdigest()[:12]
+    return _cache_root() / "pinconnect" / key / PAYLOAD_NAME
+
+
 def default_payload_path() -> Path:
     """Where to build the payload when nobody names a location.
 
@@ -70,7 +83,7 @@ def default_payload_path() -> Path:
     root = designer_root()
     if _in_source_checkout() and os.access(root, os.W_OK):
         return root / PAYLOAD_NAME
-    return _cache_root() / "pinconnect" / PAYLOAD_NAME
+    return _cache_path()
 
 
 def _in_source_checkout() -> bool:
@@ -78,34 +91,49 @@ def _in_source_checkout() -> bool:
     return _PKG.parent.name == "src" and (_PKG.parent.parent / "pyproject.toml").is_file()
 
 
+def _signature(members: list[tuple[str, Path]]) -> bytes:
+    """A digest of every member's name and bytes, stored as the zip's comment."""
+    digest = hashlib.sha256()
+    for arcname, src in sorted(members):
+        digest.update(arcname.encode("utf-8") + b"\0")
+        digest.update(hashlib.sha256(src.read_bytes()).digest())
+    return digest.hexdigest().encode("ascii")
+
+
 def payload_is_stale(dest: Path, members: list[tuple[str, Path]]) -> bool:
     """Whether the payload needs rebuilding.
 
-    Comparing the archive's contents, not just modification times, is what
-    catches a source file that was deleted or renamed: every remaining file is
-    older than the zip in that case, so an mtime test alone would keep serving
-    a connector type or theme the package no longer has.
+    Compares a digest of the sources' names and contents with the one the zip
+    was built from. Modification times are not enough: a deleted or renamed
+    source leaves every remaining file older than the zip, and a zip built from
+    another copy of the package can be newer than this one's files.
     """
     if not dest.is_file():
         return True
     try:
         with zipfile.ZipFile(dest) as zf:
-            if sorted(zf.namelist()) != sorted(name for name, _ in members):
-                return True
+            return zf.comment != _signature(members)
     except (OSError, zipfile.BadZipFile):
         return True          # unreadable or truncated: rebuild rather than serve it
-    built = dest.stat().st_mtime
-    return any(src.stat().st_mtime > built for _, src in members)
 
 
 def _write_payload(dest: Path, members: list[tuple[str, Path]]) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
-        for arcname, src in members:
-            info = zipfile.ZipInfo(arcname, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
-            zf.writestr(info, src.read_bytes())
+    # Written beside the target and swapped in, so a server reading the old
+    # zip never sees a half-written one.
+    tmp = dest.with_name(f"{dest.name}.{os.getpid()}.tmp")
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.comment = _signature(members)
+            for arcname, src in members:
+                info = zipfile.ZipInfo(arcname, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.external_attr = 0o644 << 16
+                zf.writestr(info, src.read_bytes())
+        os.replace(tmp, dest)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
 
 
 def build_payload(dest: Path | None = None, *, force: bool = False) -> Path:
@@ -128,7 +156,7 @@ def build_payload(dest: Path | None = None, *, force: bool = False) -> Path:
         _write_payload(dest, members)
         return dest
     except OSError:
-        fallback = _cache_root() / "pinconnect" / PAYLOAD_NAME
+        fallback = _cache_path()
         if explicit or dest == fallback:
             raise    # the caller named this path, or the cache itself failed
         if not payload_is_stale(fallback, members):
