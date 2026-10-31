@@ -8,7 +8,7 @@ PinConnect turns a photo of a PCB into an interactive pinout diagram. It is one 
 
 1. **The designer** (`src/pinconnect/designer/`) — a browser app that writes a board TOML config and renders the pinout. It does not reimplement the renderer: it loads the `pinconnect` package into the page under Pyodide and calls it. `pinconnect` with no arguments serves it locally; it is also hosted at <https://pinconnect.isiks.tech>.
 2. **The command line** (`pinconnect board.toml`) — reads that TOML and renders a single interactive HTML file.
-3. **The Markdown extension** (`pinout_embed/`) — a Python-Markdown extension that embeds the generated HTML into MkDocs / Zensical sites. It is moving to its own repository as `md-iframe`; leave `pinout_embed/` as it is.
+3. **The Markdown extension** — a Python-Markdown extension that embeds the generated HTML into MkDocs / Zensical sites. It lives in its own repository, [md-iframe](https://github.com/xbst/md-iframe); it used to be `pinout_embed/` here, which is now a compatibility stub (see "Compatibility stubs" below).
 
 The board TOML config is the interface between the designer and the renderer; the generated HTML is the interface between the renderer and the publishing step.
 
@@ -26,8 +26,8 @@ The board TOML config is the interface between the designer and the renderer; th
   - `designer/` — the visual designer (vanilla ES modules, no framework): `index.html`, `css/`, `js/` (`board-model.js`, `state.js`, `*-panel.js`, `toml-io.js`, `dialogs.js`, `runtime.js` boots Pyodide, `main.js`) and `py/bridge.py`, the only Python the designer adds: a thin shim over `pinconnect` for the catalogs, the connector preview, and Generate.
   - `designer/pinconnect.zip` — the payload the browser fetches at startup. **Generated and git-ignored.**
 - `examples/example.toml` — example board config.
-- `pinout_gen/` — holds only the old `README.md` for now; the `pinout-gen` compatibility distribution goes here.
-- `pinout_embed/` — the Markdown extension (single module, `pinout_embed.py`), on its way to the `md-iframe` repository.
+- `pinout_gen/` — the `pinout-gen` compatibility stub, a distribution of its own (see "Compatibility stubs" below).
+- `pinout_embed/` — the `pinout-embed` compatibility stub, likewise.
 - `docs/` — human documentation.
 - `tools/` — repo-level doc-asset generators, each its own folder with a `generate.py` and a `README.md` (see "Regenerating doc images" below).
 
@@ -48,8 +48,6 @@ The board TOML config is the interface between the designer and the renderer; th
 - **The generated page can be driven from outside.** It picks its color scheme from `?theme=dark|light`, a `{pinconnectTheme: "dark"|"light"}` `postMessage`, or — same-origin — the embedding site's scheme (MkDocs Material / Zensical `data-md-color-scheme`, a generic `data-theme`, or a `dark` class), tracked live with a `MutationObserver`; with no signal it follows `prefers-color-scheme`. Keep this contract intact when touching the renderer's theme-sync script.
 - **The page reports its height in one message with two keys**, `{pinconnectHeight: v, mdIframeHeight: v}`, when its theme stacks the connector list. `mdIframeHeight` is for `md-iframe`; `pinconnectHeight` is for sites still on `pinout-embed`, which listens for that key alone. Keep both, in one message.
 - **Jumper settings are data on a pin header, not connector types.** A `[[connector.setting]]` has `label`, `jumpers` (`"a-b"` strings of 1-based pin-list positions), `default`, `group` and `description`; settings sharing a group are alternatives. `config.parse_settings` checks them (unknown keys are errors) and is shared by `load_board` and the designer's bridge, so the preview fails exactly where Generate does. The two checks that need the type's layout live in `renderer.py`: settings only on `header-male` types, and each jumper must join neighbors (`_check_jumpers`); the CLI reports both as `Error:` lines. The drawing carries every setting as a `<g data-setting>` (non-opening ones `display="none"`, so the SVG alone shows the defaults) and tags pins `data-pin`; the page's `jDraw` and the designer's `_decoratePreview` toggle those. In the designer, pin deletes and moves renumber jumpers (`renumberJumpers`), and keys a setting has no field for travel in `Setting.unknown` so the bridge can reject them.
-- **`pinout_embed` depends on the `attr_list` Markdown extension** for its `{ type=application/pinout }` tag syntax.
-
 ## Old names
 
 Users install unpinned from `master`, so every old name keeps working for good:
@@ -57,6 +55,17 @@ Users install unpinned from `master`, so every old name keeps working for good:
 - **`legacy_main()` is the `pinout-gen` command line, frozen.** Its parser, help text and error messages ("a config file is required (use --serve to open the designer)", "--serve renders nothing, so it takes no config file") must stay byte-identical to pinout-gen 0.2.0. Change `main()` freely; never `legacy_main()`'s strings.
 - **`pinconnect` ships only `pinconnect/` and the `pinconnect` script.** No `pinout_gen` package and no `pinout-gen` script: those belong to the `pinout-gen` compatibility distribution. If two distributions install the same path, upgrading a long-lived venv deletes it.
 - **`pinconnect --serve [PORT]`** still opens the designer, as a hidden alias of `pinconnect [--port N]`.
+
+## Compatibility stubs
+
+`pinout_gen/` and `pinout_embed/` are small distributions that keep the old names installable: `pip install "git+...@master#subdirectory=pinout_gen"` and `pinout-gen @ git+...` requirements lines are in CI configs and long-lived venvs that nobody will update. Each stub depends on its replacement and adds only the old names. **They are never removed**, and neither is anything in them.
+
+- **`pinout-gen`** (0.3.0) depends on `pinconnect @ git+https://github.com/xbst/PinConnect.git@master`. It declares the `pinout-gen` script (`pinconnect.cli:legacy_main`) and ships the `pinout_gen` package, which puts each `pinconnect` module in `sys.modules` under its old name (`pinout_gen.designer` is `pinconnect.payload`) and warns with a `DeprecationWarning`, hidden by default. `pinout_gen/cli.py` is a module of its own rather than an alias, because its `main` is `legacy_main`.
+- **`pinout-embed`** (0.2.0) depends on `md-iframe @ git+https://github.com/xbst/md-iframe.git@master` and ships `pinout_embed.py`, which re-exports md-iframe under the old names (`PinoutExtension`, `makeExtension`, `EMBED_CLASS = "pinconnect-embed"`). It serves the dotted `pinout_embed:PinoutExtension` form; plain `- pinout_embed` resolves to md-iframe's entry point of that name without importing the module.
+- **File ownership.** A file with an old name belongs to the stub with the same old name and to no other distribution: the `pinout_gen` package and the `pinout-gen` script to `pinout-gen`, `pinout_embed.py` to `pinout-embed`. When pip upgrades `pinout-gen` 0.2.0 in place, it installs the new dependency first and then uninstalls the old distribution, deleting every file that distribution recorded. If `pinconnect` also shipped `pinout_gen/`, that uninstall would delete `pinconnect`'s copy. Upgrading a stub over its own older version replaces its own files, which is safe.
+- **The stub's URL and the package name must match.** Requirements lines say `pinout-gen @ ...` and `pinout-embed @ ...`, and pip rejects a URL whose metadata names a different distribution. Keep both `name`s.
+- **The dependency lines point at GitHub `master`**, so a stub can only be tested before release with a temporary copy whose URL points at a local checkout (`git+file:///...`). PyPI rejects direct-URL dependencies: when the packages reach PyPI, the PyPI builds of the stubs depend on `pinconnect` / `md-iframe` by name.
+- **Both stubs need `setuptools>=77`** for the SPDX `license` string, and each has a `MANIFEST.in` that keeps a working copy's tests out of its sdist.
 
 ## Common commands
 
@@ -84,10 +93,10 @@ python -m pinconnect.payload --force
 
 Nothing needs regenerating after editing a connector type, a theme, or `symbols.py`: the designer reads them through the bridge. `pinconnect` rebuilds the payload whenever the package changes, including when a file is **removed**.
 
-Install the Markdown extension:
+Install the Markdown extension (it needs `attr_list` enabled beside it for the `{ type=iframe }` tag syntax):
 
 ```bash
-pip install ./pinout_embed
+pip install "git+https://github.com/xbst/md-iframe.git@master"
 ```
 
 ## Regenerating doc images
@@ -115,5 +124,5 @@ The images in `docs/` are generated, not hand-made, so they can be refreshed whe
 - After editing `renderer.py` or a connector type, render `examples/example.toml` and open the HTML to eyeball the result — connectors do not need to sit on a real board image to be inspected.
 - After editing a connector type, theme, or `symbols.py`, restart `pinconnect` and confirm the designer still lists and renders what you changed.
 - After changing packaging, build a wheel (`python -m build`) and list it: it should hold exactly `pinconnect/**` plus metadata, with no zip, no tests and nothing named `pinout_gen`.
-- **Tests are not committed** (`test_*.py` is git-ignored), so a fresh clone has none. A working copy may still have `tests/` (and `pinout_embed/tests/`) — if they are present, run `pytest` there before finishing, and add cases for new behavior. Never `git add` a test file.
+- **Tests are not committed** (`test_*.py` is git-ignored), so a fresh clone has none. A working copy may still have `tests/` — if they are present, run `pytest` there before finishing, and add cases for new behavior. Never `git add` a test file.
 - Beyond that, validate by generating output and viewing it.
