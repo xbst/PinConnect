@@ -1,49 +1,19 @@
-"""Build hook that bundles the designer into the distribution.
+"""Build hook that keeps pinout-gen 0.2.0's files out of this stub's wheel.
 
-The designer lives beside this package rather than inside it, so setuptools
-would not ship it on its own. `pinout-gen --serve` has to work from any install,
-including `pip install` straight from GitHub, so the designer's static files are
-copied into the package before any build command runs.
-
-The copy is skipped when the source is absent, which is the case when building
-from an sdist: the designer is already inside the package there.
+setuptools stages the package into build/lib and never prunes it. A checkout
+that built pinout-gen 0.2.0 still has that whole package staged there (the
+renderer, the bundled connectors, the designer copy), and building this stub
+over it would ship all of it again under the old name. Clearing the staged
+package first makes the wheel hold only the stub. Everything else is in
+pyproject.toml.
 """
 import shutil
 from pathlib import Path
 
 from setuptools import setup
 
-_HERE = Path(__file__).resolve().parent
-_SRC = _HERE.parent / "pinout_design"
-_DEST = _HERE / "pinout_gen" / "designer"
-
-# Checkout-only tooling and generated files have no place in a wheel. The
-# payload zip in particular is rebuilt at runtime from the installed package.
-_SKIP_DIRS = {"tools", "__pycache__", "node_modules", ".git"}
-_SKIP_FILES = {"pinout_gen.zip", "README.md"}
-
-
-def _bundle_designer() -> None:
-    if not (_SRC / "index.html").is_file():
-        return  # building from an sdist; the copy is already in place
-    if _DEST.exists():
-        shutil.rmtree(_DEST)
-    shutil.copytree(
-        _SRC, _DEST,
-        ignore=lambda _dir, names: [
-            n for n in names if n in _SKIP_DIRS or n in _SKIP_FILES
-        ],
-    )
-    # setuptools stages into build/lib and never prunes it, so anything a
-    # previous build put there is copied into the next wheel: files since
-    # deleted from the designer, stale .pyc, and the generated payload zip that
-    # _SKIP_FILES exists to keep out. Clearing the staged tree makes each build
-    # reflect only what is in the source now.
-    staged = _HERE / "build" / "lib" / "pinout_gen"
-    if staged.exists():
-        shutil.rmtree(staged, ignore_errors=True)
-
-
-_bundle_designer()
+_STAGED = Path(__file__).resolve().parent / "build" / "lib" / "pinout_gen"
+if _STAGED.exists():
+    shutil.rmtree(_STAGED, ignore_errors=True)
 
 setup()

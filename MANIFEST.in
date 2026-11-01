@@ -1,0 +1,4 @@
+# Tests are never committed (see AGENTS.md); a working copy may still have
+# them, and they must not leak into a source distribution.
+prune tests
+global-exclude __pycache__ *.py[cod]

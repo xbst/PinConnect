@@ -1,6 +1,6 @@
 name: Deploy designer to GitHub Pages
 
-# The designer is a static site that runs pinout-gen in the browser under
+# The designer is a static site that runs pinconnect in the browser under
 # Pyodide, so publishing it needs no server: build the Python payload it
 # fetches at startup, then upload the folder.
 
@@ -8,8 +8,7 @@ on:
   push:
     branches: [master]
     paths:
-      - "pinout_design/**"
-      - "pinout_gen/pinout_gen/**"
+      - "src/pinconnect/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -35,25 +34,28 @@ jobs:
           python-version: "3.12"
 
       - name: Build the Pyodide payload
-        run: python pinout_design/tools/build-payload.py
+        run: PYTHONPATH=src python -m pinconnect.payload
 
       - name: Stage the site
         run: |
           mkdir -p _site
-          cp pinout_design/index.html _site/
-          cp pinout_design/pinout_gen.zip _site/
-          cp -r pinout_design/css _site/css
-          cp -r pinout_design/js _site/js
+          cp src/pinconnect/designer/index.html _site/
+          cp src/pinconnect/designer/pinconnect.zip _site/
+          cp -r src/pinconnect/designer/css _site/css
+          cp -r src/pinconnect/designer/js _site/js
           echo "pinconnect.isiks.tech" > _site/CNAME
 
       - name: Check the payload landed
         run: |
-          test -s _site/pinout_gen.zip
+          test -s _site/pinconnect.zip
           python - <<'PY'
           import zipfile
-          names = zipfile.ZipFile("_site/pinout_gen.zip").namelist()
+          names = zipfile.ZipFile("_site/pinconnect.zip").namelist()
           assert "bridge.py" in names, "payload is missing the bridge module"
           assert any(n.endswith(".toml") for n in names), "payload has no connector or theme data"
+          assert "pinconnect/__init__.py" in names, "payload is missing the pinconnect package"
+          stray = [n for n in names if n != "bridge.py" and not n.startswith("pinconnect/")]
+          assert not stray, f"payload has entries outside pinconnect/: {stray}"
           print(f"payload ok: {len(names)} entries")
           PY
 

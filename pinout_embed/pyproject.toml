@@ -1,13 +1,26 @@
+# pinout-embed moved to its own repository as md-iframe. This distribution
+# stays, under the old name, so existing install lines and requirements files
+# keep working: it pulls in md-iframe and owns pinout_embed.py. md-iframe must
+# never ship that module, or an in-place upgrade from pinout-embed 0.1.0
+# deletes it. See AGENTS.md.
 [project]
 name = "pinout-embed"
-version = "0.1.0"
-description = "Markdown extension for embedding interactive pinouts on markdown docs sites."
+version = "0.2.0"
+description = "Moved to md-iframe. This package keeps the pinout-embed name working."
 readme = "README.md"
 license = "GPL-3.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+dependencies = [
+    "md-iframe @ git+https://github.com/xbst/md-iframe.git@master",
+]
+
+[project.urls]
+Homepage = "https://github.com/xbst/md-iframe"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["pinout_embed"]
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"

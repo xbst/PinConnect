@@ -1,149 +1,16 @@
-"""Command-line interface for the pinout generator."""
-from __future__ import annotations
+"""Old name of ``pinconnect.cli``.
 
-import argparse
-import base64
-import mimetypes
-import sys
-from pathlib import Path
+Everything in ``pinconnect.cli`` is available here, except that ``main`` is
+``legacy_main``: code calling ``pinout_gen.cli.main()`` and
+``python -m pinout_gen.cli`` keep the ``pinout-gen`` command line.
+"""
+from pinconnect import cli as _cli
 
-from .config import load_all_connector_types, load_board, load_theme
-from .renderer import generate_html
-
-
-def _embed_image(path: Path) -> str:
-    if not path.exists():
-        print(f"Error: image file not found: {path}", file=sys.stderr)
-        sys.exit(1)
-    mime = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
-    try:
-        data = path.read_bytes()
-    except OSError as e:
-        print(f"Error: cannot read image file: {path}: {e}", file=sys.stderr)
-        sys.exit(1)
-    b64 = base64.b64encode(data).decode("ascii")
-    return f"data:{mime};base64,{b64}"
-
-
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate interactive pinout diagrams for documentation sites.",
-    )
-    parser.add_argument(
-        "config",
-        nargs="?",
-        type=Path,
-        default=None,
-        help="Path to the board pinout TOML config file.",
-    )
-    parser.add_argument(
-        "-o", "--output",
-        type=Path,
-        default=None,
-        help="Output HTML file path.  Defaults to <config_stem>.pinout.html "
-             "next to the config file.",
-    )
-    parser.add_argument(
-        "-i", "--image-embed",
-        nargs="?",
-        const=True,
-        default=None,
-        metavar="IMAGE",
-        help="Embed the board image as a base64 data URI.  "
-             "Without a path, uses the image from the board config.  "
-             "With a path, embeds the specified image instead.",
-    )
-    parser.add_argument(
-        "-t", "--theme",
-        default=None,
-        metavar="NAME",
-        help="Theme to apply, overriding the board's [board] theme.  "
-             "Resolved from the board's theme_dir, then the bundled themes.",
-    )
-
-    parser.add_argument(
-        "--serve",
-        nargs="?",
-        const=0,
-        type=int,
-        default=None,
-        metavar="PORT",
-        help="Serve the visual designer and open it in a browser, instead of "
-             "rendering a config.  Without a port, one free port is chosen.",
-    )
-    parser.add_argument(
-        "--no-browser",
-        action="store_true",
-        help="With --serve, do not open a browser window.",
-    )
-
-    args = parser.parse_args(argv)
-
-    if args.serve is not None:
-        if args.config is not None:
-            parser.error("--serve renders nothing, so it takes no config file")
-        from .serve import serve
-        try:
-            serve(args.serve, open_browser=not args.no_browser)
-        except (FileNotFoundError, ValueError, OSError) as e:
-            # A bad port, an unwritable install and a missing designer all
-            # deserve a message rather than a traceback.
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
-
-    if args.config is None:
-        parser.error("a config file is required (use --serve to open the designer)")
-
-    config_path: Path = args.config.resolve()
-
-    if not config_path.exists():
-        print(f"Error: config file not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        board = load_board(config_path)
-        connector_types = load_all_connector_types(board, config_path)
-    except (ValueError, FileNotFoundError) as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    theme_name = args.theme or board.theme
-    try:
-        theme = load_theme(theme_name, config_path, board.theme_dir)
-    except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-    for warning in theme.warnings:
-        print(f"Warning: {warning}", file=sys.stderr)
-
-    image_data_uri: str | None = None
-    if args.image_embed is not None:
-        if args.image_embed is True:
-            image_path = (config_path.parent / board.image).resolve()
-        else:
-            image_path = Path(args.image_embed).resolve()
-        image_data_uri = _embed_image(image_path)
-
-    # Some board errors can only be found while drawing, against the connector
-    # type's layout (a jumper between pins that are not neighbors, say), so
-    # they get the same one-line report as the ones found while loading.
-    try:
-        html = generate_html(board, connector_types, theme=theme,
-                             image_data_uri=image_data_uri)
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    out_path: Path = args.output or config_path.with_suffix(".pinout.html")
-    # Write LF explicitly. Text mode translates to CRLF on Windows, so the same
-    # config rendered on two machines produced two different files, and the
-    # designer (which always writes LF) disagreed with the CLI byte for byte.
-    # Path.write_text only grew a newline argument in 3.10, and this supports 3.9.
-    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(html)
-    print(f"Generated: {out_path}  ({len(board.connectors)} connectors)")
-
+globals().update(
+    (name, value) for name, value in vars(_cli).items()
+    if not name.startswith("__")
+)
+main = _cli.legacy_main
 
 if __name__ == "__main__":
     main()
