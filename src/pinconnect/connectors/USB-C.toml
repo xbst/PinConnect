@@ -1,5 +1,7 @@
 [connector]
 name = "USB-C"
+category = "Other"
+menu_name = "USB-C"
 style = "box"
 
 [geometry]

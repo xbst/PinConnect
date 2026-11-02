@@ -1,5 +1,7 @@
 [connector]
 name = "Button"
+category = "Other"
+menu_name = "Push Button"
 style = "button"
 
 [geometry]

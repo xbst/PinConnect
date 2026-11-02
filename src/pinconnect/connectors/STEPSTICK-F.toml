@@ -1,5 +1,7 @@
 [connector]
 name = "StepStick-F"
+category = "Other"
+menu_name = "StepStick Socket"
 style = "stepstick"
 
 # TMC2209 SilentStepStick pinout, seen from the socket's mating face. Row 1 is

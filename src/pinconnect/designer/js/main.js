@@ -19,7 +19,8 @@ async function loadCatalogs() {
   state.connectorTypes.clear();
   for (const ct of connectors) {
     state.connectorTypes.set(ct.slug, {
-      name: ct.name, style: ct.style, geometry: ct.geometry, defaultPins: ct.default_pins,
+      name: ct.name, category: ct.category, menuName: ct.menu_name,
+      style: ct.style, geometry: ct.geometry, defaultPins: ct.default_pins,
     });
   }
   state.themes = themes;

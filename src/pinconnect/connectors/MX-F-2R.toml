@@ -1,5 +1,7 @@
 [connector]
 name = "Micro-Fit"
+category = "Molex"
+menu_name = "Micro-Fit 3.0 Dual Row"
 style = "grid"
 
 [geometry]

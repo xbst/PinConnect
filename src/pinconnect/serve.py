@@ -4,17 +4,54 @@
 away rather than a directory change, a separate web server, and a reminder to
 activate a virtual environment.  The designer has to be served over HTTP because it fetches its
 Python payload, so opening index.html from disk does not work.
+
+The payload is checked against the package each time the designer asks for it,
+and rebuilt first if a source changed, so an edit to the package (a connector
+type, a theme, ``symbols.py``, the renderer, the bridge) reaches the designer's
+Generate at its next page load without restarting the server.
 """
 from __future__ import annotations
 
+import io
 import socket
 import sys
+import threading
 import webbrowser
 from functools import partial
+from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .payload import PAYLOAD_NAME, build_payload, designer_root
+
+
+class _Payload:
+    """The payload as served, rebuilt first whenever the package has changed.
+
+    The designer fetches it once per page load, so checking every request
+    costs one digest of the package's sources (a few milliseconds) per load.
+    ``build_payload`` decides where, as it did at startup: beside the designer
+    in a source checkout, in the per-user cache for an installed package.
+
+    The check, a rebuild and the read happen under one lock, and the bytes are
+    sent from memory: two requests never build at once (the temporary file is
+    named after the process), and no thread has the zip open while another
+    replaces it, which Windows refuses.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.path = build_payload()
+        self.data = self.path.read_bytes()
+
+    def read(self) -> bytes:
+        with self._lock:
+            path = build_payload()
+            data = path.read_bytes()
+            if data != self.data:
+                print(f"Payload:   rebuilt, the package changed  ({len(data) / 1024:.0f} KB)", flush=True)
+            self.path, self.data = path, data
+            return data
 
 
 class _Handler(SimpleHTTPRequestHandler):
@@ -24,12 +61,12 @@ class _Handler(SimpleHTTPRequestHandler):
     modules change under anyone editing them, so a cached copy is always the
     wrong answer here.
 
-    The payload is served from wherever it was actually built, which is not
-    always inside the served directory: for an installed package it lives in
-    a per-user cache.
+    The payload is answered from memory (see _Payload), so it does not matter
+    that it is not always inside the served directory: for an installed
+    package it lives in a per-user cache.
     """
 
-    payload: Path | None = None
+    payload: _Payload | None = None
 
     # SimpleHTTPRequestHandler takes its content types from mimetypes, which on
     # Windows consults the registry, where an installed application can have
@@ -52,11 +89,27 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, must-revalidate")
         super().end_headers()
 
-    def translate_path(self, path: str) -> str:
-        served = super().translate_path(path)
-        if self.payload is not None and Path(served).name == PAYLOAD_NAME:
-            return str(self.payload)
-        return served
+    def send_head(self):
+        if self.payload is None or not self._asks_for_payload():
+            return super().send_head()
+        try:
+            data = self.payload.read()
+        except OSError as e:
+            # Never the previous payload instead: Generate would quietly
+            # disagree with the command line, which is what the check is for.
+            print(f"Could not build the payload: {e}", file=sys.stderr, flush=True)
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Could not build the payload", str(e))
+            return None
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", self.extensions_map[".zip"])
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        return io.BytesIO(data)
+
+    def _asks_for_payload(self) -> bool:
+        # Any path that names the payload, as the designer's relative fetch
+        # does from the root.
+        return Path(self.translate_path(self.path)).name == PAYLOAD_NAME
 
     def log_message(self, fmt: str, *args) -> None:
         pass  # one line per asset is noise; errors still surface below
@@ -135,10 +188,10 @@ def serve(port: int = 0, *, open_browser: bool = True) -> None:
         raise ValueError(f"port must be between 0 and 65535, got {port}")
 
     root: Path = designer_root()
-    payload = build_payload()
+    payload = _Payload()
     print(f"Designer:  {root}")
-    print(f"Payload:   {payload}  ({payload.stat().st_size / 1024:.0f} KB)")
-    if payload.parent != root:
+    print(f"Payload:   {payload.path}  ({len(payload.data) / 1024:.0f} KB)")
+    if payload.path.parent != root:
         print("           (built in the user cache, outside the installed package)")
 
     bound = _pick_port(port)

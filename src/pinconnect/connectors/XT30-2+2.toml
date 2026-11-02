@@ -1,5 +1,7 @@
 [connector]
 name = "XT30(2+2)"
+category = "Other"
+menu_name = "XT30 (2+2)"
 style = "xt30"
 
 [geometry]

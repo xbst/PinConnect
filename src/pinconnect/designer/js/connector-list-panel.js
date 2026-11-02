@@ -1,4 +1,5 @@
 import { previewSymbol } from "./runtime.js";
+import { typeName, typePath } from "./type-menu.js";
 
 // The list uses BoardState's existing selection and mutation events, so source,
 // board hotspots, the connector editor and undo all follow the same order.
@@ -131,8 +132,11 @@ export class ConnectorListPanel {
     const select = row.querySelector(".connector-list-select");
     const name = row.querySelector(".connector-list-name");
     if (name.textContent !== label) name.textContent = label;
-    row.querySelector(".connector-list-detail").textContent = `${conn.type || "No type"} · ${pins}`;
-    select.setAttribute("aria-label", `Select ${label}, ${conn.type || "no type"}, ${pins}${conn.symbol ? `, symbol ${conn.symbol}` : ""}`);
+    const types = this.state.connectorTypes;
+    const detail = row.querySelector(".connector-list-detail");
+    detail.textContent = `${conn.type ? typeName(types, conn.type) : "No type"} · ${pins}`;
+    detail.title = types.has(conn.type) ? `${conn.type}: ${typePath(types, conn.type)}` : conn.type;
+    select.setAttribute("aria-label", `Select ${label}, ${conn.type ? typePath(types, conn.type) : "no type"}, ${pins}${conn.symbol ? `, symbol ${conn.symbol}` : ""}`);
     select.title = `${label} (${conn.id})`;
     for (const [action, verb] of [["duplicate", "Duplicate"], ["delete", "Delete"]]) {
       const button = row.querySelector(`[data-action="${action}"]`);

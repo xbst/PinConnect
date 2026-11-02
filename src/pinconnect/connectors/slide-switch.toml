@@ -1,5 +1,7 @@
 [connector]
 name = "Slide Switch"
+category = "Other"
+menu_name = "Slide Switch"
 style = "slide-switch"
 
 [geometry]

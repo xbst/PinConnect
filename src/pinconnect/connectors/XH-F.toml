@@ -1,5 +1,7 @@
 [connector]
 name = "JST-XH"
+category = "JST"
+menu_name = "XH (2.5mm)"
 style = "latch"
 
 [geometry]
