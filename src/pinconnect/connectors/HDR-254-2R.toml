@@ -1,5 +1,7 @@
 [connector]
 name = "2.54mm Dual-Row Header"
+category = "Pin Header"
+menu_name = "2.54mm Dual Row"
 style = "header-male"
 
 [geometry]

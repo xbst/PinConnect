@@ -1,5 +1,7 @@
 [connector]
 name = "2.54mm Screw Terminal"
+category = "Screw Terminal"
+menu_name = "2.54mm"
 style = "screw-terminal"
 
 [geometry]

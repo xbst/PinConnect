@@ -1,5 +1,7 @@
 [connector]
 name = "JST-PH"
+category = "JST"
+menu_name = "PH (2.0mm)"
 style = "latch"
 
 [geometry]

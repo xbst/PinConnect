@@ -1,5 +1,6 @@
 import { previewConnectorSvg } from "./runtime.js";
 import { Pin, Setting, parseJumper } from "./board-model.js";
+import { typeOptionsHtml } from "./type-menu.js";
 
 const COLOR_PRESETS = [
   { color: "#E74C3C", label: "Red" },
@@ -323,9 +324,7 @@ export class ConnectorPanel {
       svgHtml = `<div style="color:var(--text-muted);font-size:12px">Unknown type: ${this._esc(conn.type)}</div>`;
     }
 
-    const typeOptions = [...this.state.connectorTypes.keys()]
-      .map(k => `<option value="${k}" ${k === conn.type ? "selected" : ""}>${k}</option>`)
-      .join("");
+    const typeOptions = typeOptionsHtml(this.state.connectorTypes, conn.type);
 
     const orientOptions = [0, 90, 180, 270]
       .map(d => `<option value="${d}" ${d === conn.orientation ? "selected" : ""}>${d}°</option>`)

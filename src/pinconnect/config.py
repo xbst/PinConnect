@@ -97,6 +97,11 @@ class ConnectorType:
     # Pins a new connector of this type starts with (the designer's "New
     # Connector"); empty means a single unnamed pin.
     default_pins: list[Pin] = field(default_factory=list)
+    # Where the designer's Type menu lists this type: the group it sits in and
+    # its entry there. Empty means "Other" and ``name``. Neither reaches the
+    # generated page, whose type line shows ``name``.
+    category: str = ""
+    menu_name: str = ""
 
 
 # ── Board config ─────────────────────────────────────────────────────
@@ -473,11 +478,19 @@ def load_connector_type(path: Path) -> ConnectorType:
     if style == "stepstick":
         _check_stepstick_tower(geometry, path.name)
 
+    menu = {}
+    for key in ("category", "menu_name"):
+        value = info.get(key, "")
+        if not isinstance(value, str):
+            raise ValueError(f"{path.name}: [connector] '{key}' must be a string, got {value!r}")
+        menu[key] = value.strip()
+
     return ConnectorType(
         name=_require(info, "name", f"{path.name} [connector]"),
         style=style,
         geometry=geometry,
         default_pins=default_pins,
+        **menu,
     )
 
 

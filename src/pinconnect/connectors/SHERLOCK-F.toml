@@ -1,5 +1,7 @@
 [connector]
 name = "Sherlock-F"
+category = "Molex"
+menu_name = "Sherlock (2.0mm)"
 style = "sherlock"
 
 [geometry]

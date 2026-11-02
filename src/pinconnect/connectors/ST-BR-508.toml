@@ -1,5 +1,7 @@
 [connector]
 name = "5.08mm Barrier ST"
+category = "Screw Terminal"
+menu_name = "5.08mm Barrier"
 style = "barrier"
 
 [geometry]

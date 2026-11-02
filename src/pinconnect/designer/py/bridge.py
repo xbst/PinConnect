@@ -8,6 +8,7 @@ generator itself stays a pure CLI concern.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import fields
 from pathlib import Path
 
@@ -69,8 +70,22 @@ def _connector_type(slug: str) -> ConnectorType | None:
 
 # ── Catalogs backing the designer's dropdowns ────────────────────────
 
+_OTHER = "Other"
+
+
+def _natural(text: str) -> list:
+    """Sort key that puts "2.54mm" before "10mm": digit runs compare as numbers."""
+    parts = re.split(r"(\d+)", text.casefold())
+    return [int(p) if i % 2 else p for i, p in enumerate(parts)]
+
+
 def connector_catalog() -> str:
     """Every bundled connector type, as the designer's type list needs it.
+
+    Listed in the order of the designer's Type menu: grouped by category,
+    alphabetically with "Other" last, and by menu name within a group. The
+    defaults are filled in here, so a type without a category is in "Other"
+    and one without a menu name is listed by its name.
 
     The geometry is walked off the dataclass rather than hand-listed, so a new
     geometry field reaches the designer without a second edit.
@@ -84,10 +99,13 @@ def connector_catalog() -> str:
         out.append({
             "slug": slug,
             "name": ct.name,
+            "category": ct.category or _OTHER,
+            "menu_name": ct.menu_name or ct.name or slug,
             "style": ct.style,
             "default_pins": [{"name": p.name, "color": p.color, "row": p.row} for p in ct.default_pins],
             "geometry": {f.name: getattr(geo, f.name) for f in fields(geo)},
         })
+    out.sort(key=lambda c: (c["category"] == _OTHER, _natural(c["category"]), _natural(c["menu_name"])))
     return json.dumps(out)
 
 

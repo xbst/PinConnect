@@ -1,4 +1,5 @@
 import { Connector, Pin } from "./board-model.js";
+import { typeOptionsHtml } from "./type-menu.js";
 
 const HANDLE_SIZE = 12;
 // The invisible touch target around each handle, in screen pixels. It lies
@@ -519,7 +520,6 @@ export class BoardPanel {
   }
 
   _showNewConnectorDialog(x1, y1, x2, y2) {
-    const types = [...this.state.connectorTypes.keys()];
     const existing = this.state.board ? this.state.board.connectors.map(c => c.id) : [];
     let nextId = "CONN1";
     let n = 1;
@@ -532,7 +532,7 @@ export class BoardPanel {
       <div class="conn-form-row"><label>ID</label><input type="text" id="new-conn-id" value="${nextId}"></div>
       <div class="conn-form-row"><label>Name</label><input type="text" id="new-conn-name" value=""></div>
       <div class="conn-form-row"><label>Type</label>
-        <select id="new-conn-type">${types.map(t => `<option value="${t}">${t}</option>`).join("")}</select>
+        <select id="new-conn-type">${typeOptionsHtml(this.state.connectorTypes, "")}</select>
       </div>
       <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px">
         <button id="new-conn-cancel" class="toolbar-btn">Cancel</button>

@@ -1,3 +1,5 @@
 [connector]
 name = "None"
+category = "Other"
+menu_name = "None (marker only)"
 style = "none"
